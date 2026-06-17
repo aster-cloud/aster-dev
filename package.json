@@ -1,0 +1,39 @@
+{
+  "name": "aster-dev",
+  "version": "0.0.1",
+  "private": true,
+  "description": "aster-lang.dev 文档站（Next.js 重写，ADR 0018 Phase 3）。统一技术栈：与 aster-cloud 同 Next.js + next-intl + 运行时 ui-messages 加载。",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "next": "16.2.9",
+    "next-intl": "^4.13.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "@next/mdx": "16.2.9",
+    "@mdx-js/loader": "^3.1.0",
+    "@mdx-js/react": "^3.1.0",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.34.1",
+    "@uiw/react-codemirror": "^4.23.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.2.9",
+    "@types/mdx": "^2.0.13",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "devSite": {
+    "heroName": "策略 · 流程 · 决策",
+    "heroText": "用 English、中文、Deutsch、हिन्दी 都行",
+    "tryPlayground": "在演练场开始",
+    "quickStart": "5 分钟快速上手",
+    "choosePath": "选择你的路径",
+    "businessExpertTitle": "我是业务专家",
+    "businessExpertBody": "合规官、风险分析师或策略作者。你想用自己的语言写规则，由 AI 帮你起草初稿。",
+    "developerTitle": "我是开发者",
+    "developerBody": "你想要一个可嵌入、确定性、可审计的规则引擎——两套运行时、一份 IR、每个决策可回放。"
+  },
+  "playground": {
+    "title": "演练场",
+    "subtitle": "写一条规则，运行它，看决策结果。",
+    "sourceLabel": "策略源码",
+    "run": "运行",
+    "running": "运行中…",
+    "resultLabel": "结果",
+    "errorLabel": "错误"
+  }
+}

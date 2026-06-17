@@ -1,0 +1,22 @@
+{
+  "devSite": {
+    "heroName": "Policy · Workflow · Decision",
+    "heroText": "All in plain English, 中文, Deutsch, हिन्दी",
+    "tryPlayground": "Try in Playground",
+    "quickStart": "5-Minute Quick Start",
+    "choosePath": "Choose your path",
+    "businessExpertTitle": "I'm a business expert",
+    "businessExpertBody": "Compliance officer, risk analyst, or policy author. You want rules in your language, with AI helping you write the first draft.",
+    "developerTitle": "I'm a developer",
+    "developerBody": "You want a deterministic, auditable rules engine you can embed — two runtimes, one IR, every decision replayable."
+  },
+  "playground": {
+    "title": "Playground",
+    "subtitle": "Write a rule, run it, see the decision.",
+    "sourceLabel": "Policy source",
+    "run": "Run",
+    "running": "Running…",
+    "resultLabel": "Result",
+    "errorLabel": "Error"
+  }
+}

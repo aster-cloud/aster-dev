@@ -1,0 +1,22 @@
+{
+  "devSite": {
+    "heroName": "Richtlinie · Workflow · Entscheidung",
+    "heroText": "Alles in English, 中文, Deutsch, हिन्दी",
+    "tryPlayground": "Im Playground ausprobieren",
+    "quickStart": "5-Minuten-Schnellstart",
+    "choosePath": "Wähle deinen Weg",
+    "businessExpertTitle": "Ich bin Fachexperte",
+    "businessExpertBody": "Compliance-Beauftragter, Risikoanalyst oder Richtlinienautor. Du willst Regeln in deiner Sprache, mit KI-Unterstützung für den ersten Entwurf.",
+    "developerTitle": "Ich bin Entwickler",
+    "developerBody": "Du willst eine deterministische, prüfbare Regel-Engine zum Einbetten — zwei Laufzeiten, eine IR, jede Entscheidung wiederholbar."
+  },
+  "playground": {
+    "title": "Playground",
+    "subtitle": "Schreibe eine Regel, führe sie aus, sieh die Entscheidung.",
+    "sourceLabel": "Richtlinien-Quelltext",
+    "run": "Ausführen",
+    "running": "Läuft…",
+    "resultLabel": "Ergebnis",
+    "errorLabel": "Fehler"
+  }
+}
