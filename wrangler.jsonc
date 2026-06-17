@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aster-dev",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // OpenNext build 产物：worker 入口 + 静态资源。
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // 自定义域名：替换当前 aster-lang.dev（旧 Pages 站退役）。
+  // www 同时指向，避免裸域/www 分裂。
+  "routes": [
+    { "pattern": "aster-lang.dev", "custom_domain": true },
+    { "pattern": "www.aster-lang.dev", "custom_domain": true }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // 后端策略 API（playground / 运行时 messages 回源）。
+    "NEXT_PUBLIC_ASTER_POLICY_API_URL": "https://policy.aster-lang.dev"
+  }
+}
