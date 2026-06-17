@@ -70,6 +70,27 @@ export default async function LocaleLayout({
       suppressHydrationWarning
       className={`${fraunces.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        {/*
+          esbuild __name polyfill（与 aster-cloud 同款修复）。
+
+          OpenNext-on-Cloudflare 用 esbuild 的 keepNames 转换打包 worker，会发出对
+          __name helper 的调用以在压缩后保留类/函数的 .name。helper 定义在 worker
+          bundle 里，但落进 HTML 的某些 inline <script>（尤其 next-themes 的主题
+          bootstrap 脚本）也引用 __name 却不重新声明 → 浏览器在首个 inline script
+          抛 "Uncaught ReferenceError: __name is not defined"（线上 /docs/lexicons
+          等所有页面都中招）。
+
+          在任何其它 inline script 之前定义一个等价兜底（设 .name 并返回入参，
+          与 esbuild 自身定义行为一致），bundled helper 未加载时也行为相同。
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'globalThis.__name=globalThis.__name||function(t,n){try{Object.defineProperty(t,"name",{value:n,configurable:true})}catch(e){}return t};',
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-bg text-fg antialiased">
         <ThemeProvider>
           <NextIntlClientProvider>
