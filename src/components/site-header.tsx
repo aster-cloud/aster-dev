@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ThemeToggle } from './theme-toggle';
@@ -22,9 +23,7 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight">
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-fg">
-            A
-          </span>
+          <Image src="/logo.svg" alt="Aster Lang" width={28} height={28} priority />
           Aster
         </Link>
 

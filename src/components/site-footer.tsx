@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
 
@@ -9,9 +10,7 @@ export async function SiteFooter() {
     <footer className="border-t border-border bg-bg-subtle">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 text-sm text-fg-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex items-center gap-2">
-          <span className="grid h-6 w-6 place-items-center rounded bg-primary text-xs text-primary-fg">
-            A
-          </span>
+          <Image src="/logo.svg" alt="Aster Lang" width={24} height={24} />
           <span>© {new Date().getFullYear()} Aster Lang</span>
         </div>
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2">
