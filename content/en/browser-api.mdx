@@ -1,0 +1,110 @@
+# Browser API
+
+`@aster-cloud/aster-lang-ts` is the TypeScript engine. It compiles, type-checks,
+extracts schemas and evaluates Aster policies **in the browser or Node** — no server
+round-trip. It's the same engine the [Playground](/playground) runs on.
+
+## Installation
+
+```bash
+npm install @aster-cloud/aster-lang-ts
+```
+
+## Imports
+
+```js
+import {
+  validateSyntaxWithSpan,
+  compile,
+  compileAndTypecheck,
+  extractSchema,
+  tokenize,
+  generateInputValues,
+  evaluate,
+} from '@aster-cloud/aster-lang-ts';
+```
+
+## Lexicons
+
+Every function takes an optional `lexicon` / `locale` (default `en-US`). Pass
+`zh-CN`, `de-DE` or `hi-IN` to author in that language.
+
+```js
+const result = compile(source, { locale: 'zh-CN' });
+```
+
+## Core functions
+
+### `validateSyntaxWithSpan(source, lexicon?)`
+
+Parse-checks the source and returns diagnostics with line/column spans — ideal for an
+editor's squiggly underlines.
+
+```js
+const diags = validateSyntaxWithSpan(source);
+// → [{ message, severity, start: {line, col}, end: {line, col} }]
+```
+
+### `compile(source, options?)`
+
+Lowers source to the core intermediate representation (IR).
+
+```js
+const { ir, diagnostics } = compile(source, { locale: 'en-US' });
+```
+
+### `compileAndTypecheck(source, options?)`
+
+`compile` plus static type inference — catches type errors (e.g. comparing `Text` to
+`Int`) before evaluation.
+
+### `extractSchema(source, options?)`
+
+Derives the input/output schema of each rule — parameter names, inferred types,
+struct shapes. Useful for auto-generating forms or API contracts.
+
+### `tokenize(source, lexicon?)`
+
+Returns the token stream (keyword / identifier / literal / operator) — the basis for
+syntax highlighting.
+
+### `generateInputValues(parameters, lexicon?)`
+
+Generates plausible sample inputs from a rule's parameters — for quick "try it"
+affordances.
+
+### `evaluate(coreIR, functionName, context)`
+
+Runs a compiled rule against an input context, returning a typed result (and,
+optionally, a decision trace).
+
+```js
+const { ir } = compile(source);
+const out = evaluate(ir, 'discountedPrice', { amount: 200, tier: 'gold' });
+// → 160
+```
+
+## Browser API vs REST vs GraphQL
+
+| Use case | Surface |
+| --- | --- |
+| Live editor validation, in-page "try it" | **Browser API** (no network) |
+| Deployed, versioned, audited policies | **REST API** (`aster-api`) |
+| Rich querying of versions / audit logs | **GraphQL** |
+
+## Typical workflow
+
+```js
+// 1. validate as the user types
+const diags = validateSyntaxWithSpan(source);
+if (diags.some((d) => d.severity === 'error')) return showErrors(diags);
+
+// 2. compile + typecheck
+const { ir } = compileAndTypecheck(source);
+
+// 3. extract schema → build an input form
+const schema = extractSchema(source);
+
+// 4. evaluate with the user's inputs
+const result = evaluate(ir, schema.entry, inputs);
+```

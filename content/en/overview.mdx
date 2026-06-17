@@ -1,0 +1,90 @@
+# What is Aster?
+
+Aster is a **controlled natural language** (CNL) for business rules. Policies read
+like sentences — yet compile to a deterministic core that runs over REST, GraphQL,
+WebSocket, or directly in the browser, with a replayable decision trace for every
+evaluation.
+
+Aster sits between plain English and a traditional programming language: restrictive
+enough for a machine to parse unambiguously, natural enough for domain experts —
+underwriters, compliance officers, product managers — to read and author without
+developer help.
+
+A minimal policy:
+
+```aster
+Module Pricing.
+
+Rule discountedPrice given amount, tier:
+  if tier is equal to "gold"
+    then return amount times 80 divided by 100
+  else return amount.
+```
+
+## Core properties
+
+- **Deterministic** — the same input always produces the same output, no side effects.
+- **Typed** — every parameter and return value carries a type (`Int`, `Float`, `Text`,
+  `Bool`, `DateTime`, or a user-defined struct), inferred where possible.
+- **Multi-language** — author in English, 中文, Deutsch or हिन्दी; all locales compile
+  to the identical core.
+- **Auditable** — the engine records a tamper-evident decision trace for every run.
+
+## How it fits together
+
+```
+  Author (CNL)  ──►  Browser API (aster-lang-ts)  ──►  REST API (aster-api)
+                     validate · schema · sample           evaluate · version · audit
+```
+
+1. **Author** — write policies in the [Playground](/playground) or any editor.
+2. **Validate** — catch syntax/type errors before deploy (Browser API or playground).
+3. **Deploy** — submit source to the REST API; the engine compiles and stores it.
+4. **Evaluate** — call the deployed policy with input data; get a typed result + audit record.
+5. **Monitor** — query version history, audit logs and anomaly detection to stay compliant.
+
+## Where to start
+
+| Goal | Page |
+| --- | --- |
+| Try Aster in your browser now | [Playground](/playground) |
+| Learn the language | [Language Guide](/docs/language-guide) |
+| The full specification | [Reference](/docs/reference) |
+| Embed in JS/TS | [Browser API](/docs/browser-api) |
+| Ship to production | [Deployment](/docs/deployment) |
+
+## Multi-language
+
+The same logical policy in three locales — only the keywords differ, the compiled
+core is byte-identical:
+
+```aster
+Module Pricing.
+
+Rule discountedPrice given amount:
+  if amount is greater than 100
+    then return amount times 90 divided by 100
+  else return amount.
+```
+
+```aster
+模块 定价。
+
+规则 折扣价格 给定 金额：
+  如果 金额 大于 100
+    那么 返回 金额 乘以 90 除以 100
+  否则 返回 金额。
+```
+
+```aster
+Modul Preisgestaltung.
+
+Regel rabattPreis gegeben betrag:
+  wenn betrag größer als 100
+    dann gib betrag mal 90 geteilt durch 100 zurück
+  sonst gib betrag zurück.
+```
+
+Both the Browser API and REST API accept a `locale` parameter telling the compiler
+which keyword set to use. Try switching the source language in the
+[Playground](/playground).

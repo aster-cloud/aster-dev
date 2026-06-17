@@ -53,6 +53,7 @@
   },
   "docsNav": {
     "gettingStarted": "快速开始",
+    "overview": "什么是 Aster？",
     "quickstart": "快速上手",
     "languageGuide": "语言指南",
     "syntax": "语法",
@@ -60,9 +61,13 @@
     "expressions": "表达式",
     "functions": "规则与函数",
     "modules": "模块",
+    "lexicons": "词法表",
     "stdlib": "标准库",
     "reference": "语言参考",
     "tooling": "工具链",
+    "browserApi": "浏览器 API",
+    "deployment": "部署",
+    "editions": "版本对比",
     "examples": "示例",
     "onThisPage": "本页目录"
   }

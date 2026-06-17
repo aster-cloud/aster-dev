@@ -1,0 +1,47 @@
+# 词法表
+
+**词法表**（lexicon）是一个语言包——一种人类语言的关键词集、标点与规范化规则。Aster
+的核心语法与语言无关；词法表把它映射到 English、中文、Deutsch、हिन्दी 等。所有词法表
+共享同一套 **Lexicon SPI** 契约，因此任何语言写的策略都编译到同一核心。
+
+## 工作原理
+
+同一条规则，两种词法表，同一编译结果：
+
+```aster
+Rule greet given name:
+  return "Hello, " followed by name.
+```
+
+```aster
+规则 问候 给定 名字：
+  返回 "你好，" 连接 名字。
+```
+
+编译器通过 `locale` / `lexicon` 参数得知用哪套词法表。它在降到中间表示前，把本地化关键词
+规范化回核心语法——这就是为什么中文策略和它的英文译本产生逐字节相同的决策。
+
+## 官方词法表
+
+由 Aster 团队维护，发布到 Maven（GitHub Packages）+ npm：
+
+| 词法表 | 语言 | 状态 |
+| --- | --- | --- |
+| `aster-lang-en` | English (US) | ✅ 官方 |
+| `aster-lang-zh` | 简体中文 | ✅ 官方 |
+| `aster-lang-de` | Deutsch | ✅ 官方 |
+| `aster-lang-hi` | हिन्दी | ✅ 官方 |
+
+> 英/中/德三包合并在 `aster-lang-locales`；印地语从独立的 `aster-lang-hi` 发布。
+> 它们共享同一条版本线。
+
+## 编写词法表
+
+词法表是纯数据 + 一个 SPI 注册——无需改编译器。你提供：
+
+- 关键词翻译（每个 `SemanticTokenKind` 一条，键集须与 `en-US` 骨架一致），
+- 标点（语句结束符，如 `.` 或天城文 danda `।`），
+- 空白模式（如 `ENGLISH` 与 `CHINESE` 分词）。
+
+核心负责规范化与降级。语法契约见[参考手册](/docs/reference)，在[演练场](/playground)
+试试非英文源码。

@@ -1,0 +1,59 @@
+# Lexicons
+
+A **lexicon** is a language pack — the keyword set, punctuation and canonicalization
+rules for one human language. Aster's core grammar is language-agnostic; a lexicon
+maps it onto English, 中文, Deutsch, हिन्दी, etc. All lexicons share the same
+**Lexicon SPI** contract, so a policy in any language compiles to the identical core.
+
+## How it works
+
+The same rule, two lexicons, one compiled result:
+
+```aster
+Rule greet given name:
+  return "Hello, " followed by name.
+```
+
+```aster
+规则 问候 给定 名字：
+  返回 "你好，" 连接 名字。
+```
+
+The compiler is told which lexicon to use via a `locale` / `lexicon` parameter. It
+canonicalizes the localized keywords back to the core grammar before lowering to the
+intermediate representation — which is why a Chinese policy and its English
+translation produce byte-identical decisions.
+
+## Official lexicons
+
+Maintained by the Aster team, published to Maven (GitHub Packages) + npm:
+
+| Lexicon | Language | Status |
+| --- | --- | --- |
+| `aster-lang-en` | English (US) | ✅ Official |
+| `aster-lang-zh` | 简体中文 | ✅ Official |
+| `aster-lang-de` | Deutsch | ✅ Official |
+| `aster-lang-hi` | हिन्दी | ✅ Official |
+
+> The English / Chinese / German packs are consolidated in `aster-lang-locales`;
+> Hindi ships from the standalone `aster-lang-hi`. They share one version line.
+
+## In progress
+
+| Lexicon | Language | Status |
+| --- | --- | --- |
+| `aster-lang-ja` | 日本語 | 🚧 Wanted |
+| `aster-lang-fr` | Français | 🚧 Wanted |
+
+## Authoring a lexicon
+
+A lexicon is pure data plus an SPI registration — no compiler changes. You provide:
+
+- the keyword translations (one per `SemanticTokenKind`, key set must match the
+  `en-US` backbone),
+- punctuation (statement terminator, e.g. `.` or Devanagari danda `।`),
+- whitespace mode (e.g. `ENGLISH` vs `CHINESE` word-segmentation).
+
+The core handles canonicalization and lowering. See the
+[Reference](/docs/reference#multi-language) for the grammar contract, and try a
+non-English source in the [Playground](/playground).

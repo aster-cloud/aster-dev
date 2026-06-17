@@ -53,6 +53,7 @@
   },
   "docsNav": {
     "gettingStarted": "Getting Started",
+    "overview": "What is Aster?",
     "quickstart": "Quick Start",
     "languageGuide": "Language Guide",
     "syntax": "Syntax",
@@ -60,9 +61,13 @@
     "expressions": "Expressions",
     "functions": "Rules & Functions",
     "modules": "Modules",
+    "lexicons": "Lexicons",
     "stdlib": "Standard Library",
     "reference": "Language Reference",
     "tooling": "Tooling",
+    "browserApi": "Browser API",
+    "deployment": "Deployment",
+    "editions": "Editions",
     "examples": "Examples",
     "onThisPage": "On this page"
   }

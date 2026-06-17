@@ -1,0 +1,79 @@
+# Deployment
+
+Take a policy from source to production on the Aster engine (`aster-api`) and call it
+at scale, with versioning and audit.
+
+## Policy lifecycle
+
+```
+Author ──► Validate ──► Deploy ──► Evaluate ──► Monitor
+ (CNL)     (browser)    (REST)     (REST)       (audit + versions)
+```
+
+## 1. Author
+
+Write the policy in the [Playground](/playground) or any editor.
+
+```aster
+Module Pricing.
+
+Rule discountedPrice given amount, tier:
+  if tier is equal to "gold"
+    then return amount times 80 divided by 100
+  else return amount.
+```
+
+## 2. Validate locally
+
+Use the [Browser API](/docs/browser-api) (`compileAndTypecheck`) or the playground to
+catch syntax and type errors **before** deploying — no server needed.
+
+## 3. Extract the schema
+
+`extractSchema` derives each rule's input/output shape, so you know exactly what the
+deployed policy expects.
+
+## 4. Deploy
+
+Submit the source to the REST API. The engine compiles, type-checks and stores it,
+returning a version id.
+
+```bash
+curl -X POST https://policy.aster-lang.dev/api/v1/policies \
+  -H 'Content-Type: application/json' \
+  -d '{ "source": "...", "locale": "en-US" }'
+```
+
+## 5. Execute
+
+Call the deployed policy (or evaluate source directly):
+
+```bash
+curl -X POST https://policy.aster-lang.dev/api/v1/policies/evaluate-source \
+  -H 'Content-Type: application/json' \
+  -d '{ "source": "...", "context": { "amount": 200, "tier": "gold" } }'
+```
+
+Add `?trace=true` to get the decision trace — which rule fired, on which inputs, to
+which result — the foundation of **replayable** decisions.
+
+## 6. Monitor & audit
+
+- **Audit logs** — every evaluation is recorded.
+- **Hash-chain integrity** — the audit trail is tamper-evident.
+- **Anomaly detection** — surface unusual decision patterns.
+
+## Version management
+
+- **List versions** — see every deployed revision of a policy.
+- **Deploy a new version** — submit updated source; the old version stays callable.
+- **Rollback** — pin execution to a previous version. Because each decision records
+  the exact version it ran against, history is fully reconstructable.
+
+## Checklist
+
+- [ ] Validated + type-checked locally
+- [ ] Schema reviewed (inputs/outputs as expected)
+- [ ] Deployed and version id recorded
+- [ ] Smoke-tested with representative inputs (incl. edge cases)
+- [ ] Audit + monitoring confirmed

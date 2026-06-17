@@ -5,9 +5,7 @@ import { useTranslations } from 'next-intl';
 
 /**
  * 文档左侧分组导航（语言规范标准 IA）：
- *   Getting Started → Language Guide → Standard Library → Reference → Tooling → Examples
- *
- * PoC 阶段链接到已迁移的页面；后续里程碑随 63 篇文档批量补全。
+ *   Getting Started → Language Guide → Reference → Tooling
  */
 export function DocsSidebar() {
   const t = useTranslations('docsNav');
@@ -16,7 +14,10 @@ export function DocsSidebar() {
   const groups: { title: string; items: { href: string; label: string }[] }[] = [
     {
       title: t('gettingStarted'),
-      items: [{ href: '/docs', label: t('quickstart') }],
+      items: [
+        { href: '/docs/overview', label: t('overview') },
+        { href: '/docs', label: t('quickstart') },
+      ],
     },
     {
       title: t('languageGuide'),
@@ -25,12 +26,20 @@ export function DocsSidebar() {
         { href: '/docs/language-guide#types', label: t('types') },
         { href: '/docs/language-guide#expressions', label: t('expressions') },
         { href: '/docs/language-guide#functions', label: t('functions') },
-        { href: '/docs/language-guide#modules', label: t('modules') },
+        { href: '/docs/lexicons', label: t('lexicons') },
       ],
     },
     {
       title: t('reference'),
       items: [{ href: '/docs/reference', label: t('reference') }],
+    },
+    {
+      title: t('tooling'),
+      items: [
+        { href: '/docs/browser-api', label: t('browserApi') },
+        { href: '/docs/deployment', label: t('deployment') },
+        { href: '/docs/editions', label: t('editions') },
+      ],
     },
   ];
 
