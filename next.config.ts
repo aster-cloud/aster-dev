@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import createMDX from '@next/mdx';
 
@@ -18,6 +20,11 @@ const withMDX = createMDX({
 const nextConfig: NextConfig = {
   // 文档站正文用 MDX（Phase 3 把 VitePress 的 md 迁过来）。
   pageExtensions: ['ts', 'tsx', 'md', 'mdx'],
+  // 显式钉死 workspace root，消除"检测到多个 lockfile"的推断警告
+  // （~/package-lock.json 干扰）。指向本项目目录。
+  turbopack: {
+    root: dirname(fileURLToPath(import.meta.url)),
+  },
 };
 
 export default withNextIntl(withMDX(nextConfig));
