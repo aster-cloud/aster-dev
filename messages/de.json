@@ -1,14 +1,35 @@
 {
+  "devNav": {
+    "docs": "Doku",
+    "guide": "Sprachführer",
+    "reference": "Referenz",
+    "playground": "Playground"
+  },
+  "devFooter": {
+    "docs": "Dokumentation",
+    "playground": "Playground",
+    "cloud": "Aster Cloud"
+  },
   "devSite": {
-    "heroName": "Richtlinie · Workflow · Entscheidung",
-    "heroText": "Alles in English, 中文, Deutsch, हिन्दी",
+    "badge": "Open Source · Zwei Laufzeiten · Wiederholbar",
+    "heroName": "Regeln in deiner Sprache. Entscheidungen, denen du vertraust.",
+    "heroText": "Schreibe Richtlinien, Workflows und Entscheidungen in natürlicher Sprache — English, 中文, Deutsch oder हिन्दी — und führe sie auf einer deterministischen, prüfbaren Engine aus, in der jede Entscheidung wiederholbar ist.",
+    "heroCodeHint": "Echter Aster-Quelltext — führe ihn im Playground aus.",
     "tryPlayground": "Im Playground ausprobieren",
     "quickStart": "5-Minuten-Schnellstart",
+    "valueLanguageTitle": "Deine Sprache",
+    "valueLanguageBody": "Schreibe Regeln in der natürlichen Sprache deines Teams. Keine DSL-Zeremonie, kein Operator-Wirrwarr — der Quelltext liest sich wie die Richtlinie, die er kodiert.",
+    "valueDeterministicTitle": "Deterministisch",
+    "valueDeterministicBody": "Zwei unabhängige Laufzeiten, eine Zwischendarstellung, byte-identische Ergebnisse. Dieselbe Regel widerspricht sich nie selbst.",
+    "valueAuditableTitle": "Wiederholbar",
+    "valueAuditableBody": "Jede Entscheidung trägt eine wiederholbare Spur — welche Regel ausgelöst wurde, mit welchen Eingaben, zu welchem Ergebnis. Nichts versteckt, nichts erraten.",
     "choosePath": "Wähle deinen Weg",
     "businessExpertTitle": "Ich bin Fachexperte",
     "businessExpertBody": "Compliance-Beauftragter, Risikoanalyst oder Richtlinienautor. Du willst Regeln in deiner Sprache, mit KI-Unterstützung für den ersten Entwurf.",
+    "businessExpertCta": "Mit dem Führer starten",
     "developerTitle": "Ich bin Entwickler",
-    "developerBody": "Du willst eine deterministische, prüfbare Regel-Engine zum Einbetten — zwei Laufzeiten, eine IR, jede Entscheidung wiederholbar."
+    "developerBody": "Du willst eine deterministische, prüfbare Regel-Engine zum Einbetten — zwei Laufzeiten, eine IR, jede Entscheidung wiederholbar.",
+    "developerCta": "Referenz lesen"
   },
   "playground": {
     "title": "Playground",
@@ -18,5 +39,20 @@
     "running": "Läuft…",
     "resultLabel": "Ergebnis",
     "errorLabel": "Fehler"
+  },
+  "docsNav": {
+    "gettingStarted": "Erste Schritte",
+    "quickstart": "Schnellstart",
+    "languageGuide": "Sprachführer",
+    "syntax": "Syntax",
+    "types": "Typen",
+    "expressions": "Ausdrücke",
+    "functions": "Regeln & Funktionen",
+    "modules": "Module",
+    "stdlib": "Standardbibliothek",
+    "reference": "Sprachreferenz",
+    "tooling": "Werkzeuge",
+    "examples": "Beispiele",
+    "onThisPage": "Auf dieser Seite"
   }
 }

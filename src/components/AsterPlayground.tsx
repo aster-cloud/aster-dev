@@ -3,26 +3,28 @@
 import { useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { useTranslations } from 'next-intl';
+import { Play, Loader2 } from 'lucide-react';
 
 /**
- * AsterPlayground — VitePress AsterPlayground.vue（1074 行）的 React PoC 移植
- * （ADR 0018 Phase 3 第一里程碑）。
+ * AsterPlayground — VitePress AsterPlayground.vue（1074 行）的 React 移植
+ * （ADR 0018 Phase 3）。设计对齐 aster-cloud（token 配色 + JetBrains Mono）。
  *
- * 这是**概念验证**，证明 Vue→React + CodeMirror + 后端 evaluate 路径在新栈可行；
- * 不是 Vue 版全功能（语法高亮扩展、多示例、trace 面板、AI 解释等后续里程碑补）。
+ * 编译/执行走后端 /api/v1/policies/evaluate-source（与原站同一真实路径），
+ * 不在前端做语义——保持可信执行链。文案走 next-intl（playground namespace）。
  *
- * 编译/执行仍走后端 /api/v1/policies/evaluate-source（与原站同一真实路径），
- * 不在前端做语义——保持"可信执行链"。文案走 next-intl（playground namespace），
- * 运行时从后端 messages 加载。
+ * 后续里程碑：语法高亮扩展、多示例下拉、决策 trace 面板、AI 解释。
  */
 
 const API_BASE =
   process.env.NEXT_PUBLIC_ASTER_POLICY_API_URL || 'https://policy.aster-lang.dev';
 
-const SAMPLE = `Module Greeting.
+const SAMPLE = `Module LoanApproval.
 
-Rule greet given name:
-  return "Hello, " followed by name.`;
+Rule approve given applicant:
+  if applicant.creditScore is at least 700
+    and applicant.income is greater than 50000
+  then return "approved"
+  else return "manual review".`;
 
 interface EvalResult {
   result?: unknown;
@@ -54,54 +56,50 @@ export default function AsterPlayground() {
   }
 
   return (
-    <section>
-      <h1>{t('title')}</h1>
-      <p style={{ color: '#475569' }}>{t('subtitle')}</p>
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+      <h1 className="font-display text-3xl font-semibold tracking-tight text-fg">
+        {t('title')}
+      </h1>
+      <p className="mt-2 text-fg-muted">{t('subtitle')}</p>
 
-      <label style={{ fontWeight: 600 }}>{t('sourceLabel')}</label>
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', marginTop: 8 }}>
-        <CodeMirror value={source} height="200px" onChange={setSource} />
+      <label className="mt-8 block text-sm font-semibold text-fg">{t('sourceLabel')}</label>
+      <div className="mt-2 overflow-hidden rounded-xl border border-border shadow-brand">
+        <CodeMirror
+          value={source}
+          height="220px"
+          onChange={setSource}
+          basicSetup={{ lineNumbers: true, foldGutter: false }}
+        />
       </div>
 
       <button
         onClick={run}
         disabled={running}
-        style={{
-          marginTop: 12,
-          background: running ? '#94a3b8' : '#2563eb',
-          color: '#fff',
-          border: 'none',
-          padding: '0.6rem 1.25rem',
-          borderRadius: 8,
-          cursor: running ? 'default' : 'pointer',
-        }}
+        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg shadow-brand transition-colors hover:bg-primary-hover disabled:opacity-60"
       >
+        {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
         {running ? t('running') : t('run')}
       </button>
 
       {result && (
-        <div style={{ marginTop: 16 }}>
+        <div className="mt-6">
           {result.error !== undefined ? (
             <>
-              <strong style={{ color: '#dc2626' }}>{t('errorLabel')}</strong>
-              <pre style={pre}>{result.error}</pre>
+              <p className="text-sm font-semibold text-danger">{t('errorLabel')}</p>
+              <pre className="mt-1 overflow-auto rounded-lg border border-danger-subtle bg-danger-subtle/40 p-3 font-mono text-sm text-fg">
+                {result.error}
+              </pre>
             </>
           ) : (
             <>
-              <strong>{t('resultLabel')}</strong>
-              <pre style={pre}>{JSON.stringify(result.result ?? result, null, 2)}</pre>
+              <p className="text-sm font-semibold text-success">{t('resultLabel')}</p>
+              <pre className="mt-1 overflow-auto rounded-lg border border-border bg-bg-muted p-3 font-mono text-sm text-fg">
+                {JSON.stringify(result.result ?? result, null, 2)}
+              </pre>
             </>
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
-
-const pre: React.CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
-  padding: '0.75rem',
-  overflow: 'auto',
-};

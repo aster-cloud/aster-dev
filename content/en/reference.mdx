@@ -1,0 +1,41 @@
+# Language Reference
+
+The formal reference for Aster's grammar, types and evaluation semantics. This is
+the authoritative specification; the [Language Guide](/docs/language-guide) is the
+tutorial-style introduction.
+
+## Grammar
+
+Aster's surface grammar is defined per-locale by a **lexicon** (keyword set) over a
+shared core grammar. The English lexicon uses `Module`, `Rule`, `given`, `has`,
+`return`, `if`/`then`/`else`. Other locales translate the keywords; the core
+grammar and intermediate representation are identical.
+
+```aster
+module      = "Module" Name "." rule+ ;
+rule        = "Rule" Name "given" params ":" expr "." ;
+expr        = literal | name | call | ifExpr | binaryExpr ;
+ifExpr      = "if" expr "then" expr "else" expr ;
+```
+
+## Operators
+
+| Surface (English) | Meaning |
+| --- | --- |
+| `plus`, `minus`, `times`, `divided by` | arithmetic |
+| `modulo`, `integer divided by` | remainder, truncating division |
+| `is equal to`, `is at least`, `is greater than` | comparison |
+| `and`, `or`, `not` | logic |
+| `followed by` | text concatenation |
+
+## Evaluation
+
+A rule is a pure function of its inputs. Evaluation is deterministic: the same
+inputs always yield the same result, and both the JVM (Truffle) and TypeScript
+runtimes lower to the **same intermediate representation**, guaranteeing
+byte-identical results. Every evaluation can emit a **decision trace** for replay.
+
+## Effects & purity
+
+Rules are pure by default. Side effects (I/O, external calls) are declared
+explicitly via effect capabilities, keeping the audit surface honest.

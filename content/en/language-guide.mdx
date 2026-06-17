@@ -1,0 +1,71 @@
+# Language Guide
+
+Aster is a **controlled natural language** (CNL) for rules. It reads like English
+(or 中文 / Deutsch / हिन्दी) but compiles to a precise, deterministic intermediate
+representation. This guide walks the core constructs.
+
+## Syntax
+
+Every file is a **module** with one or more **rules**. Statements end with a period.
+
+```aster
+Module Greeting.
+
+Rule greet given name:
+  return "Hello, " followed by name.
+```
+
+- `Module <Name>.` declares the module.
+- `Rule <name> given <params>:` declares a rule (function) and its inputs.
+- The body is an expression that produces the rule's result.
+
+## Types
+
+Aster is statically typed with inference. The core types:
+
+| Type | Example |
+| --- | --- |
+| Integer | `42` |
+| Decimal | `3.14` |
+| Text | `"approved"` |
+| Boolean | `true`, `false` |
+| List | `[1, 2, 3]` |
+| Record | `applicant.creditScore` |
+
+You rarely write types — they are inferred from literals and field access.
+
+## Expressions
+
+Arithmetic, comparison and logic read in words:
+
+```aster
+Rule score given a, b:
+  return a times 2 plus b.
+
+Rule eligible given applicant:
+  return applicant.age is at least 18
+    and applicant.income is greater than 30000.
+```
+
+Comparisons (`is at least`, `is greater than`, `is equal to`) and logic
+(`and`, `or`, `not`) keep the source scannable.
+
+## Rules & functions
+
+A rule maps inputs to a decision. Branch with `if … then … else …`:
+
+```aster
+Rule classify given amount:
+  if amount is greater than 10000 then return "large"
+  else if amount is greater than 1000 then return "medium"
+  else return "small".
+```
+
+## Modules
+
+Modules group related rules and can reference each other by version, so a decision
+always pins the exact rule set it ran against — the foundation of **replayable**
+decisions.
+
+Next: try these in the [Playground](/playground), or read the
+[Language Reference](/docs/reference) for the formal grammar.

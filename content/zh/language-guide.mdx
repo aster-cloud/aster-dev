@@ -1,0 +1,51 @@
+# 语言指南
+
+Aster 是一种面向规则的**受控自然语言**（CNL）。它读起来像英文（或中文 / Deutsch /
+हिन्दी），却编译成精确、确定性的中间表示。本指南讲解核心构造。
+
+## 语法
+
+每个文件是一个**模块**，含一条或多条**规则**。语句以句号结尾。
+
+```aster
+Module Greeting.
+
+Rule greet given name:
+  return "Hello, " followed by name.
+```
+
+- `Module <名称>.` 声明模块。
+- `Rule <名称> given <参数>:` 声明规则（函数）及其输入。
+- 规则体是一个产生结果的表达式。
+
+## 类型
+
+Aster 是带推断的静态类型。核心类型：整数、小数、文本、布尔、列表、记录。
+你很少需要显式写类型——它们从字面量和字段访问推断而来。
+
+## 表达式
+
+算术、比较与逻辑都用词语表达：
+
+```aster
+Rule eligible given applicant:
+  return applicant.age is at least 18
+    and applicant.income is greater than 30000.
+```
+
+## 规则与函数
+
+规则把输入映射为决策。用 `if … then … else …` 分支：
+
+```aster
+Rule classify given amount:
+  if amount is greater than 10000 then return "large"
+  else return "small".
+```
+
+## 模块
+
+模块组织相关规则，并可按版本相互引用，因此决策总能钉住它运行时的确切规则集——
+这是**可回放**决策的基石。
+
+下一步：在[演练场](/playground)试试，或阅读[语言参考](/docs/reference)了解形式语法。

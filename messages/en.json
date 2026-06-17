@@ -1,14 +1,35 @@
 {
+  "devNav": {
+    "docs": "Docs",
+    "guide": "Language Guide",
+    "reference": "Reference",
+    "playground": "Playground"
+  },
+  "devFooter": {
+    "docs": "Documentation",
+    "playground": "Playground",
+    "cloud": "Aster Cloud"
+  },
   "devSite": {
-    "heroName": "Policy · Workflow · Decision",
-    "heroText": "All in plain English, 中文, Deutsch, हिन्दी",
+    "badge": "Open-source · Dual-runtime · Replayable",
+    "heroName": "Rules in your language. Decisions you can trust.",
+    "heroText": "Write policies, workflows and decisions in plain English, 中文, Deutsch or हिन्दी — run them on a deterministic, auditable engine where every decision is replayable.",
+    "heroCodeHint": "Real Aster source — run it in the Playground.",
     "tryPlayground": "Try in Playground",
     "quickStart": "5-Minute Quick Start",
+    "valueLanguageTitle": "Your language",
+    "valueLanguageBody": "Write rules in the natural language your team already speaks. No DSL ceremony, no operator soup — the source reads like the policy it encodes.",
+    "valueDeterministicTitle": "Deterministic",
+    "valueDeterministicBody": "Two independent runtimes, one intermediate representation, byte-identical results. The same rule never disagrees with itself.",
+    "valueAuditableTitle": "Replayable",
+    "valueAuditableBody": "Every decision carries a trace you can replay — which rule fired, on which inputs, to which result. Nothing hidden, nothing inferred.",
     "choosePath": "Choose your path",
     "businessExpertTitle": "I'm a business expert",
     "businessExpertBody": "Compliance officer, risk analyst, or policy author. You want rules in your language, with AI helping you write the first draft.",
+    "businessExpertCta": "Start with the guide",
     "developerTitle": "I'm a developer",
-    "developerBody": "You want a deterministic, auditable rules engine you can embed — two runtimes, one IR, every decision replayable."
+    "developerBody": "You want a deterministic, auditable rules engine you can embed — two runtimes, one IR, every decision replayable.",
+    "developerCta": "Read the reference"
   },
   "playground": {
     "title": "Playground",
@@ -18,5 +39,20 @@
     "running": "Running…",
     "resultLabel": "Result",
     "errorLabel": "Error"
+  },
+  "docsNav": {
+    "gettingStarted": "Getting Started",
+    "quickstart": "Quick Start",
+    "languageGuide": "Language Guide",
+    "syntax": "Syntax",
+    "types": "Types",
+    "expressions": "Expressions",
+    "functions": "Rules & Functions",
+    "modules": "Modules",
+    "stdlib": "Standard Library",
+    "reference": "Language Reference",
+    "tooling": "Tooling",
+    "examples": "Examples",
+    "onThisPage": "On this page"
   }
 }

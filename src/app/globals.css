@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* Typography plugin — `prose` 工具类用于 /[locale]/docs MDX 正文。 */
+@plugin "@tailwindcss/typography";
+
+/*
+ * Aster brand tokens —— 与 aster-cloud 的单一真相源（@aster-cloud/tokens）。
+ * tokens.css 声明整套品牌 CSS 变量：色阶、语义角色、字体栈、圆角/阴影/动效。
+ * 暗色由 tokens.css 内部 [data-theme="dark"] + prefers-color-scheme 处理。
+ */
+@import "@aster-cloud/tokens/tokens.css";
+
+/*
+ * 把 next-themes 的 [data-theme] 属性接到 Tailwind v4 的 dark: 变体，
+ * 让 dark:* 工具类与 token 一起翻转（与 aster-cloud 同款）。
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * 把 Aster token 桥接进 Tailwind v4 的 @theme 命名空间 —— 纯 pass-through，
+ * 不复制值，单一真相源。组件写 bg-primary / font-display / text-fg-muted。
+ * 与 aster-cloud/src/app/globals.css 的语义角色映射逐一对齐。
+ */
+@theme inline {
+  --color-primary:         var(--aster-primary);
+  --color-primary-hover:   var(--aster-primary-hover);
+  --color-primary-active:  var(--aster-primary-active);
+  --color-primary-fg:      var(--aster-primary-fg);
+  --color-primary-subtle:  var(--aster-primary-subtle);
+
+  --color-accent:          var(--aster-accent);
+  --color-accent-hover:    var(--aster-accent-hover);
+  --color-accent-fg:       var(--aster-accent-fg);
+  --color-accent-subtle:   var(--aster-accent-subtle);
+
+  --color-bg:              var(--aster-bg);
+  --color-bg-subtle:       var(--aster-bg-subtle);
+  --color-bg-muted:        var(--aster-bg-muted);
+  --color-fg:              var(--aster-fg);
+  --color-fg-muted:        var(--aster-fg-muted);
+  --color-fg-subtle:       var(--aster-fg-subtle);
+  --color-border:          var(--aster-border);
+  --color-border-strong:   var(--aster-border-strong);
+
+  --color-success:         var(--aster-success);
+  --color-success-subtle:  var(--aster-success-subtle);
+  --color-warning:         var(--aster-warning);
+  --color-warning-subtle:  var(--aster-warning-subtle);
+  --color-danger:          var(--aster-danger);
+  --color-danger-subtle:   var(--aster-danger-subtle);
+
+  /* 字体角色：next/font 注入 --aster-font-*-loaded，layout 里 splice 进 token 名。 */
+  --font-display: var(--aster-font-display);
+  --font-sans:    var(--aster-font-sans);
+  --font-mono:    var(--aster-font-mono);
+
+  --radius-sm: var(--aster-radius-sm);
+  --radius-md: var(--aster-radius-md);
+  --radius-lg: var(--aster-radius-lg);
+  --radius-xl: var(--aster-radius-xl);
+
+  --shadow-brand: var(--aster-shadow-brand);
+  --shadow-ring:  var(--aster-shadow-ring);
+}
+
+/*
+ * next/font 注入的字体变量 splice 到 Aster token 名上（与 aster-cloud 同款）。
+ * 这样 token 栈里的 family 名被自托管字体覆盖，无 FOUT/CLS。
+ */
+:root {
+  --aster-font-display: var(--aster-font-display-loaded), "Fraunces", ui-serif, serif;
+  --aster-font-sans: var(--aster-font-sans-loaded), "Inter", system-ui, sans-serif;
+  --aster-font-mono: var(--aster-font-mono-loaded), "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+/* 站内锚点平滑滚动（reduced-motion 保留瞬跳，前庭无障碍）。 */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* 文档正文 prose 颜色绑定到 token（暗色自动翻转）。 */
+.prose {
+  --tw-prose-body: var(--color-fg-muted);
+  --tw-prose-headings: var(--color-fg);
+  --tw-prose-links: var(--color-primary);
+  --tw-prose-bold: var(--color-fg);
+  --tw-prose-code: var(--color-fg);
+  --tw-prose-pre-bg: var(--color-bg-muted);
+  --tw-prose-pre-code: var(--color-fg);
+  --tw-prose-quotes: var(--color-fg-muted);
+  --tw-prose-borders: var(--color-border);
+}

@@ -1,14 +1,35 @@
 {
+  "devNav": {
+    "docs": "文档",
+    "guide": "语言指南",
+    "reference": "参考手册",
+    "playground": "演练场"
+  },
+  "devFooter": {
+    "docs": "文档",
+    "playground": "演练场",
+    "cloud": "Aster Cloud"
+  },
   "devSite": {
-    "heroName": "策略 · 流程 · 决策",
-    "heroText": "用 English、中文、Deutsch、हिन्दी 都行",
+    "badge": "开源 · 双运行时 · 可回放",
+    "heroName": "用你的语言写规则，写出可信任的决策。",
+    "heroText": "用自然语言——English、中文、Deutsch 或 हिन्दी——编写策略、流程与决策，在确定性、可审计的引擎上运行，每个决策都可回放。",
+    "heroCodeHint": "真实的 Aster 源码——在演练场运行它。",
     "tryPlayground": "在演练场开始",
     "quickStart": "5 分钟快速上手",
+    "valueLanguageTitle": "你的语言",
+    "valueLanguageBody": "用团队本来就在说的自然语言写规则。没有 DSL 的繁文缛节，没有运算符乱炖——源码读起来就是它所表达的策略。",
+    "valueDeterministicTitle": "确定性",
+    "valueDeterministicBody": "两套独立运行时、一份中间表示、逐字节一致的结果。同一条规则永远不会与自己产生分歧。",
+    "valueAuditableTitle": "可回放",
+    "valueAuditableBody": "每个决策都带有可回放的执行轨迹——哪条规则触发、基于哪些输入、得出什么结果。没有黑盒，没有臆测。",
     "choosePath": "选择你的路径",
     "businessExpertTitle": "我是业务专家",
     "businessExpertBody": "合规官、风险分析师或策略作者。你想用自己的语言写规则，由 AI 帮你起草初稿。",
+    "businessExpertCta": "从指南开始",
     "developerTitle": "我是开发者",
-    "developerBody": "你想要一个可嵌入、确定性、可审计的规则引擎——两套运行时、一份 IR、每个决策可回放。"
+    "developerBody": "你想要一个可嵌入、确定性、可审计的规则引擎——两套运行时、一份 IR、每个决策可回放。",
+    "developerCta": "阅读参考手册"
   },
   "playground": {
     "title": "演练场",
@@ -18,5 +39,20 @@
     "running": "运行中…",
     "resultLabel": "结果",
     "errorLabel": "错误"
+  },
+  "docsNav": {
+    "gettingStarted": "快速开始",
+    "quickstart": "快速上手",
+    "languageGuide": "语言指南",
+    "syntax": "语法",
+    "types": "类型",
+    "expressions": "表达式",
+    "functions": "规则与函数",
+    "modules": "模块",
+    "stdlib": "标准库",
+    "reference": "语言参考",
+    "tooling": "工具链",
+    "examples": "示例",
+    "onThisPage": "本页目录"
   }
 }
