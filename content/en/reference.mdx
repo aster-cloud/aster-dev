@@ -1,8 +1,8 @@
 # Language Reference
 
-The formal reference for Aster's grammar, types and evaluation semantics. This is
-the authoritative specification; the [Language Guide](/docs/language-guide) is the
-tutorial-style introduction.
+The authoritative reference for Aster's grammar, type system and evaluation
+semantics. The [Language Guide](/docs/language-guide) is the tutorial-style
+introduction; this page is the specification.
 
 ## Grammar
 
@@ -12,30 +12,119 @@ shared core grammar. The English lexicon uses `Module`, `Rule`, `given`, `has`,
 grammar and intermediate representation are identical.
 
 ```aster
-module      = "Module" Name "." rule+ ;
-rule        = "Rule" Name "given" params ":" expr "." ;
-expr        = literal | name | call | ifExpr | binaryExpr ;
-ifExpr      = "if" expr "then" expr "else" expr ;
+module      = "Module" Name "." declaration+ ;
+declaration = define | rule ;
+define      = "Define" Name "has" field ("," field)* "." ;
+rule        = "Rule" Name "given" params ("," "produce" Type)? ":" body ;
+ifExpr      = "if" condition ("then")? body ("else" body)? ;
 ```
+
+## Type system
+
+Aster provides four built-in primitive types plus user-defined structs. Types are
+**inferred** — you rarely write them.
+
+### Primitive types
+
+| Type | Description | Examples |
+| --- | --- | --- |
+| `Int` | Integer | `0`, `42`, `-7` |
+| `Float` | Floating-point | `3.14`, `0.5`, `-1.0` |
+| `Text` | String (double-quoted) | `"hello"`, `"gold"` |
+| `Bool` | Boolean | `true`, `false` |
+
+> **DateTime inference** — `DateTime` is not a keyword. The compiler infers it for
+> fields whose names match temporal patterns (`createdAt`, `birthday`, `expiryDate`).
+
+### Custom types (structs)
+
+Any name introduced by a `Define` declaration becomes a valid type:
+
+```aster
+Define Policy has premium as Int, deductible as Int.
+
+Rule quote given age:
+  if age is less than 25
+    then return Policy with premium set to 500, deductible set to 1000
+  else return Policy with premium set to 300, deductible set to 500.
+```
+
+## Control flow
+
+Conditional logic uses `if … then … else …`. The first branch whose condition is
+`true` executes; its `return` produces the rule's value.
+
+```aster
+Rule classify given score:
+  if score is at least 90 then return "excellent"
+  else if score is at least 70 then return "good"
+  else if score is at least 50 then return "average"
+  else return "poor".
+```
+
+Conditions compose with `and` / `or` rather than deep indentation where possible.
 
 ## Operators
 
-| Surface (English) | Meaning |
-| --- | --- |
-| `plus`, `minus`, `times`, `divided by` | arithmetic |
-| `modulo`, `integer divided by` | remainder, truncating division |
-| `is equal to`, `is at least`, `is greater than` | comparison |
-| `and`, `or`, `not` | logic |
-| `followed by` | text concatenation |
+### Arithmetic
+
+| Operator | Meaning | Example |
+| --- | --- | --- |
+| `plus` | addition | `amount plus 10` |
+| `minus` | subtraction | `price minus discount` |
+| `times` | multiplication | `quantity times unitPrice` |
+| `divided by` | division | `total divided by count` |
+| `modulo` | remainder | `n modulo 2` |
+| `integer divided by` | truncating division | `n integer divided by 2` |
+
+`times`, `divided by`, `modulo` and `integer divided by` bind tighter than `plus`
+and `minus`.
+
+### Comparison
+
+| Operator | Meaning | Example |
+| --- | --- | --- |
+| `is greater than` | `>` | `age is greater than 18` |
+| `is less than` | `<` | `score is less than 50` |
+| `is at least` | `>=` | `income is at least 30000` |
+| `is at most` | `<=` | `balance is at most 0` |
+| `is equal to` | `==` | `tier is equal to "gold"` |
+
+The leading `is` is optional — `score is at least 700` and `score at least 700`
+compile identically. Use whichever reads clearer.
+
+### Logical
+
+| Operator | Meaning | Example |
+| --- | --- | --- |
+| `not` | NOT | `not isExpired` |
+| `and` | AND | `age is at least 18 and income is at least 30000` |
+| `or` | OR | `tier is equal to "gold" or tier is equal to "platinum"` |
+
+`and` binds tighter than `or`, so `x or y and z` reads as `x or (y and z)`.
+
+### Text
+
+| Operator | Meaning | Example |
+| --- | --- | --- |
+| `followed by` | concatenation | `"Hello, " followed by name` |
 
 ## Evaluation
 
-A rule is a pure function of its inputs. Evaluation is deterministic: the same
+A rule is a pure function of its inputs. Evaluation is **deterministic**: the same
 inputs always yield the same result, and both the JVM (Truffle) and TypeScript
 runtimes lower to the **same intermediate representation**, guaranteeing
-byte-identical results. Every evaluation can emit a **decision trace** for replay.
+byte-identical results. Every evaluation can emit a **decision trace** for replay —
+which rule fired, on which inputs, to which result.
 
 ## Effects & purity
 
 Rules are pure by default. Side effects (I/O, external calls) are declared
 explicitly via effect capabilities, keeping the audit surface honest.
+
+## Multi-language
+
+The same program can be written in English, 中文, Deutsch or हिन्दी — only the
+keywords differ. All locales compile to the identical IR, so a Chinese policy and
+its English translation produce byte-identical decisions. Try switching the source
+language in the [Playground](/playground).

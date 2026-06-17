@@ -2,21 +2,22 @@
 
 import { useLocale } from 'next-intl';
 import { usePathname, useRouter } from '@/i18n/navigation';
-import { locales, localeNames, partialLocales, type Locale } from '@/i18n/config';
+import { localeNames, partialLocales, type Locale } from '@/i18n/config';
+import { useAvailableLocales } from '@/hooks/useAvailableLocales';
 import { Globe } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 /**
  * 语言切换器（与 aster-cloud 同款交互）。
  *
- * PoC 阶段列编译期全集；后续里程碑接后端 /api/v1/lexicons 可用性约束
- * （与 cloud 四重交集 compiled∩backend∩platform∩team 同源）。partial locale
- * 标 beta 角标。
+ * 只显示后端可用的 locale（compiled∩backend，见 useAvailableLocales，与 cloud
+ * 四重交集同源）。fail-open：后端异常时回退编译期全集。partial locale 标 beta。
  */
 export function LanguageSwitcher() {
   const locale = useLocale() as Locale;
   const pathname = usePathname();
   const router = useRouter();
+  const { available } = useAvailableLocales();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,7 +51,7 @@ export function LanguageSwitcher() {
           role="listbox"
           className="absolute right-0 z-50 mt-1 min-w-40 overflow-hidden rounded-lg border border-border bg-bg shadow-brand"
         >
-          {locales.map((l) => (
+          {available.map((l) => (
             <li key={l}>
               <button
                 type="button"

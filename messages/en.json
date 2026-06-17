@@ -33,12 +33,23 @@
   },
   "playground": {
     "title": "Playground",
-    "subtitle": "Write a rule, run it, see the decision.",
+    "subtitle": "Write a rule, run it, replay the decision.",
     "sourceLabel": "Policy source",
+    "templateLabel": "Example",
+    "langLabel": "Language",
     "run": "Run",
     "running": "Running…",
     "resultLabel": "Result",
-    "errorLabel": "Error"
+    "errorLabel": "Error",
+    "share": "Share",
+    "shared": "Link copied",
+    "copy": "Copy",
+    "copied": "Copied",
+    "traceLabel": "Decision trace",
+    "traceHint": "Which rule fired, on which inputs, to which result.",
+    "traceStep": "Step",
+    "traceMatched": "matched",
+    "traceResult": "Final result"
   },
   "docsNav": {
     "gettingStarted": "Getting Started",

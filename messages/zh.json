@@ -33,12 +33,23 @@
   },
   "playground": {
     "title": "演练场",
-    "subtitle": "写一条规则，运行它，看决策结果。",
+    "subtitle": "写一条规则，运行它，回放决策。",
     "sourceLabel": "策略源码",
+    "templateLabel": "示例",
+    "langLabel": "语言",
     "run": "运行",
     "running": "运行中…",
     "resultLabel": "结果",
-    "errorLabel": "错误"
+    "errorLabel": "错误",
+    "share": "分享",
+    "shared": "链接已复制",
+    "copy": "复制",
+    "copied": "已复制",
+    "traceLabel": "决策轨迹",
+    "traceHint": "哪条规则触发、基于哪些输入、得出什么结果。",
+    "traceStep": "步骤",
+    "traceMatched": "匹配",
+    "traceResult": "最终结果"
   },
   "docsNav": {
     "gettingStarted": "快速开始",

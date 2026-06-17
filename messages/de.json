@@ -33,12 +33,23 @@
   },
   "playground": {
     "title": "Playground",
-    "subtitle": "Schreibe eine Regel, führe sie aus, sieh die Entscheidung.",
+    "subtitle": "Schreibe eine Regel, führe sie aus, spiele die Entscheidung ab.",
     "sourceLabel": "Richtlinien-Quelltext",
+    "templateLabel": "Beispiel",
+    "langLabel": "Sprache",
     "run": "Ausführen",
     "running": "Läuft…",
     "resultLabel": "Ergebnis",
-    "errorLabel": "Fehler"
+    "errorLabel": "Fehler",
+    "share": "Teilen",
+    "shared": "Link kopiert",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "traceLabel": "Entscheidungsspur",
+    "traceHint": "Welche Regel ausgelöst wurde, mit welchen Eingaben, zu welchem Ergebnis.",
+    "traceStep": "Schritt",
+    "traceMatched": "passt",
+    "traceResult": "Endergebnis"
   },
   "docsNav": {
     "gettingStarted": "Erste Schritte",
