@@ -18,8 +18,12 @@ import { locales, localeNames, type Locale } from '@/i18n/config';
  * 执行链。源码语言 locale 映射到后端全码（en→en-US）。
  */
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_ASTER_POLICY_API_URL || 'https://policy.aster-lang.dev';
+// 走 aster-cloud 的 playground BFF（已 allowlist aster-lang.dev origin）：它对内
+// 用 HMAC 签名+限流+trial 网关代理到 aster-api 的 internal-only /evaluate-source。
+// 直接打 policy.aster-lang.dev/api/v1/policies/evaluate-source 会 403（internal-only）。
+const PLAYGROUND_API =
+  process.env.NEXT_PUBLIC_PLAYGROUND_API_URL ||
+  'https://aster-lang.cloud/api/playground/evaluate-source';
 
 const LOCALE_ID: Record<Locale, string> = {
   en: 'en-US',
@@ -32,6 +36,8 @@ interface EvalResponse {
   result?: unknown;
   error?: string;
   trace?: DecisionTrace;
+  executedFunction?: string;
+  executionTimeMs?: number;
 }
 
 /** base64url 编解码源码用于 URL 分享（兼容 UTF-8 中文/天城文）。 */
@@ -63,6 +69,9 @@ export default function AsterPlayground() {
     const decoded = enc ? decodeSource(enc) : null;
     return decoded ?? tmpls[0].source;
   });
+  // 入口规则名 + 输入数据（context）。求值需要它们。
+  const [entry, setEntry] = useState(tmpls[0].entry);
+  const [context, setContext] = useState(tmpls[0].context);
   const [running, setRunning] = useState(false);
   const [resp, setResp] = useState<EvalResponse | null>(null);
   const [shared, setShared] = useState(false);
@@ -74,6 +83,8 @@ export default function AsterPlayground() {
     const same = list.find((x) => x.id === templateId) ?? list[0];
     setTemplateId(same.id);
     setSource(same.source);
+    setEntry(same.entry);
+    setContext(same.context);
     setResp(null);
   }
 
@@ -82,6 +93,8 @@ export default function AsterPlayground() {
     if (tpl) {
       setTemplateId(id);
       setSource(tpl.source);
+      setEntry(tpl.entry);
+      setContext(tpl.context);
       setResp(null);
     }
   }
@@ -89,11 +102,25 @@ export default function AsterPlayground() {
   async function run() {
     setRunning(true);
     setResp(null);
+    // 解析 context（输入数据）。无效 JSON → 友好报错，不打后端。
+    let parsedContext: unknown;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/policies/evaluate-source?trace=true`, {
+      parsedContext = JSON.parse(context);
+    } catch {
+      setResp({ error: 'Invalid input JSON (context)' });
+      setRunning(false);
+      return;
+    }
+    try {
+      const res = await fetch(`${PLAYGROUND_API}?trace=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ source, locale: LOCALE_ID[srcLocale] }),
+        body: JSON.stringify({
+          source,
+          functionName: entry,
+          locale: LOCALE_ID[srcLocale],
+          context: parsedContext,
+        }),
       });
       const body = (await res.json()) as EvalResponse;
       setResp(res.ok ? body : { error: body.error ?? `HTTP ${res.status}` });
@@ -166,6 +193,18 @@ export default function AsterPlayground() {
       <div className="mt-2">
         <CodeEditor value={source} onChange={setSource} />
       </div>
+
+      {/* 输入数据（context）：入口规则的参数值，JSON 格式 */}
+      <label className="mt-4 block text-sm font-semibold text-fg">
+        {t('inputLabel')} <span className="font-mono text-xs font-normal text-fg-subtle">{entry}(…)</span>
+      </label>
+      <textarea
+        value={context}
+        onChange={(e) => setContext(e.target.value)}
+        spellCheck={false}
+        rows={Math.min(6, context.split('\n').length + 1)}
+        className="mt-2 w-full rounded-xl border border-border bg-bg-muted p-3 font-mono text-sm text-fg outline-none focus:border-primary"
+      />
 
       <button
         onClick={run}

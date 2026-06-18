@@ -49,7 +49,8 @@
     "traceHint": "哪条规则触发、基于哪些输入、得出什么结果。",
     "traceStep": "步骤",
     "traceMatched": "匹配",
-    "traceResult": "最终结果"
+    "traceResult": "最终结果",
+    "inputLabel": "输入数据"
   },
   "docsNav": {
     "gettingStarted": "快速开始",

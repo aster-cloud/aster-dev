@@ -49,7 +49,8 @@
     "traceHint": "Welche Regel ausgelöst wurde, mit welchen Eingaben, zu welchem Ergebnis.",
     "traceStep": "Schritt",
     "traceMatched": "passt",
-    "traceResult": "Endergebnis"
+    "traceResult": "Endergebnis",
+    "inputLabel": "Eingabe"
   },
   "docsNav": {
     "gettingStarted": "Erste Schritte",
