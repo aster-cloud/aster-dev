@@ -44,23 +44,55 @@ async function loadEmbedded(locale: Locale): Promise<MessageTree> {
 }
 
 /**
- * 运行时获取某 locale 的界面文案：后端 → 内嵌兜底。永远 fail-open 返回一个树。
+ * 运行时获取某 locale 的界面文案。
+ *
+ * **关键（修 MISSING_MESSAGE: playground）**：后端 `/api/v1/messages` 服务的是
+ * **aster-cloud** 的界面文案（admin/dashboard/billing…），**不含本文档站特有的
+ * namespace**（playground/devSite/devNav/docsNav/devFooter）。若直接用后端响应
+ * 替换内嵌副本，dev 的 namespace 会整个消失 → next-intl 报 MISSING_MESSAGE。
+ *
+ * 因此：**内嵌副本是本站文案的权威基底**，后端只能在其上**叠加/覆盖**（deep-merge），
+ * 绝不替换。后端能改文案即显示的能力对**共有 key** 仍生效；dev 特有 namespace 永远
+ * 来自内嵌，不会被 cloud 的响应冲掉。fail-open：后端不可达 → 纯内嵌。
  */
 export async function loadMessages(locale: Locale): Promise<MessageTree> {
+  const embedded = await loadEmbedded(locale);
   const fullId = LOCALE_ID_MAP[locale];
   if (!fullId) {
-    return loadEmbedded(locale);
+    return embedded;
   }
   try {
     const res = await fetch(`${API_BASE}/api/v1/messages/${fullId}`, {
       headers: { Accept: 'application/json' },
     });
     if (res.ok) {
-      return JSON.parse(await res.text()) as MessageTree;
+      const backend = JSON.parse(await res.text()) as MessageTree;
+      // 内嵌为基底，后端叠加在上（dev 特有 namespace 必然保留）。
+      return deepMerge(embedded, backend);
     }
     console.warn(`[i18n] backend messages ${fullId} → HTTP ${res.status}; using embedded`);
   } catch (error) {
     console.warn(`[i18n] backend messages fetch failed for ${fullId}; using embedded:`, error);
   }
-  return loadEmbedded(locale);
+  return embedded;
+}
+
+/** 深合并 override 到 base 之上（dev 特有 namespace 永不丢；空串/空白不覆盖）。 */
+function deepMerge(base: MessageTree, override: MessageTree): MessageTree {
+  const result: MessageTree = { ...base };
+  for (const key of Object.keys(override)) {
+    const o = override[key];
+    const b = result[key];
+    if (
+      o !== null && typeof o === 'object' && !Array.isArray(o) &&
+      b !== null && typeof b === 'object' && !Array.isArray(b)
+    ) {
+      result[key] = deepMerge(b as MessageTree, o as MessageTree);
+    } else if (typeof o === 'string') {
+      if (o.trim().length > 0) result[key] = o;
+    } else if (o !== undefined && o !== null) {
+      result[key] = o;
+    }
+  }
+  return result;
 }
