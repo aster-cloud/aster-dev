@@ -217,7 +217,9 @@ export default function AsterPlayground() {
 
       {resp && (
         <div className="mt-6">
-          {resp.error !== undefined ? (
+          {/* 后端成功响应是 {result, error: null}——用 != null 同时排除 null/undefined，
+              否则 `error: null !== undefined` 为 true 会误显 Error。 */}
+          {resp.error != null ? (
             <>
               <p className="text-sm font-semibold text-danger">{t('errorLabel')}</p>
               <pre className="mt-1 overflow-auto rounded-lg border border-danger-subtle bg-danger-subtle/40 p-3 font-mono text-sm text-fg">
