@@ -6,7 +6,8 @@ import { Play, Loader2, Share2, Check } from 'lucide-react';
 import { CodeEditor } from './code-editor';
 import { TracePanel, type DecisionTrace } from './trace-panel';
 import { templatesFor } from '@/lib/playground-templates';
-import { locales, localeNames, type Locale } from '@/i18n/config';
+import { localeNames, type Locale } from '@/i18n/config';
+import { useAvailableLocales } from '@/hooks/useAvailableLocales';
 
 /**
  * AsterPlayground 全功能版（ADR 0018 Phase 3）。
@@ -56,6 +57,10 @@ export default function AsterPlayground() {
   const t = useTranslations('playground');
   const uiLocale = useLocale() as Locale;
 
+  // 后端可用语言（compiled ∩ backend）：admin 软下线某语种后，它会从 /api/v1/lexicons
+  // 消失 → 源码语言下拉不再列该语种样例。fail-open：fetch 失败回退编译期全集。
+  const { available } = useAvailableLocales();
+
   // 源码语言（默认跟随界面 locale，可独立切换）。
   const [srcLocale, setSrcLocale] = useState<Locale>(uiLocale);
   const tmpls = useMemo(() => templatesFor(srcLocale), [srcLocale]);
@@ -86,6 +91,18 @@ export default function AsterPlayground() {
     setEntry(same.entry);
     setContext(same.context);
     setResp(null);
+  }
+
+  // 当前源码语言若不在后端可用集（admin 下线该语种，或界面 locale 本就被禁），
+  // 在 render 阶段就地纠正到首个可用语言（React 官方"render 期间调整 state"模式：
+  // 用上一次见到的 available 做守卫，避免无限循环；不放 effect 故无级联渲染）。
+  // fail-open：hook 在 fetch 未回/失败时返回编译期全集（含所有 locale），此时所有
+  // srcLocale 都在集内 → 不纠正、下拉显示全部，后端异常宁可多显示。
+  const [adjustedFor, setAdjustedFor] = useState<string>('');
+  const availKey = available.join(',');
+  if (available.length > 0 && !available.includes(srcLocale) && adjustedFor !== availKey) {
+    setAdjustedFor(availKey);
+    switchSrcLocale(available[0]);
   }
 
   function pickTemplate(id: string) {
@@ -171,7 +188,7 @@ export default function AsterPlayground() {
             onChange={(e) => switchSrcLocale(e.target.value as Locale)}
             className="rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-fg"
           >
-            {locales.map((l) => (
+            {available.map((l) => (
               <option key={l} value={l}>
                 {localeNames[l]}
               </option>
