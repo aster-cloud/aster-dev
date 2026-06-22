@@ -70,6 +70,7 @@
     "deployment": "部署",
     "editions": "版本对比",
     "examples": "示例",
-    "onThisPage": "本页目录"
+    "onThisPage": "本页目录",
+    "sectionsLabel": "章节"
   }
 }

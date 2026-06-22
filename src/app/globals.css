@@ -96,3 +96,19 @@ body {
   --tw-prose-quotes: var(--color-fg-muted);
   --tw-prose-borders: var(--color-border);
 }
+
+/*
+ * 移动端：prose 里的代码块长行横向滚动（而非撑破布局导致正文文字被切）。
+ * 配合 docs 布局网格主列的 min-w-0 一起治本：min-w-0 让 1fr 轨道可收缩，
+ * pre 横滚把不可断的长行限制在自身容器内。不对整个 prose 用 overflow-hidden
+ * （会裁掉 focus ring / 锚点 / 宽表格）。
+ */
+.prose pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* 长行内代码（如标识符/URL）允许换行，避免单 token 撑宽 */
+.prose :not(pre) > code {
+  overflow-wrap: anywhere;
+}
