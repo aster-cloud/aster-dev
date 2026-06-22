@@ -41,7 +41,7 @@ export function LanguageSwitcher() {
         aria-label="Switch language"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-2.5 text-sm text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border px-2.5 text-sm text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg sm:h-9 sm:min-h-0"
       >
         <Globe className="h-4 w-4" />
         <span>{localeNames[locale]}</span>

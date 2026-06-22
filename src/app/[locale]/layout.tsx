@@ -6,12 +6,21 @@ import { routing } from '@/i18n/routing';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { ThemeProvider } from '@/components/theme-provider';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
+
+/**
+ * 显式声明移动端 viewport：width=device-width + initialScale=1 确保跨设备一致缩放。
+ * **不**设 maximumScale/userScalable —— 禁用缩放会伤可访问性（低视力用户需放大）。
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 /*
  * 自托管品牌字体（与 aster-cloud 同款 next/font/google）：

@@ -70,6 +70,7 @@
     "deployment": "Deployment",
     "editions": "Editions",
     "examples": "Examples",
-    "onThisPage": "On this page"
+    "onThisPage": "On this page",
+    "sectionsLabel": "Sections"
   }
 }

@@ -3,6 +3,7 @@ import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ThemeToggle } from './theme-toggle';
 import { LanguageSwitcher } from './language-switcher';
+import { MobileNav } from './mobile-nav';
 import { Code2 } from 'lucide-react';
 
 /**
@@ -47,10 +48,12 @@ export async function SiteHeader() {
             target="_blank"
             rel="noreferrer"
             aria-label="GitHub"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg sm:h-9 sm:min-h-0 sm:w-9 sm:min-w-0"
           >
             <Code2 className="h-4 w-4" />
           </a>
+          {/* 移动端主导航：汉堡 + 抽屉（仅 <md 显示，nav label 由 server 翻译后传入） */}
+          <MobileNav nav={nav} />
         </div>
       </div>
     </header>
