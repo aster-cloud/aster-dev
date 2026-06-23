@@ -13,7 +13,8 @@
   "devSite": {
     "badge": "开源 · 双运行时 · 可回放",
     "heroName": "用你的语言写规则，写出可信任的决策。",
-    "heroText": "用自然语言——English、中文、Deutsch 或 हिन्दी——编写策略、流程与决策，在确定性、可审计的引擎上运行，每个决策都可回放。",
+    "heroText": "用自然语言——{languages}——编写策略、流程与决策，在确定性、可审计的引擎上运行，每个决策都可回放。",
+    "heroLanguagesConjunction": "或",
     "heroCodeHint": "真实的 Aster 源码——在演练场运行它。",
     "tryPlayground": "在演练场开始",
     "quickStart": "5 分钟快速上手",

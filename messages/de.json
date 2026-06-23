@@ -13,7 +13,8 @@
   "devSite": {
     "badge": "Open Source · Zwei Laufzeiten · Wiederholbar",
     "heroName": "Regeln in deiner Sprache. Entscheidungen, denen du vertraust.",
-    "heroText": "Schreibe Richtlinien, Workflows und Entscheidungen in natürlicher Sprache — English, 中文, Deutsch oder हिन्दी — und führe sie auf einer deterministischen, prüfbaren Engine aus, in der jede Entscheidung wiederholbar ist.",
+    "heroText": "Schreibe Richtlinien, Workflows und Entscheidungen in natürlicher Sprache — {languages} — und führe sie auf einer deterministischen, prüfbaren Engine aus, in der jede Entscheidung wiederholbar ist.",
+    "heroLanguagesConjunction": "oder",
     "heroCodeHint": "Echter Aster-Quelltext — führe ihn im Playground aus.",
     "tryPlayground": "Im Playground ausprobieren",
     "quickStart": "5-Minuten-Schnellstart",

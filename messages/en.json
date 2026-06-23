@@ -13,7 +13,8 @@
   "devSite": {
     "badge": "Open-source · Dual-runtime · Replayable",
     "heroName": "Rules in your language. Decisions you can trust.",
-    "heroText": "Write policies, workflows and decisions in plain English, 中文, Deutsch or हिन्दी — run them on a deterministic, auditable engine where every decision is replayable.",
+    "heroText": "Write policies, workflows and decisions in plain {languages} — run them on a deterministic, auditable engine where every decision is replayable.",
+    "heroLanguagesConjunction": "or",
     "heroCodeHint": "Real Aster source — run it in the Playground.",
     "tryPlayground": "Try in Playground",
     "quickStart": "5-Minute Quick Start",

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { Fraunces, Inter, JetBrains_Mono } from 'next/font/google';
 import { routing } from '@/i18n/routing';
+import { allLanguagesLabel } from '@/lib/hero-languages';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -39,9 +40,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'devSite' });
+  // heroText 现含 {languages} 占位符。SEO 描述是静态 SSG，无法探测后端可用性，
+  // 故用 compiled 全集（描述完整能力）。落地页的 <HeroText> 才按 backend 收敛。
+  const languages = allLanguagesLabel(t('heroLanguagesConjunction'));
+  const description = t('heroText', { languages });
   return {
     title: { default: `Aster Lang — ${t('heroName')}`, template: '%s · Aster Lang' },
-    description: t('heroText'),
+    description,
     alternates: {
       languages: Object.fromEntries(
         routing.locales.map((l) => [l, l === routing.defaultLocale ? '/' : `/${l}`]),
@@ -49,7 +54,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: `Aster Lang — ${t('heroName')}`,
-      description: t('heroText'),
+      description,
       locale,
       type: 'website',
     },

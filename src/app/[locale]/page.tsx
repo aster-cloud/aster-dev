@@ -1,6 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { CodeBlock } from '@/components/code-block';
+import { HeroText } from '@/components/hero-text';
 import { ArrowRight, GitCompareArrows, Languages, ScrollText } from 'lucide-react';
 
 const HERO_SAMPLE = `Module LoanApproval.
@@ -38,7 +39,10 @@ export default async function HomePage({
             <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight text-fg sm:text-5xl">
               {t('heroName')}
             </h1>
-            <p className="mt-4 text-lg text-fg-muted">{t('heroText')}</p>
+            {/* ★动态化★：heroText 里的语言列表（"…English, 中文, Deutsch or
+                हिन्दी…"）改由 client 组件按 compiled∩backend 实时拼接，管理员
+                在后端禁用某语言后这句即时收敛。fail-open 回退完整四语。 */}
+            <HeroText />
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/playground"
