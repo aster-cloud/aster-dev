@@ -9,13 +9,21 @@
 同一条规则，两种词法表，同一编译结果：
 
 ```aster
-Rule greet given name:
-  return "Hello, " followed by name.
+Module Pricing.
+
+Rule discountedPrice given amount as Int, produce Int:
+  If amount greater than 100
+    Return amount times 90 divided by 100.
+  Return amount.
 ```
 
 ```aster
-规则 问候 给定 名字：
-  返回 "你好，" 连接 名字。
+模块 定价。
+
+规则 折扣价格 给定 金额 作为 整数，产出 整数：
+  如果 金额 大于 100
+    返回 金额 乘以 90 除以 100。
+  返回 金额。
 ```
 
 编译器通过 `locale` / `lexicon` 参数得知用哪套词法表。它在降到中间表示前，把本地化关键词

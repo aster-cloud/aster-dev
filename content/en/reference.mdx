@@ -8,15 +8,17 @@ introduction; this page is the specification.
 
 Aster's surface grammar is defined per-locale by a **lexicon** (keyword set) over a
 shared core grammar. The English lexicon uses `Module`, `Rule`, `given`, `has`,
-`return`, `if`/`then`/`else`. Other locales translate the keywords; the core
-grammar and intermediate representation are identical.
+`Return` and `If`. Other locales translate the keywords; the core grammar and
+intermediate representation are identical.
 
-```aster
+```ebnf
 module      = "Module" Name "." declaration+ ;
 declaration = define | rule ;
 define      = "Define" Name "has" field ("," field)* "." ;
 rule        = "Rule" Name "given" params ("," "produce" Type)? ":" body ;
-ifExpr      = "if" condition ("then")? body ("else" body)? ;
+ifStmt      = "If" condition body ;
+body        = statement+ ;
+statement   = ifStmt | "Return" expression "." ;
 ```
 
 ## Type system
@@ -41,25 +43,33 @@ Aster provides four built-in primitive types plus user-defined structs. Types ar
 Any name introduced by a `Define` declaration becomes a valid type:
 
 ```aster
+Module Insurance.
+
 Define Policy has premium as Int, deductible as Int.
 
-Rule quote given age:
-  if age is less than 25
-    then return Policy with premium set to 500, deductible set to 1000
-  else return Policy with premium set to 300, deductible set to 500.
+Rule quote given age as Int, produce Policy:
+  If age is less than 25
+    Return Policy with premium set to 500, deductible set to 1000.
+  Return Policy with premium set to 300, deductible set to 500.
 ```
 
 ## Control flow
 
-Conditional logic uses `if … then … else …`. The first branch whose condition is
-`true` executes; its `return` produces the rule's value.
+Conditional logic uses `If … Return …`. Branches are evaluated top to bottom; the
+first whose condition is `true` returns and stops the rule. A trailing `Return`
+with no `If` is the default.
 
 ```aster
-Rule classify given score:
-  if score is at least 90 then return "excellent"
-  else if score is at least 70 then return "good"
-  else if score is at least 50 then return "average"
-  else return "poor".
+Module Grading.
+
+Rule classify given score as Int, produce Text:
+  If score is at least 90
+    Return "excellent".
+  If score is at least 70
+    Return "good".
+  If score is at least 50
+    Return "average".
+  Return "poor".
 ```
 
 Conditions compose with `and` / `or` rather than deep indentation where possible.
@@ -102,12 +112,6 @@ compile identically. Use whichever reads clearer.
 | `or` | OR | `tier is equal to "gold" or tier is equal to "platinum"` |
 
 `and` binds tighter than `or`, so `x or y and z` reads as `x or (y and z)`.
-
-### Text
-
-| Operator | Meaning | Example |
-| --- | --- | --- |
-| `followed by` | concatenation | `"Hello, " followed by name` |
 
 ## Evaluation
 

@@ -9,15 +9,18 @@ representation. This guide walks the core constructs.
 Every file is a **module** with one or more **rules**. Statements end with a period.
 
 ```aster
-Module Greeting.
+Module Pricing.
 
-Rule greet given name:
-  return "Hello, " followed by name.
+Rule discountedPrice given amount as Int, produce Int:
+  If amount greater than 100
+    Return amount times 90 divided by 100.
+  Return amount.
 ```
 
 - `Module <Name>.` declares the module.
 - `Rule <name> given <params>:` declares a rule (function) and its inputs.
-- The body is an expression that produces the rule's result.
+- Each statement ends with a period; the rule returns the value of its last
+  `Return`.
 
 ## Types
 
@@ -39,12 +42,13 @@ You rarely write types — they are inferred from literals and field access.
 Arithmetic, comparison and logic read in words:
 
 ```aster
-Rule score given a, b:
-  return a times 2 plus b.
+Module Underwriting.
 
-Rule eligible given applicant:
-  return applicant.age is at least 18
-    and applicant.income is greater than 30000.
+Rule score given a as Int, b as Int, produce Int:
+  Return a times 2 plus b.
+
+Rule eligible given age as Int, income as Int, produce Bool:
+  Return age is at least 18 and income is greater than 30000.
 ```
 
 Comparisons (`is at least`, `is greater than`, `is equal to`) and logic
@@ -52,13 +56,18 @@ Comparisons (`is at least`, `is greater than`, `is equal to`) and logic
 
 ## Rules & functions
 
-A rule maps inputs to a decision. Branch with `if … then … else …`:
+A rule maps inputs to a decision. Branch with `If … Return …`; the first matching
+branch wins, and a trailing `Return` acts as the default:
 
 ```aster
-Rule classify given amount:
-  if amount is greater than 10000 then return "large"
-  else if amount is greater than 1000 then return "medium"
-  else return "small".
+Module Tiering.
+
+Rule classify given amount as Int, produce Text:
+  If amount greater than 10000
+    Return "large".
+  If amount greater than 1000
+    Return "medium".
+  Return "small".
 ```
 
 ## Modules

@@ -15,10 +15,10 @@ A minimal policy:
 ```aster
 Module Pricing.
 
-Rule discountedPrice given amount, tier:
-  if tier is equal to "gold"
-    then return amount times 80 divided by 100
-  else return amount.
+Rule discountedPrice given amount as Int, tier as Text, produce Int:
+  If tier is equal to "gold"
+    Return amount times 80 divided by 100.
+  Return amount.
 ```
 
 ## Core properties
@@ -61,28 +61,28 @@ core is byte-identical:
 ```aster
 Module Pricing.
 
-Rule discountedPrice given amount:
-  if amount is greater than 100
-    then return amount times 90 divided by 100
-  else return amount.
+Rule discountedPrice given amount as Int, produce Int:
+  If amount greater than 100
+    Return amount times 90 divided by 100.
+  Return amount.
 ```
 
 ```aster
 模块 定价。
 
-规则 折扣价格 给定 金额：
+规则 折扣价格 给定 金额 作为 整数，产出 整数：
   如果 金额 大于 100
-    那么 返回 金额 乘以 90 除以 100
-  否则 返回 金额。
+    返回 金额 乘以 90 除以 100。
+  返回 金额。
 ```
 
 ```aster
 Modul Preisgestaltung.
 
-Regel rabattPreis gegeben betrag:
-  wenn betrag größer als 100
-    dann gib betrag mal 90 geteilt durch 100 zurück
-  sonst gib betrag zurück.
+Regel rabattPreis gegeben betrag als Ganzzahl, liefert Ganzzahl:
+  Wenn betrag größer als 100
+    Gib zurück betrag mal 90 geteilt durch 100.
+  Gib zurück betrag.
 ```
 
 Both the Browser API and REST API accept a `locale` parameter telling the compiler
