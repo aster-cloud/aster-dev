@@ -6,13 +6,16 @@ English (中文, Deutsch, हिन्दी), then run them on a deterministic,
 ## Your first rule
 
 ```aster
-Module Greeting.
+Module Pricing.
 
-Rule greet given name:
-  return "Hello, " followed by name.
+Rule discountedPrice given amount as Int, produce Int:
+  If amount greater than 100
+    Return amount times 90 divided by 100.
+  Return amount.
 ```
 
-Run it in the [Playground](/playground) — every decision is replayable.
+Give it `amount = 200` and the rule returns `180`. Run it in the
+[Playground](/playground) — every decision is replayable.
 
 ## Why Aster
 

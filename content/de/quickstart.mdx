@@ -7,13 +7,16 @@ deterministischen, prüfbaren Engine aus.
 ## Deine erste Regel
 
 ```aster
-Module Greeting.
+Module Pricing.
 
-Rule greet given name:
-  return "Hello, " followed by name.
+Rule discountedPrice given amount as Int, produce Int:
+  If amount greater than 100
+    Return amount times 90 divided by 100.
+  Return amount.
 ```
 
-Führe sie im [Playground](/playground) aus — jede Entscheidung ist wiederholbar.
+Mit `amount = 200` liefert die Regel `180`. Führe sie im [Playground](/playground)
+aus — jede Entscheidung ist wiederholbar.
 
 ## Warum Aster
 

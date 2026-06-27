@@ -17,10 +17,10 @@ Write the policy in the [Playground](/playground) or any editor.
 ```aster
 Module Pricing.
 
-Rule discountedPrice given amount, tier:
-  if tier is equal to "gold"
-    then return amount times 80 divided by 100
-  else return amount.
+Rule discountedPrice given amount as Int, tier as Text, produce Int:
+  If tier is equal to "gold"
+    Return amount times 80 divided by 100.
+  Return amount.
 ```
 
 ## 2. Validate locally

@@ -1,0 +1,28 @@
+name: CI
+
+# PR 质量门：typecheck + lint + test 在合并前跑。deploy.yml 只在 push 到 main 时
+# 触发（部署前再跑一次同样的门），所以这里补一个 pull_request 触发，让坏示例在
+# 合并前就被 src/content/cnl-examples.test.ts 拦截，而不是等到部署时。
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test

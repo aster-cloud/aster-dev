@@ -27,9 +27,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # 质量门：typecheck + lint + build 全过才部署。
+      # 质量门：typecheck + lint + test + build 全过才部署。
+      # test 含文档 CNL 示例验证器：任一 ```aster 块编译失败即拦截部署，
+      # 防止"演练场照抄文档却跑不起来"的回归。
       - run: pnpm typecheck
       - run: pnpm lint
+      - run: pnpm test
 
       # OpenNext build + deploy 到 Workers。
       - name: Build & Deploy (OpenNext → Workers)
