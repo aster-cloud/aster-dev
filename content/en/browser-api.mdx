@@ -12,6 +12,9 @@ npm install @aster-cloud/aster-lang-ts
 
 ## Imports
 
+The compiler/evaluator API lives in the **`/browser`** subpath (browser- and
+edge-safe — no Node-only dependencies). Import the lexicons from there too.
+
 ```js
 import {
   validateSyntaxWithSpan,
@@ -21,16 +24,42 @@ import {
   tokenize,
   generateInputValues,
   evaluate,
-} from '@aster-cloud/aster-lang-ts';
+  EN_US, ZH_CN, DE_DE, HI_IN,
+} from '@aster-cloud/aster-lang-ts/browser';
+```
+
+## Quick start (copy-paste, runs in Node or the browser)
+
+```js
+import { compile, evaluate, EN_US } from '@aster-cloud/aster-lang-ts/browser';
+
+const source = `Module pricing.
+
+Rule discountedPrice given amount as Int, produce Int:
+  If amount at least 100
+    Return amount minus 20.
+  Return amount.`;
+
+// 1. compile → Core IR
+const result = compile(source, { lexicon: EN_US });
+if (!result.success) {
+  console.error(result.diagnostics);
+} else {
+  // 2. evaluate a rule against an input context
+  const out = evaluate(result.core, 'discountedPrice', { amount: 200 });
+  console.log(out.value); // → 180
+}
 ```
 
 ## Lexicons
 
-Every function takes an optional `lexicon` / `locale` (default `en-US`). Pass
-`zh-CN`, `de-DE` or `hi-IN` to author in that language.
+Most functions take an optional `lexicon` (default `EN_US`). Pass `ZH_CN`,
+`DE_DE` or `HI_IN` (imported from `@aster-cloud/aster-lang-ts/browser`) to author
+in that language.
 
 ```js
-const result = compile(source, { locale: 'zh-CN' });
+import { compile, ZH_CN } from '@aster-cloud/aster-lang-ts/browser';
+const result = compile(source, { lexicon: ZH_CN });
 ```
 
 ## Core functions
@@ -47,16 +76,25 @@ const diags = validateSyntaxWithSpan(source);
 
 ### `compile(source, options?)`
 
-Lowers source to the core intermediate representation (IR).
+Lowers source to the Core IR. Returns a `CompileResult`:
 
 ```js
-const { ir, diagnostics } = compile(source, { locale: 'en-US' });
+const result = compile(source, { lexicon: EN_US });
+// result: { success: boolean, core?: Module, diagnostics?: Diagnostic[] }
+if (result.success) {
+  console.log(result.core); // the compiled Core IR module
+}
 ```
+
+> Note: the compiled module is `result.core` (the Core IR). `compile` does **not**
+> return an `ir` field.
+
+`options` (`CompileOptions`): `{ lexicon?, domain?, tenantId?, includeIntermediates? }`.
 
 ### `compileAndTypecheck(source, options?)`
 
 `compile` plus static type inference — catches type errors (e.g. comparing `Text` to
-`Int`) before evaluation.
+`Int`) before evaluation. Same `CompileResult` shape, with type diagnostics included.
 
 ### `extractSchema(source, options?)`
 
@@ -73,16 +111,21 @@ syntax highlighting.
 Generates plausible sample inputs from a rule's parameters — for quick "try it"
 affordances.
 
-### `evaluate(coreIR, functionName, context)`
+### `evaluate(core, functionName, context, options?)`
 
-Runs a compiled rule against an input context, returning a typed result (and,
-optionally, a decision trace).
+Runs a compiled rule against an input context. Takes the **`core`** module from
+`compile`, and returns an `EvalResult` — the result is in `.value`:
 
 ```js
-const { ir } = compile(source);
-const out = evaluate(ir, 'discountedPrice', { amount: 200, tier: 'gold' });
-// → 160
+const result = compile(source, { lexicon: EN_US });
+const out = evaluate(result.core, 'discountedPrice', { amount: 200 });
+// out: { success: boolean, value?: unknown, error?: string, ... }
+console.log(out.value); // → 180
 ```
+
+Pass `{ maxSteps }` as the 4th argument to cap evaluation steps (guards against
+runaway recursion). For a full decision trace, use the REST API's
+`evaluate-source?trace=true`.
 
 ## Browser API vs REST vs GraphQL
 
@@ -95,16 +138,23 @@ const out = evaluate(ir, 'discountedPrice', { amount: 200, tier: 'gold' });
 ## Typical workflow
 
 ```js
+import {
+  validateSyntaxWithSpan, compileAndTypecheck, extractSchema, evaluate, EN_US,
+} from '@aster-cloud/aster-lang-ts/browser';
+
 // 1. validate as the user types
 const diags = validateSyntaxWithSpan(source);
 if (diags.some((d) => d.severity === 'error')) return showErrors(diags);
 
 // 2. compile + typecheck
-const { ir } = compileAndTypecheck(source);
+const result = compileAndTypecheck(source, { lexicon: EN_US });
+if (!result.success) return showErrors(result.diagnostics);
 
-// 3. extract schema → build an input form
-const schema = extractSchema(source);
+// 3. extract schema → build an input form (parameter names + inferred types)
+const schema = extractSchema(source, { lexicon: EN_US });
+// schema.parameters → [{ name, type, ... }]
 
 // 4. evaluate with the user's inputs
-const result = evaluate(ir, schema.entry, inputs);
+const out = evaluate(result.core, 'discountedPrice', inputs);
+console.log(out.value);
 ```

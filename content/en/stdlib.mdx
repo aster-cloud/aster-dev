@@ -1,0 +1,174 @@
+# Standard Library
+
+The built-in functions Aster ships with. All are **deterministic** and run
+identically on both engines (TypeScript and JVM). Call them with parentheses,
+e.g. `List.sum(xs)`. Every example below compiles and runs as written.
+
+> Determinism: there is intentionally **no** `today()` / `now()` / `random()`.
+> The current date is passed in as an input (see `Date.*`). This is what makes a
+> decision replayable and the two engines byte-for-byte identical.
+
+## Text
+
+| Function | Signature | Result |
+| --- | --- | --- |
+| `Text.concat(a, b)` | `(Text, Text) → Text` | `a` followed by `b` (or just use `a plus b`) |
+| `Text.toUpper(t)` | `(Text) → Text` | uppercase |
+| `Text.toLower(t)` | `(Text) → Text` | lowercase |
+| `Text.length(t)` | `(Text) → Int` | character count |
+| `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | substring test |
+| `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | prefix test |
+| `Text.indexOf(t, sub)` | `(Text, Text) → Int` | first index, or `-1` |
+| `Text.split(t, delimiter)` | `(Text, Text) → List` | split into a list |
+| `Text.trim(t)` | `(Text) → Text` | strip leading/trailing whitespace |
+| `Text.substring(t, start[, end])` | `(Text, Int[, Int]) → Text` | slice `[start, end)` |
+| `Text.replace(t, target, replacement)` | `(Text, Text, Text) → Text` | replace occurrences |
+
+```aster
+Module text_demo.
+
+Rule shout given name as Text, produce Text:
+  Return Text.toUpper(name) plus "!".
+```
+
+## List
+
+| Function | Signature | Result |
+| --- | --- | --- |
+| `List.length(xs)` | `(List) → Int` | element count |
+| `List.get(xs, i)` | `(List, Int) → T` | element at index `i` (out of range → error) |
+| `List.contains(xs, v)` | `(List, T) → Bool` | membership test |
+| `List.append(xs, v)` | `(List, T) → List` | new list with `v` appended |
+| `List.concat(xs, ys)` | `(List, List) → List` | join two lists |
+| `List.slice(xs, start[, end])` | `(List, Int[, Int]) → List` | slice `[start, end)` |
+| `List.distinct(xs)` | `(List) → List` | dedupe, order-preserving |
+| `List.range(start, end)` | `(Int, Int) → List` | integers `[start, end)` |
+| `List.sum(xs)` | `(List) → Num` | sum (empty → 0) |
+| `List.min(xs)` / `List.max(xs)` | `(List) → Num` | min / max (empty → error) |
+| `List.sort(xs)` | `(List) → List` | ascending, stable |
+| `List.combinations(xs, k)` | `(List, Int) → List` | all `k`-element combinations (lexicographic) |
+
+```aster
+Module list_demo.
+
+Rule total given amounts as List, produce Int:
+  Return List.sum(amounts).
+```
+
+`List.combinations` is bounded for safety: at most 64 input elements, and the
+number of combinations capped (large inputs raise an error rather than hang).
+
+### Higher-order (lambda) list functions
+
+`List.map` / `List.filter` / `List.reduce` / `List.count` / `List.sortBy` /
+`List.minBy` / `List.maxBy` / `List.groupBy` take a function argument. Define the
+function as a named rule and pass it by name.
+
+```aster
+Module hof_demo.
+
+Rule increment given x as Int, produce Int:
+  Return x plus 1.
+
+Rule bumpAll given xs as List, produce List:
+  Return List.map(xs, increment).
+```
+
+## Map
+
+A `Map` maps string keys to values. All operations return a new map (immutable).
+
+| Function | Signature | Result |
+| --- | --- | --- |
+| `Map.empty()` | `() → Map` | empty map |
+| `Map.get(m, key)` | `(Map, Text) → T` | value, or `null` if absent |
+| `Map.put(m, key, value)` | `(Map, Text, T) → Map` | new map with the entry set |
+| `Map.remove(m, key)` | `(Map, Text) → Map` | new map without the key |
+| `Map.contains(m, key)` | `(Map, Text) → Bool` | key-present test |
+| `Map.keys(m)` | `(Map) → List` | all keys |
+| `Map.values(m)` | `(Map) → List` | all values |
+| `Map.size(m)` | `(Map) → Int` | entry count |
+
+```aster
+Module map_demo.
+
+Rule lookup given score as Int, produce Int:
+  Let table be Map.put(Map.empty(), "gold", score).
+  Return Map.get(table, "gold").
+```
+
+## Date
+
+Dates are represented as an integer number of days since 1970-01-01 (an
+"epoch-day"). Comparing or shifting dates is just integer arithmetic. There is no
+`today()` — pass the evaluation date in as an input.
+
+| Function | Signature | Result |
+| --- | --- | --- |
+| `Date.fromISO(iso)` | `(Text) → Int` | parse strict `YYYY-MM-DD` → epoch-day |
+| `Date.daysBetween(a, b)` | `(Int, Int) → Int` | `b - a` in days (may be negative) |
+| `Date.addDays(d, n)` | `(Int, Int) → Int` | shift by `n` days |
+| `Date.year(d)` / `Date.month(d)` / `Date.day(d)` | `(Int) → Int` | extract field |
+
+```aster
+Module date_demo.
+
+Rule ageInDays given birthday as Text, asOf as Text, produce Int:
+  Return Date.daysBetween(Date.fromISO(birthday), Date.fromISO(asOf)).
+```
+
+Errors: a malformed or out-of-range date raises `Date.InvalidISODate`; arithmetic
+that leaves the supported range (0001-01-01 … 9999-12-31) raises `Date.OutOfRange`.
+
+## Decimal
+
+Exact base-10 numbers for money and rates. Write a Decimal literal with an `m`
+suffix (`1.08m`). `+`, `-`, `*` are exact; division and rounding must be explicit.
+
+| Function | Signature | Result |
+| --- | --- | --- |
+| `Decimal.round(x, scale, mode)` | `(Decimal, Int, Text) → Decimal` | round to `scale` decimal places |
+| `Decimal.divide(x, y, scale, mode)` | `(Decimal, Decimal, Int, Text) → Decimal` | exact division then round |
+
+`scale` is `0…18`. `mode` is `"HALF_UP"`, `"HALF_EVEN"` (banker's), or `"DOWN"`
+(truncate) — identical to the JVM `RoundingMode` of the same name.
+
+```aster
+Module money_demo.
+
+Rule withTax given price as Decimal, produce Decimal:
+  Return Decimal.round(price times 1.08m, 2, "HALF_EVEN").
+```
+
+Mixing `Decimal` with a binary float (`Double`) is rejected at evaluation —
+promote `Int` to `Decimal` instead. `Decimal.divide` by zero raises an error.
+
+## Maybe / Option and Result
+
+Build optional values with `Some(x)` / `None`, and fallible values with `Ok(x)` /
+`Err(e)`. Inspect them with the helpers below (or with `Match`).
+
+| Function | Result |
+| --- | --- |
+| `Maybe.isSome(o)` / `Maybe.isNone(o)` | `Bool` |
+| `Maybe.withDefault(o, fallback)` | the value, or `fallback` if `None` |
+| `Maybe.unwrap(o)` | the value (raises on `None`) |
+| `Result.isOk(r)` / `Result.isErr(r)` | `Bool` |
+| `Result.unwrap(r)` / `Result.unwrapErr(r)` | the Ok value / the Err value |
+
+`Option.*` are aliases of `Maybe.*`.
+
+```aster
+Module maybe_demo.
+
+Rule scoreOrZero given raw as Int, produce Int:
+  Let maybeScore be Some(raw).
+  Return Maybe.withDefault(maybeScore, 0).
+```
+
+## Not available
+
+`Math.*` and real `IO.*` (file/network) are **not** part of the standard library —
+the runtime is sandboxed and deterministic by design. For arithmetic use the
+operators (`plus`, `minus`, `times`, `divided by`, `modulo`); for I/O, evaluate
+the rule from your application and do the I/O there.

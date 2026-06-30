@@ -34,7 +34,10 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
     },
     {
       title: t('reference'),
-      items: [{ href: '/docs/reference', label: t('reference') }],
+      items: [
+        { href: '/docs/stdlib', label: t('stdlib') },
+        { href: '/docs/reference', label: t('reference') },
+      ],
     },
     {
       title: t('tooling'),

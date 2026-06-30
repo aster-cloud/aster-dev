@@ -10,6 +10,7 @@ const SLUGS = [
   'overview',
   'language-guide',
   'lexicons',
+  'stdlib',
   'reference',
   'browser-api',
   'deployment',
