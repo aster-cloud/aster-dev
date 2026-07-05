@@ -63,10 +63,22 @@ export const SHERLOCK_LAYOUT: readonly LayoutSpan[] = [
   { canonical: '。', display: '。' },
 ];
 
-/** 案发线索场景（不同线索 → 不同真凶，展示真决策）。 */
-export const SHERLOCK_SCENES: ReadonlyArray<{ key: string; clues: Record<string, boolean> }> = [
-  { key: 'original', clues: { 铃绳通风口: true, 保险箱藏毒蛇: true, 唯继父可入密室: true, 姐姐临终呼斑点带子: true } },
-  { key: 'roomOnly', clues: { 铃绳通风口: false, 保险箱藏毒蛇: false, 唯继父可入密室: true, 姐姐临终呼斑点带子: true } },
-  { key: 'wordsOnly', clues: { 铃绳通风口: false, 保险箱藏毒蛇: false, 唯继父可入密室: false, 姐姐临终呼斑点带子: true } },
-  { key: 'insufficient', clues: { 铃绳通风口: false, 保险箱藏毒蛇: false, 唯继父可入密室: false, 姐姐临终呼斑点带子: false } },
+/**
+ * 探案台的四条线索。`id` 是稳定标识（给 i18n label + React key），`field` 是喂给引擎
+ * evaluate 的 clue 变量名（须与 CNL 规则里的中文别名逐字一致）。交互游戏让用户勾选任意
+ * 组合，实时把 { field: bool } 喂给同一条已编译规则，看真凶如何翻转。
+ */
+export const SHERLOCK_CLUES: ReadonlyArray<{ id: string; field: string }> = [
+  { id: 'bellRope', field: '铃绳通风口' },
+  { id: 'safeSnake', field: '保险箱藏毒蛇' },
+  { id: 'onlyStepfather', field: '唯继父可入密室' },
+  { id: 'dyingWords', field: '姐姐临终呼斑点带子' },
+];
+
+/** 预设线索组合（快捷按钮，一键填入探案台）。值按 SHERLOCK_CLUES 的 id 顺序排列。 */
+export const SHERLOCK_PRESETS: ReadonlyArray<{ key: string; on: readonly string[] }> = [
+  { key: 'original', on: ['bellRope', 'safeSnake', 'onlyStepfather', 'dyingWords'] },
+  { key: 'roomOnly', on: ['onlyStepfather'] },
+  { key: 'wordsOnly', on: ['dyingWords'] },
+  { key: 'insufficient', on: [] },
 ];

@@ -18,7 +18,6 @@ export async function SiteHeader() {
     { href: '/docs/language-guide', label: t('guide') },
     { href: '/docs/reference', label: t('reference') },
     { href: '/playground', label: t('playground') },
-    { href: '/demos', label: t('demos') },
   ];
 
   return (

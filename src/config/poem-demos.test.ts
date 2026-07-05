@@ -8,7 +8,13 @@ import { describe, it, expect } from 'vitest';
 import { compile, evaluate } from '@aster-cloud/aster-lang-ts/browser';
 import { toCanonical, toDisplay } from '../lib/layout-map';
 import { JINGYESI_LAYOUT, JINGYESI_LEXICON, JINGYESI_DOMAIN, registerJingyesiVocab } from './jingyesi';
-import { SHERLOCK_LAYOUT, SHERLOCK_LEXICON, SHERLOCK_DOMAIN, SHERLOCK_SCENES } from './sherlock';
+import { SHERLOCK_LAYOUT, SHERLOCK_LEXICON, SHERLOCK_DOMAIN, SHERLOCK_CLUES, SHERLOCK_PRESETS } from './sherlock';
+
+/** 把预设的 on(id 列表) 转成喂给引擎的 clue context {field: bool}——与探案台组件同一路径。 */
+function presetContext(key: string): Record<string, boolean> {
+  const on = new Set(SHERLOCK_PRESETS.find((p) => p.key === key)!.on);
+  return Object.fromEntries(SHERLOCK_CLUES.map((c) => [c.field, on.has(c.id)]));
+}
 
 describe('静夜思 demo（LayoutMap）', () => {
   it('canonical 编译运行 → 输出诗名「静夜思」（字面量宏）', () => {
@@ -33,18 +39,18 @@ describe('斑点带子案 demo（LayoutMap）', () => {
     expect(c.core!.decls[0].name).toBe('揪出真凶');
   });
 
-  it('真决策：不同线索导出不同结论', () => {
+  it('真决策：不同线索组合导出不同真凶（探案台预设路径）', () => {
     const c = compile(toCanonical(SHERLOCK_LAYOUT), { lexicon: SHERLOCK_LEXICON, domain: SHERLOCK_DOMAIN, tenantId: SHERLOCK_DOMAIN });
     const rule = c.core!.decls[0].name;
     const out = (key: string) => {
-      const s = SHERLOCK_SCENES.find((x) => x.key === key)!;
-      const ev = evaluate(c.core!, rule, s.clues);
+      const ev = evaluate(c.core!, rule, presetContext(key));
       return ev.success ? String(ev.value) : `fail:${ev.error}`;
     };
     expect(out('original')).toBe('继父罗伊洛特');
+    expect(out('roomOnly')).toBe('继父罗伊洛特');
     expect(out('wordsOnly')).toBe('尚需查证：谁豢养毒蛇');
     expect(out('insufficient')).toBe('疑点未清，尚难定论');
-    // 三种不同结论 → 真决策
+    // 至少三种不同结论 → 线索真的驱动决策翻转
     expect(new Set([out('original'), out('wordsOnly'), out('insufficient')]).size).toBe(3);
   });
 
