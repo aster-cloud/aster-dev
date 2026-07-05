@@ -1,0 +1,72 @@
+/**
+ * 《斑点带子案》demo 配置——「源码即推理」。
+ *
+ * 福尔摩斯的推断写成 Aster 决策规则：侦探叙事词做关键词别名（ADR 0022），inline-if 决策链。
+ * 喂入案发线索，运行输出真凶。
+ *
+ * LayoutMap（显示/编译解耦）：canonical（缩进决策链 + 规范 then/else，编译真源）↔ display
+ * （福尔摩斯推理独白，then/else 渲染成「——则真凶必是」等叙事连接词）。编译走 canonical。
+ */
+import { ZH_CN } from '@aster-cloud/aster-lang-ts/lexicons/zh-CN';
+import type { Lexicon } from '@aster-cloud/aster-lang-ts/lexicons/types';
+import { SemanticTokenKind as K } from '@aster-cloud/aster-lang-ts/token-kind';
+import type { LayoutSpan } from '@/lib/layout-map';
+
+export const SHERLOCK_DOMAIN = 'sherlock';
+
+export const SHERLOCK_LEXICON: Lexicon = {
+  ...ZH_CN,
+  id: SHERLOCK_DOMAIN,
+  name: '福尔摩斯',
+  aliases: {
+    [K.MODULE_DECL]: ['探案笔记'],
+    [K.FUNC_TO]: ['推断'],
+    [K.FUNC_GIVEN]: ['已知'],
+    [K.IF]: ['若'],
+    [K.RETURN]: ['凶手即'],
+    [K.AND]: ['且'],
+  },
+};
+
+/**
+ * LayoutMap：canonical（`探案笔记`/`推断`别名 + inline-if 缩进决策链 + 规范 then/else）↔
+ * display（福尔摩斯推理独白，then→「——则真凶必是」、else 若→「纵此/假使」等）。
+ * then/else 是 inline-if 连接词、非 SemanticTokenKind 无法别名，canonical 保留规范拼写、
+ * 由 display 渲染成叙事连接词。toCanonical(SHERLOCK_LAYOUT) 即编译真源。
+ */
+export const SHERLOCK_LAYOUT: readonly LayoutSpan[] = [
+  { canonical: '探案笔记 ', display: '《' },
+  { text: '斑点带子案' },
+  { canonical: '。\n\n', display: '》\n\n' },
+  { canonical: '推断 揪出真凶 已知 ', display: '要揪出真凶，已知这几处疑点：' },
+  { text: '铃绳通风口' },
+  { canonical: '，', display: '、' },
+  { text: '保险箱藏毒蛇' },
+  { canonical: '，', display: '、' },
+  { text: '唯继父可入密室' },
+  { canonical: '，', display: '、' },
+  { text: '姐姐临终呼斑点带子' },
+  { canonical: '，产出：\n  ', display: '。\n\n  ' },
+  { text: '若 铃绳通风口 且 保险箱藏毒蛇' },
+  { canonical: ' then 凶手即 ', display: '——则真凶必是' },
+  { text: '"继父罗伊洛特"' },
+  { canonical: '\n  else 若 ', display: '。\n  纵此不足为凭，然' },
+  { text: '唯继父可入密室' },
+  { canonical: ' then 凶手即 ', display: '，亦足以断定凶手乃' },
+  { text: '"继父罗伊洛特"' },
+  { canonical: '\n  else 若 ', display: '。\n  假使仅凭' },
+  { text: '姐姐临终呼斑点带子' },
+  { canonical: ' then 凶手即 ', display: '一句遗言，则只能锁定' },
+  { text: '"尚需查证：谁豢养毒蛇"' },
+  { canonical: '\n  else 凶手即 ', display: '。\n  否则，只得承认' },
+  { text: '"疑点未清，尚难定论"' },
+  { canonical: '。', display: '。' },
+];
+
+/** 案发线索场景（不同线索 → 不同真凶，展示真决策）。 */
+export const SHERLOCK_SCENES: ReadonlyArray<{ key: string; clues: Record<string, boolean> }> = [
+  { key: 'original', clues: { 铃绳通风口: true, 保险箱藏毒蛇: true, 唯继父可入密室: true, 姐姐临终呼斑点带子: true } },
+  { key: 'roomOnly', clues: { 铃绳通风口: false, 保险箱藏毒蛇: false, 唯继父可入密室: true, 姐姐临终呼斑点带子: true } },
+  { key: 'wordsOnly', clues: { 铃绳通风口: false, 保险箱藏毒蛇: false, 唯继父可入密室: false, 姐姐临终呼斑点带子: true } },
+  { key: 'insufficient', clues: { 铃绳通风口: false, 保险箱藏毒蛇: false, 唯继父可入密室: false, 姐姐临终呼斑点带子: false } },
+];

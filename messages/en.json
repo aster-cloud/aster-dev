@@ -3,12 +3,14 @@
     "docs": "Docs",
     "guide": "Language Guide",
     "reference": "Reference",
-    "playground": "Playground"
+    "playground": "Playground",
+    "demos": "Demos"
   },
   "devFooter": {
     "docs": "Documentation",
     "playground": "Playground",
-    "cloud": "Aster Cloud"
+    "cloud": "Aster Cloud",
+    "demos": "Demos"
   },
   "devSite": {
     "badge": "Open-source · Dual-runtime · Replayable",
@@ -81,7 +83,7 @@
     },
     "eyebrow": "Demos",
     "title": "See Aster in action",
-    "subtitle": "Three live demos — each runs the real engine in your browser, no signup.",
+    "subtitle": "Four live demos — each runs the real engine in your browser, no signup.",
     "enter": "Open demo",
     "cards": {
       "kitten": {
@@ -92,9 +94,13 @@
         "title": "Poker showdown 🃏",
         "description": "A poker-vocabulary rule decides the winning hand at a self-dealing table — and awards the trophy. Same provable engine, just dealt in cards."
       },
-      "poem": {
-        "title": "The source is a poem 📜",
-        "description": "A poem whose source code reads as verse — and still compiles and runs on the same engine. Keyword aliases + a paren-free call hide every trace of code. (A different poem per site language.)"
+      "jingyesi": {
+        "title": "Quiet Night Thoughts",
+        "description": "A Li Bai poem that is runnable Aster — outputs the poem’s title."
+      },
+      "sherlock": {
+        "title": "The Speckled Band",
+        "description": "Sherlock’s deduction as a decision rule — feed clues, get the culprit."
       }
     }
   },
@@ -194,30 +200,43 @@
     "footer": "Silly vocabulary, serious engine: this cat rule compiled and ran on the same Aster Lang runtime as a credit policy. Your words — even these — become an auditable decision.",
     "idleHint": "The cat is doing its own thing. Pick a scene below to see how it reacts."
   },
-  "poemPage": {
+  "jingyesiPage": {
     "seo": {
-      "title": "Source as Poem — Aster demos",
-      "description": "Natural-language text that is also runnable Aster: Li Bai’s poem outputs its title; a Sherlock deduction outputs the culprit."
+      "title": "Quiet Night Thoughts — Aster demo",
+      "description": "Li Bai’s poem is Aster source: run it and it outputs the poem’s title. Display layout decoupled from compile source via LayoutMap."
     },
-    "eyebrow": "Fun demo",
-    "title": "Source as poem, source as deduction",
-    "subtitle": "The same text reads as a poem or a detective’s reasoning — and compiles to a real Aster program. Keyword aliases + literal macros, all at canonicalize time.",
+    "eyebrow": "Source as poem",
+    "title": "Quiet Night Thoughts — Li Bai",
+    "subtitle": "The whole poem, in original word order, is runnable Aster. Two layouts of the same program — display reads as the poem, canonical is what compiles.",
+    "displayView": "Display view",
+    "displayHint": "Li Bai’s poem, its natural four lines.",
+    "canonicalView": "Compile view",
+    "canonicalHint": "The canonical source (what actually compiles) — layout bent to Aster’s grammar.",
+    "decoupleNote": "Same program, two layouts — display frees the poem, compile runs the canonical source (LayoutMap).",
     "compileError": "Compile error",
     "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
-    "jingyesi": {
-      "title": "Quiet Night Thoughts — Li Bai",
-      "description": "The whole poem, read in original word order, is Aster source. Run it and it outputs the poem’s title.",
-      "runLabel": "Run the poem-as-program, it outputs the poem’s name:"
+    "runLabel": "Run the poem-as-program, it outputs the poem’s name:"
+  },
+  "sherlockPage": {
+    "seo": {
+      "title": "The Speckled Band — Aster demo",
+      "description": "Sherlock’s deduction as an Aster decision rule: feed clues, it outputs the culprit. Display reasoning decoupled from compile source via LayoutMap."
     },
-    "sherlock": {
-      "title": "The Speckled Band — Sherlock’s deduction",
-      "description": "Sherlock’s reasoning written as an Aster decision rule. Feed it the case clues; it deduces the culprit.",
-      "scenes": {
-        "original": "Original case (bell-rope + safe snake)",
-        "roomOnly": "Room-access clue only",
-        "wordsOnly": "Dying words only",
-        "insufficient": "Insufficient clues"
-      }
+    "eyebrow": "Source as deduction",
+    "title": "The Speckled Band — Sherlock’s deduction",
+    "subtitle": "Sherlock’s reasoning is a runnable Aster decision rule. Two layouts — display reads as his monologue, canonical is the indented decision chain that compiles.",
+    "displayView": "Display view",
+    "displayHint": "Sherlock’s reasoning, as a flowing monologue.",
+    "canonicalView": "Compile view",
+    "canonicalHint": "The canonical source (what compiles) — inline-if decision chain with then/else.",
+    "decoupleNote": "Same rule, two layouts — display reads as reasoning, compile runs the canonical chain (LayoutMap).",
+    "compileError": "Compile error",
+    "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
+    "scenes": {
+      "original": "Original case (bell-rope + safe snake)",
+      "roomOnly": "Room-access clue only",
+      "wordsOnly": "Dying words only",
+      "insufficient": "Insufficient clues"
     }
   }
 }

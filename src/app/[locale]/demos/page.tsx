@@ -26,11 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /** demo 卡片元数据：href 指向子路由，文案走 i18n（demosIndex.cards.<key>）。
- * 只列 aster-lang.dev 实际存在的 demo（poker/kitten/poem）——credit/vocab 是 cloud 专属，已裁剪。 */
+ * 只列 aster-lang.dev 实际存在的 demo——credit/vocab 是 cloud 专属，已裁剪；
+ * 「源码即诗/推理」拆成独立的 jingyesi（静夜思）+ sherlock（斑点带子案）两个 demo。 */
 const DEMO_CARDS = [
   { key: 'kitten', href: '/demos/kitten', emoji: '🐱' },
   { key: 'poker', href: '/demos/poker', emoji: '🃏' },
-  { key: 'poem', href: '/demos/poem', emoji: '📜' },
+  { key: 'jingyesi', href: '/demos/jingyesi', emoji: '🌕' },
+  { key: 'sherlock', href: '/demos/sherlock', emoji: '🔍' },
 ] as const;
 
 export default async function DemosIndexPage({ params }: Props) {
