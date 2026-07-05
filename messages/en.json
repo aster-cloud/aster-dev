@@ -226,18 +226,30 @@
     "title": "The Speckled Band — Sherlock’s deduction",
     "subtitle": "Sherlock’s reasoning is a runnable Aster decision rule. Two layouts — display reads as his monologue, canonical is the indented decision chain that compiles.",
     "displayView": "Display view",
-    "displayHint": "Sherlock’s reasoning, as a flowing monologue.",
-    "canonicalView": "Compile view",
-    "canonicalHint": "The canonical source (what compiles) — inline-if decision chain with then/else.",
+    "displayHint": "Holmes's reasoning, a flowing deductive monologue.",
+    "canonicalView": "Compiled view",
+    "canonicalHint": "The real compiled source — an inline-if decision chain with then/else.",
     "decoupleNote": "Same rule, two layouts — display reads as reasoning, compile runs the canonical chain (LayoutMap).",
     "compileError": "Compile error",
     "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
-    "scenes": {
-      "original": "Original case (bell-rope + safe snake)",
-      "roomOnly": "Room-access clue only",
+    "boardTitle": "Deduction board",
+    "boardHint": "Tick the clues found at the crime scene — Holmes's rule re-deduces the culprit in real time. The rule is compiled once; changing clues re-runs the decision instantly.",
+    "clues": {
+      "bellRope": "A dummy bell-rope leads to the ventilator",
+      "safeSnake": "A venomous snake is kept in the safe",
+      "onlyStepfather": "Only the stepfather can enter the sealed room",
+      "dyingWords": "The sister’s dying words: “the speckled band”"
+    },
+    "verdictLabel": "Holmes's verdict",
+    "presetsLabel": "Try these clue combinations:",
+    "presets": {
+      "original": "The full case",
+      "roomOnly": "Sealed-room clue only",
       "wordsOnly": "Dying words only",
-      "insufficient": "Insufficient clues"
-    }
+      "insufficient": "No clues at all"
+    },
+    "clearAll": "Clear clues",
+    "ruleTitle": "The rule itself"
   },
   "playgroundDemos": {
     "eyebrow": "Explore",

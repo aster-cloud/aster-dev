@@ -232,12 +232,24 @@
     "decoupleNote": "同一规则两种排版——显示读如推理，编译走 canonical 决策链（LayoutMap）。",
     "compileError": "编译错误",
     "compiledTo": "编译成模块「{module}」·规则「{rule}」",
-    "scenes": {
-      "original": "原案（铃绳直通通风口 + 保险箱藏毒蛇）",
+    "boardTitle": "探案台",
+    "boardHint": "勾选案发现场的线索，福尔摩斯的规则会实时重新推断真凶。规则已编译一次，改动线索即刻重跑决策。",
+    "clues": {
+      "bellRope": "假铃绳直通通风口",
+      "safeSnake": "保险箱里藏着毒蛇",
+      "onlyStepfather": "唯继父能进入密室",
+      "dyingWords": "姐姐临终呼喊「斑点带子」"
+    },
+    "verdictLabel": "福尔摩斯的判决",
+    "presetsLabel": "试试这些线索组合：",
+    "presets": {
+      "original": "原案（全部线索）",
       "roomOnly": "仅密室线索",
-      "wordsOnly": "仅遗言线索",
-      "insufficient": "线索不足"
-    }
+      "wordsOnly": "仅遗言",
+      "insufficient": "毫无线索"
+    },
+    "clearAll": "清空线索",
+    "ruleTitle": "这条规则本身"
   },
   "playgroundDemos": {
     "eyebrow": "探索",

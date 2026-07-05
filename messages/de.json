@@ -225,19 +225,31 @@
     "eyebrow": "Quelltext als Deduktion",
     "title": "Das gefleckte Band — Sherlocks Deduktion",
     "subtitle": "Sherlocks Argumentation ist eine lauffähige Aster-Entscheidungsregel. Zwei Layouts — Anzeige liest sich als Monolog, Canonical ist die eingerückte Entscheidungskette.",
-    "displayView": "Anzeige",
-    "displayHint": "Sherlocks Argumentation als fließender Monolog.",
-    "canonicalView": "Kompilier-Ansicht",
-    "canonicalHint": "Der kanonische Quelltext (was kompiliert) — inline-if-Entscheidungskette mit then/else.",
+    "displayView": "Anzeige-Ansicht",
+    "displayHint": "Holmes’ Argumentation, ein fließender deduktiver Monolog.",
+    "canonicalView": "Kompilierte Ansicht",
+    "canonicalHint": "Der echte kompilierte Quelltext — eine Inline-if-Entscheidungskette mit then/else.",
     "decoupleNote": "Dieselbe Regel, zwei Layouts — Anzeige liest sich als Argumentation, kompiliert wird die kanonische Kette (LayoutMap).",
     "compileError": "Kompilierfehler",
     "compiledTo": "Kompiliert zu Modul 「{module}」 · Regel 「{rule}」",
-    "scenes": {
-      "original": "Originalfall (Klingelseil + Schlange im Safe)",
-      "roomOnly": "Nur Raumzugangs-Hinweis",
-      "wordsOnly": "Nur letzte Worte",
-      "insufficient": "Unzureichende Hinweise"
-    }
+    "boardTitle": "Ermittlungstafel",
+    "boardHint": "Kreuze die am Tatort gefundenen Hinweise an — Holmes’ Regel ermittelt den Täter in Echtzeit neu. Die Regel wird einmal kompiliert; das Ändern der Hinweise führt die Entscheidung sofort erneut aus.",
+    "clues": {
+      "bellRope": "Ein falscher Klingelzug führt zum Lüftungsschacht",
+      "safeSnake": "Im Safe wird eine Giftschlange gehalten",
+      "onlyStepfather": "Nur der Stiefvater kann den versiegelten Raum betreten",
+      "dyingWords": "Die letzten Worte der Schwester: „das gefleckte Band“"
+    },
+    "verdictLabel": "Holmes’ Urteil",
+    "presetsLabel": "Probiere diese Hinweis-Kombinationen:",
+    "presets": {
+      "original": "Der ganze Fall",
+      "roomOnly": "Nur der Raum-Hinweis",
+      "wordsOnly": "Nur die letzten Worte",
+      "insufficient": "Gar keine Hinweise"
+    },
+    "clearAll": "Hinweise löschen",
+    "ruleTitle": "Die Regel selbst"
   },
   "playgroundDemos": {
     "eyebrow": "Entdecken",
