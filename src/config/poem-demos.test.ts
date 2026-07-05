@@ -39,6 +39,18 @@ describe('斑点带子案 demo（LayoutMap）', () => {
     expect(c.core!.decls[0].name).toBe('揪出真凶');
   });
 
+  it('canonical 的 else 连接词已中文化为「否则」（走 OTHERWISE 语义词），then 仍英文', () => {
+    const canonical = toCanonical(SHERLOCK_LAYOUT);
+    // else 用中文「否则」（zh-CN 词法包把 OTHERWISE 映射成「否则」，inline-if 接受 otherwise 作 else 同义词）。
+    expect(canonical.includes('否则')).toBe(true);
+    expect(/\belse\b/.test(canonical)).toBe(false);
+    // then 无对应语义词、两引擎硬编码英文，故保留英文。
+    expect(canonical.includes(' then ')).toBe(true);
+    // 中文 else 的 canonical 仍能真编译真运行（回归防护：防 OTHERWISE 映射被移除）。
+    const c = compile(canonical, { lexicon: SHERLOCK_LEXICON, domain: SHERLOCK_DOMAIN, tenantId: SHERLOCK_DOMAIN });
+    expect(c.success, JSON.stringify(c.parseErrors)).toBe(true);
+  });
+
   it('真决策：不同线索组合导出不同真凶（探案台预设路径）', () => {
     const c = compile(toCanonical(SHERLOCK_LAYOUT), { lexicon: SHERLOCK_LEXICON, domain: SHERLOCK_DOMAIN, tenantId: SHERLOCK_DOMAIN });
     const rule = c.core!.decls[0].name;

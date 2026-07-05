@@ -4,8 +4,8 @@
  * 福尔摩斯的推断写成 Aster 决策规则：侦探叙事词做关键词别名（ADR 0022），inline-if 决策链。
  * 喂入案发线索，运行输出真凶。
  *
- * LayoutMap（显示/编译解耦）：canonical（缩进决策链 + 规范 then/else，编译真源）↔ display
- * （福尔摩斯推理独白，then/else 渲染成「——则真凶必是」等叙事连接词）。编译走 canonical。
+ * LayoutMap（显示/编译解耦）：canonical（缩进决策链 + 连接词 then/否则，编译真源）↔ display
+ * （福尔摩斯推理独白，then/否则 渲染成「——则真凶必是」等叙事连接词）。编译走 canonical。
  */
 import { ZH_CN } from '@aster-cloud/aster-lang-ts/lexicons/zh-CN';
 import type { Lexicon } from '@aster-cloud/aster-lang-ts/lexicons/types';
@@ -29,10 +29,15 @@ export const SHERLOCK_LEXICON: Lexicon = {
 };
 
 /**
- * LayoutMap：canonical（`探案笔记`/`推断`别名 + inline-if 缩进决策链 + 规范 then/else）↔
- * display（福尔摩斯推理独白，then→「——则真凶必是」、else 若→「纵此/假使」等）。
- * then/else 是 inline-if 连接词、非 SemanticTokenKind 无法别名，canonical 保留规范拼写、
- * 由 display 渲染成叙事连接词。toCanonical(SHERLOCK_LAYOUT) 即编译真源。
+ * LayoutMap：canonical（`探案笔记`/`推断`别名 + inline-if 缩进决策链 + 连接词 then/否则）↔
+ * display（福尔摩斯推理独白，then→「——则真凶必是」、否则 若→「纵此/假使」等）。
+ *
+ * 连接词说明（inline-if）：
+ * - `否则`（else）：走已有的 OTHERWISE 语义词——两个引擎的 inline-if 都接受 `otherwise` 作
+ *   else 同义词，zh-CN 词法包已把 OTHERWISE 映射成「否则」，故 canonical 直接用中文「否则」。
+ * - `then`：无对应 SemanticTokenKind，两个引擎都硬编码英文匹配（TS isKeyword('then')、Java
+ *   AsterLexer THEN 硬 token），无法别名，故 canonical 保留英文 `then`（中文化需改语言引擎）。
+ * display 把两者都渲染成叙事连接词。toCanonical(SHERLOCK_LAYOUT) 即编译真源。
  */
 export const SHERLOCK_LAYOUT: readonly LayoutSpan[] = [
   { canonical: '探案笔记 ', display: '《' },
@@ -50,15 +55,15 @@ export const SHERLOCK_LAYOUT: readonly LayoutSpan[] = [
   { text: '若 铃绳通风口 且 保险箱藏毒蛇' },
   { canonical: ' then 凶手即 ', display: '——则真凶必是' },
   { text: '"继父罗伊洛特"' },
-  { canonical: '\n  else 若 ', display: '。\n  纵此不足为凭，然' },
+  { canonical: '\n  否则 若 ', display: '。\n  纵此不足为凭，然' },
   { text: '唯继父可入密室' },
   { canonical: ' then 凶手即 ', display: '，亦足以断定凶手乃' },
   { text: '"继父罗伊洛特"' },
-  { canonical: '\n  else 若 ', display: '。\n  假使仅凭' },
+  { canonical: '\n  否则 若 ', display: '。\n  假使仅凭' },
   { text: '姐姐临终呼斑点带子' },
   { canonical: ' then 凶手即 ', display: '一句遗言，则只能锁定' },
   { text: '"尚需查证：谁豢养毒蛇"' },
-  { canonical: '\n  else 凶手即 ', display: '。\n  否则，只得承认' },
+  { canonical: '\n  否则 凶手即 ', display: '。\n  否则，只得承认' },
   { text: '"疑点未清，尚难定论"' },
   { canonical: '。', display: '。' },
 ];
