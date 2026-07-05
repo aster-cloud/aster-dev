@@ -228,14 +228,14 @@
     "displayView": "显示视图",
     "displayHint": "福尔摩斯的推理，连贯的推断独白。",
     "canonicalView": "编译视图",
-    "canonicalHint": "编译真源（真正编译的那份）——inline-if 决策链，含 then/else。",
+    "canonicalHint": "编译真源（真正编译的那份）——inline-if 决策链，含 then/否则。",
     "decoupleNote": "同一规则两种排版——显示读如推理，编译走 canonical 决策链（LayoutMap）。",
     "compileError": "编译错误",
     "compiledTo": "编译成模块「{module}」·规则「{rule}」",
     "boardTitle": "探案台",
     "boardHint": "勾选案发现场的线索，福尔摩斯的规则会实时重新推断真凶。规则已编译一次，改动线索即刻重跑决策。",
     "clues": {
-      "bellRope": "假铃绳直通通风口",
+      "bellRope": "床头假铃绳连着通风口",
       "safeSnake": "保险箱里藏着毒蛇",
       "onlyStepfather": "唯继父能进入密室",
       "dyingWords": "姐姐临终呼喊「斑点带子」"
