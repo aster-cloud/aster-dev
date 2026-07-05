@@ -14,5 +14,151 @@
     "tryPlayground": "प्लेग्राउंड में आज़माएँ",
     "quickStart": "5-मिनट क्विक स्टार्ट",
     "choosePath": "अपना रास्ता चुनें"
+  },
+  "demosIndex": {
+    "seo": {
+      "title": "डेमो — Aster Lang",
+      "description": "Interactive demos: a playful cat-mood engine, a Texas hold’em showdown judge, and source-as-poem/deduction — all run the real engine in your browser."
+    },
+    "eyebrow": "डेमो",
+    "title": "Aster को क्रिया में देखें",
+    "subtitle": "Three live demos — each runs the real engine in your browser, no signup.",
+    "enter": "डेमो खोलें",
+    "cards": {
+      "kitten": {
+        "title": "कैट-मूड इंजन 🐱",
+        "description": "एक मज़ेदार: एक काव्यात्मक बिल्ली-शब्दावली नियम एक छोटे हाथ से बनाए बिल्ली एनिमेशन को चलाता है। प्रमाण कि Aster नियम सामान्य भाषा की तरह पढ़े जाते हैं।"
+      },
+      "poker": {
+        "title": "पोकर शोडाउन 🃏",
+        "description": "एक पोकर-शब्दावली नियम स्वयं-वितरित मेज़ पर विजयी हाथ तय करता है — और ट्रॉफी देता है। क्रेडिट डेमो जैसा ही प्रमाणयोग्य इंजन, बस पत्तों में।"
+      },
+      "poem": {
+        "title": "स्रोत ही एक कविता है 📜",
+        "description": "एक रात-कविता जिसकी हर पंक्ति Aster कोड है — कोई स्ट्रिंग नहीं। इसे चलाना पंक्तियाँ छापना नहीं; यह हर पंक्ति को निष्पादित कर एक मान गणना करता है। 中文 / Deutsch / हिन्दी में।"
+      }
+    }
+  },
+  "pokerPage": {
+    "seo": {
+      "title": "पोकर शोडाउन — Aster Lang",
+      "description": "एक पोकर-शब्दावली नियम स्वयं-वितरित मेज़ पर विजयी हाथ तय करता है। असली इंजन आपके ब्राउज़र में चलता है; विजेता को ट्रॉफी मिलती है।"
+    },
+    "eyebrow": "मज़ेदार डेमो",
+    "title": "पोकर शोडाउन इंजन 🃏",
+    "subtitle": "पोकर शब्दों में लिखा एक नियम तय करता है कौन जीता — क्रेडिट डेमो जैसा ही प्रमाणयोग्य इंजन, बस पत्तों में। मेज़ स्वयं पत्ते बाँटती है, लूप में।",
+    "player1": "खिलाड़ी 1",
+    "player2": "खिलाड़ी 2",
+    "phases": {
+      "shuffling": "फेंटा जा रहा है…",
+      "dealing": "9 पत्ते बाँटे जा रहे हैं…",
+      "revealing": "पत्ते मेज़ पर",
+      "judging": "इंजन विजेता तय कर रहा है…",
+      "winner": "{player} ने पॉट जीता 🏆",
+      "tie": "बँटा पॉट — टाई"
+    },
+    "controls": {
+      "pause": "रोकें",
+      "resume": "जारी रखें",
+      "deal": "अगला बाँटें"
+    },
+    "ruleTitle": "विजेता तय करने वाला नियम",
+    "legendTerm": "हाइलाइट किए",
+    "legend": "शब्द पोकर डोमेन शब्दावली हैं, जो इंजन में डाले जाते हैं और किसी भी अन्य नियम की तरह कंपाइल होते हैं।",
+    "handsTitle": "हाथ क्रम (कमज़ोर → मज़बूत)",
+    "handsHint": "हर खिलाड़ी अपने 2 पत्तों और मेज़ के 5 पत्तों से अपना सर्वश्रेष्ठ पाँच-पत्ता हाथ बनाता है। मज़बूत हाथ जीतता है।",
+    "hands": {
+      "high": "हाई कार्ड",
+      "pair": "जोड़ा",
+      "twoPair": "दो जोड़े",
+      "trips": "तीन एक तरह के",
+      "straight": "स्ट्रेट",
+      "flush": "फ्लश",
+      "fullHouse": "फुल हाउस",
+      "quads": "चार एक तरह के",
+      "straightFlush": "स्ट्रेट फ्लश"
+    },
+    "footer": "डोमेन शब्दावली कुछ भी हो सकती है — क्रेडिट, क्लेम, या पोकर का एक हाथ। जो इंजन यह मेज़ बाँटता है, वही एक ऋण तय करता है।"
+  },
+  "catMoodPage": {
+    "seo": {
+      "title": "The Cat Mood Engine — a poetic Aster Lang demo",
+      "description": "Write a rule in cat-whisperer vocabulary, run it through the real engine, and watch a 5-second sketch cat react. Domain vocabulary, but make it whiskers."
+    },
+    "eyebrow": "Fun demo · cat vocabulary",
+    "title": "The Cat Mood Engine",
+    "subtitle": "A rule written in the sacred vocabulary of cat-whisperers — compiled and run by the very same engine that decides loans. The cat does not care, but it will react.",
+    "poem": "Where the sunbeam pools and the bowl is full,\nthe small god decides what mood to rule.\nNo intruder? Then warmth, or a purr, or — pfft —\nthe slow blink of judgment, exquisitely cool.",
+    "ruleTitle": "The rule (in fluent cat)",
+    "legendTerm": "Highlighted",
+    "legend": "= cat vocabulary the engine learned for this demo.",
+    "sceneTitle": "Set the scene",
+    "scenes": {
+      "perch": {
+        "label": "Claim High Ground"
+      },
+      "purr": {
+        "label": "Well-fed"
+      },
+      "loaf": {
+        "label": "Sunbeam o’clock"
+      },
+      "floof": {
+        "label": "Stranger!"
+      },
+      "judge": {
+        "label": "Unimpressed"
+      }
+    },
+    "moods": {
+      "perch": {
+        "name": "🐈 Perch",
+        "quip": "High ground secured. From this throne the whole domain is under surveillance. As it should be."
+      },
+      "purr": {
+        "name": "😌 Purr",
+        "quip": "Belly full, world forgiven. The motor is running. You may continue to exist."
+      },
+      "loaf": {
+        "name": "🍞 Loaf",
+        "quip": "Warmth detected. Bones now optional. The cat has become bread."
+      },
+      "floof": {
+        "name": "🙀 Floof",
+        "quip": "A STRANGER. Double in size, triple in suspicion. This is fine. (It is not fine.)"
+      },
+      "judge": {
+        "name": "😼 Judgment",
+        "quip": "No sun, no snacks, no patience. You are being evaluated. You did not pass."
+      }
+    },
+    "footer": "Silly vocabulary, serious engine: this cat rule compiled and ran on the same Aster Lang runtime as a credit policy. Your words — even these — become an auditable decision.",
+    "idleHint": "The cat is doing its own thing. Pick a scene below to see how it reacts."
+  },
+  "poemPage": {
+    "seo": {
+      "title": "Source as Poem — Aster demos",
+      "description": "Natural-language text that is also runnable Aster: Li Bai’s poem outputs its title; a Sherlock deduction outputs the culprit."
+    },
+    "eyebrow": "Fun demo",
+    "title": "Source as poem, source as deduction",
+    "subtitle": "The same text reads as a poem or a detective’s reasoning — and compiles to a real Aster program. Keyword aliases + literal macros, all at canonicalize time.",
+    "compileError": "Compile error",
+    "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
+    "jingyesi": {
+      "title": "Quiet Night Thoughts — Li Bai",
+      "description": "The whole poem, read in original word order, is Aster source. Run it and it outputs the poem’s title.",
+      "runLabel": "Run the poem-as-program, it outputs the poem’s name:"
+    },
+    "sherlock": {
+      "title": "The Speckled Band — Sherlock’s deduction",
+      "description": "Sherlock’s reasoning written as an Aster decision rule. Feed it the case clues; it deduces the culprit.",
+      "scenes": {
+        "original": "Original case (bell-rope + safe snake)",
+        "roomOnly": "Room-access clue only",
+        "wordsOnly": "Dying words only",
+        "insufficient": "Insufficient clues"
+      }
+    }
   }
 }

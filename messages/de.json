@@ -73,5 +73,151 @@
     "examples": "Beispiele",
     "onThisPage": "Auf dieser Seite",
     "sectionsLabel": "Abschnitte"
+  },
+  "demosIndex": {
+    "seo": {
+      "title": "Demos — Aster Lang",
+      "description": "Interaktive Demos: eine verspielte Katzenstimmungs-Engine, ein Texas-Hold’em-Showdown-Richter und Quelltext-als-Gedicht/Deduktion — alle laufen mit der echten Engine im Browser."
+    },
+    "eyebrow": "Demos",
+    "title": "Aster in Aktion erleben",
+    "subtitle": "Drei Live-Demos — jede führt die echte Engine in Ihrem Browser aus, ohne Anmeldung.",
+    "enter": "Demo öffnen",
+    "cards": {
+      "kitten": {
+        "title": "Katzenstimmungs-Engine 🐱",
+        "description": "Eine verspielte: Eine poetische Katzen-Vokabular-Regel steuert eine kleine handgezeichnete Katzen-Animation. Beweis, dass Aster-Regeln wie normale Sprache lesbar sind."
+      },
+      "poker": {
+        "title": "Poker-Showdown 🃏",
+        "description": "Eine Poker-Vokabular-Regel entscheidet am selbst gebenden Tisch über das Siegerblatt — und vergibt den Pokal. Dieselbe beweisbare Engine wie beim Kredit-Demo, nur in Karten."
+      },
+      "poem": {
+        "title": "Der Quelltext ist ein Gedicht 📜",
+        "description": "Ein Nachtgedicht, dessen jede Zeile Aster-Code IST — keine Zeichenketten. Es läuft nicht, um Verse auszugeben; es führt jede Zeile aus und berechnet einen Wert. In 中文 / Deutsch / हिन्दी."
+      }
+    }
+  },
+  "pokerPage": {
+    "seo": {
+      "title": "Poker-Showdown — Aster Lang",
+      "description": "Eine Poker-Vokabular-Regel entscheidet am selbst gebenden Tisch über das Siegerblatt. Die echte Engine läuft in deinem Browser; der Gewinner erhält den Pokal."
+    },
+    "eyebrow": "Spaß-Demo",
+    "title": "Poker-Showdown-Engine 🃏",
+    "subtitle": "Eine in Poker-Wörtern geschriebene Regel entscheidet, wer gewinnt — dieselbe beweisbare Engine wie beim Kredit-Demo, nur in Karten. Der Tisch gibt sich selbst, in Schleife.",
+    "player1": "Spieler 1",
+    "player2": "Spieler 2",
+    "phases": {
+      "shuffling": "Mischen…",
+      "dealing": "Gebe 9 Karten…",
+      "revealing": "Karten auf dem Tisch",
+      "judging": "Engine entscheidet den Gewinner…",
+      "winner": "{player} gewinnt den Pott 🏆",
+      "tie": "Geteilter Pott — unentschieden"
+    },
+    "controls": {
+      "pause": "Pause",
+      "resume": "Weiter",
+      "deal": "Nächste geben"
+    },
+    "ruleTitle": "Die Regel, die den Gewinner entscheidet",
+    "legendTerm": "hervorgehobene",
+    "legend": "Wörter sind Poker-Fachvokabular, in die Engine injiziert und wie jede andere Regel kompiliert.",
+    "handsTitle": "Blatt-Rangfolge (schwach → stark)",
+    "handsHint": "Jeder Spieler bildet sein bestes Fünf-Karten-Blatt aus seinen zwei Karten plus den fünf auf dem Tisch. Das stärkere Blatt gewinnt.",
+    "hands": {
+      "high": "Höchste Karte",
+      "pair": "Paar",
+      "twoPair": "Zwei Paare",
+      "trips": "Drilling",
+      "straight": "Straße",
+      "flush": "Flush",
+      "fullHouse": "Full House",
+      "quads": "Vierling",
+      "straightFlush": "Straight Flush"
+    },
+    "footer": "Fachvokabular kann alles sein — Kredit, Schäden oder eine Pokerhand. Die Engine, die diesen Tisch gibt, ist dieselbe, die einen Kredit entscheidet."
+  },
+  "catMoodPage": {
+    "seo": {
+      "title": "Die Katzen-Stimmungs-Engine — eine poetische Aster-Lang-Demo",
+      "description": "Schreiben Sie eine Regel im Katzenflüsterer-Vokabular, lassen Sie sie von der echten Engine ausführen und sehen Sie einer Strichkatze 5 Sekunden beim Reagieren zu."
+    },
+    "eyebrow": "Spaß-Demo · Katzen-Vokabular",
+    "title": "Die Katzen-Stimmungs-Engine",
+    "subtitle": "Eine Regel im heiligen Vokabular der Katzenflüsterer — kompiliert und ausgeführt von derselben Engine, die über Kredite entscheidet. Die Katze interessiert das nicht, aber sie wird reagieren.",
+    "poem": "Wo der Sonnenfleck liegt und der Napf ist voll,\nbeschließt der kleine Gott, welche Laune er will.\nKein Eindringling? Dann Wärme, ein Schnurren, oder — pfft —\nder langsame Blick des Urteils, exquisit kühl und still.",
+    "ruleTitle": "Die Regel (in fließendem Katzisch)",
+    "legendTerm": "Hervorgehoben",
+    "legend": "= Katzen-Vokabular, das die Engine für diese Demo gelernt hat.",
+    "sceneTitle": "Die Szene setzen",
+    "scenes": {
+      "perch": {
+        "label": "Höhe erobern"
+      },
+      "purr": {
+        "label": "Gut gefüttert"
+      },
+      "loaf": {
+        "label": "Sonnenfleck-Zeit"
+      },
+      "floof": {
+        "label": "Ein Fremder!"
+      },
+      "judge": {
+        "label": "Unbeeindruckt"
+      }
+    },
+    "moods": {
+      "perch": {
+        "name": "🐈 Hochsitz",
+        "quip": "Höhe gesichert. Von diesem Thron ist das ganze Reich unter Beobachtung. So gehört es sich."
+      },
+      "purr": {
+        "name": "😌 Schnurren",
+        "quip": "Bauch voll, Welt vergeben. Der Motor läuft. Du darfst weiter existieren."
+      },
+      "loaf": {
+        "name": "🍞 Laib",
+        "quip": "Wärme erkannt. Knochen jetzt optional. Die Katze ist zu Brot geworden."
+      },
+      "floof": {
+        "name": "🙀 Plustern",
+        "quip": "EIN FREMDER. Doppelt so groß, dreifach so misstrauisch. Alles gut. (Ist es nicht.)"
+      },
+      "judge": {
+        "name": "😼 Urteil",
+        "quip": "Keine Sonne, keine Snacks, keine Geduld. Du wirst bewertet. Du bist durchgefallen."
+      }
+    },
+    "footer": "Albernes Vokabular, ernste Engine: Diese Katzenregel kompilierte und lief auf derselben Aster-Lang-Laufzeit wie eine Kreditrichtlinie. Ihre Worte — selbst diese — werden zu einer prüfbaren Entscheidung.",
+    "idleHint": "Die Katze macht ihr eigenes Ding. Wähle unten eine Szene und sieh, wie sie reagiert."
+  },
+  "poemPage": {
+    "seo": {
+      "title": "Quelltext als Gedicht — Aster-Demos",
+      "description": "Natürlichsprachiger Text, der zugleich lauffähiger Aster-Code ist: Li Bais Gedicht gibt seinen Titel aus; eine Sherlock-Deduktion nennt den Täter."
+    },
+    "eyebrow": "Fun-Demo",
+    "title": "Quelltext als Gedicht, Quelltext als Deduktion",
+    "subtitle": "Derselbe Text liest sich als Gedicht oder als Ermittlung — und kompiliert zu einem echten Aster-Programm. Keyword-Aliase + Literal-Makros, alles zur Canonicalize-Zeit.",
+    "compileError": "Kompilierfehler",
+    "compiledTo": "Kompiliert zu Modul 「{module}」 · Regel 「{rule}」",
+    "jingyesi": {
+      "title": "Gedanken in stiller Nacht — Li Bai",
+      "description": "Das ganze Gedicht in ursprünglicher Wortfolge ist Aster-Quelltext. Ausgeführt gibt es den Titel des Gedichts aus.",
+      "runLabel": "Das Gedicht-als-Programm ausführen, es gibt den Namen des Gedichts aus:"
+    },
+    "sherlock": {
+      "title": "Das gefleckte Band — Sherlocks Deduktion",
+      "description": "Sherlocks Argumentation als Aster-Entscheidungsregel. Mit den Fallhinweisen ausgeführt, ermittelt sie den Täter.",
+      "scenes": {
+        "original": "Originalfall (Klingelseil + Schlange im Safe)",
+        "roomOnly": "Nur Raumzugangs-Hinweis",
+        "wordsOnly": "Nur letzte Worte",
+        "insufficient": "Unzureichende Hinweise"
+      }
+    }
   }
 }
