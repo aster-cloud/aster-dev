@@ -238,5 +238,11 @@
       "wordsOnly": "Nur letzte Worte",
       "insufficient": "Unzureichende Hinweise"
     }
-  }
+  },
+  "playgroundDemos": {
+    "eyebrow": "Entdecken",
+    "title": "Aster in Aktion",
+    "subtitle": "Vier Live-Demos — jede ist echtes, lauffähiges Aster. Ausprobieren, dann oben eigene Regeln schreiben."
+  },
+  "demoBackToPlayground": "Eigene Regeln im Playground ausprobieren"
 }

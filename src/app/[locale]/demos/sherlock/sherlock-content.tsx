@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { compile, evaluate } from '@aster-cloud/aster-lang-ts/browser';
 import { Container, Stack, Card, CardBody } from '@/components/ui';
+import { DemoPlaygroundLink } from '@/components/demo-playground-link';
 import { toCanonical, toDisplay } from '@/lib/layout-map';
 import { SHERLOCK_LAYOUT, SHERLOCK_LEXICON, SHERLOCK_DOMAIN, SHERLOCK_SCENES } from '@/config/sherlock';
 
@@ -85,6 +86,8 @@ export default function SherlockContent() {
             </CardBody>
           </Card>
         </div>
+
+        <DemoPlaygroundLink />
       </Container>
     </main>
   );

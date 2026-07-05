@@ -181,5 +181,11 @@
       "wordsOnly": "Dying words only",
       "insufficient": "Insufficient clues"
     }
-  }
+  },
+  "playgroundDemos": {
+    "eyebrow": "Explore",
+    "title": "See Aster in action",
+    "subtitle": "Four live demos — each is real, runnable Aster. Poke at them, then write your own rules above."
+  },
+  "demoBackToPlayground": "Try your own rules in the Playground"
 }

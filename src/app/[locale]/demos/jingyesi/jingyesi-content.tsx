@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { compile, evaluate } from '@aster-cloud/aster-lang-ts/browser';
 import { Container, Stack, Card, CardBody } from '@/components/ui';
+import { DemoPlaygroundLink } from '@/components/demo-playground-link';
 import { toCanonical, toDisplay } from '@/lib/layout-map';
 import { JINGYESI_LAYOUT, JINGYESI_LEXICON, JINGYESI_DOMAIN, registerJingyesiVocab } from '@/config/jingyesi';
 
@@ -77,6 +78,8 @@ export default function JingyesiContent() {
             </CardBody>
           </Card>
         </div>
+
+        <DemoPlaygroundLink />
       </Container>
     </main>
   );
