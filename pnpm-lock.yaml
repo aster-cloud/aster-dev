@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@aster-cloud/aster-lang-ts':
+        specifier: 1.0.13
+        version: 1.0.13(ws@8.20.1)(zod@4.4.3)
       '@aster-cloud/tokens':
         specifier: ^0.2.0
         version: 0.2.0
@@ -63,9 +66,6 @@ importers:
         specifier: ^3.6.0
         version: 3.6.0
     devDependencies:
-      '@aster-cloud/aster-lang-ts':
-        specifier: 1.0.13
-        version: 1.0.13(ws@8.20.1)(zod@4.4.3)
       '@tailwindcss/postcss':
         specifier: ^4.3.1
         version: 4.3.1
