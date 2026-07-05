@@ -228,7 +228,7 @@
     "displayView": "显示视图",
     "displayHint": "福尔摩斯的推理，连贯的推断独白。",
     "canonicalView": "编译视图",
-    "canonicalHint": "编译真源（真正编译的那份）——inline-if 决策链，含 then/否则。",
+    "canonicalHint": "编译真源（真正编译的那份）——inline-if 决策链，含 那么/否则。",
     "decoupleNote": "同一规则两种排版——显示读如推理，编译走 canonical 决策链（LayoutMap）。",
     "compileError": "编译错误",
     "compiledTo": "编译成模块「{module}」·规则「{rule}」",

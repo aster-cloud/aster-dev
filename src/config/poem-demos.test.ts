@@ -39,14 +39,17 @@ describe('斑点带子案 demo（LayoutMap）', () => {
     expect(c.core!.decls[0].name).toBe('揪出真凶');
   });
 
-  it('canonical 的 else 连接词已中文化为「否则」（走 OTHERWISE 语义词），then 仍英文', () => {
+  it('canonical 的 inline-if 连接词已全中文化（那么/否则），无残留英文 then/else', () => {
     const canonical = toCanonical(SHERLOCK_LAYOUT);
-    // else 用中文「否则」（zh-CN 词法包把 OTHERWISE 映射成「否则」，inline-if 接受 otherwise 作 else 同义词）。
-    expect(canonical.includes('否则')).toBe(true);
+    // then→那么（ADR 0029 新增 SemanticTokenKind.THEN，zh 映射「那么」，需 aster-lang-ts ≥ 1.0.14）。
+    // 钉住 3 处（决策链三个 then 分支），防未来少改一段仍 includes 通过。
+    expect((canonical.match(/那么/g) ?? []).length).toBe(3);
+    // else→否则（走 OTHERWISE 语义词，zh-CN 早已映射）：三处 else 分支。
+    expect((canonical.match(/否则/g) ?? []).length).toBe(3);
+    // 推理链纯中文，不再夹生英文连接词。
+    expect(/\bthen\b/.test(canonical)).toBe(false);
     expect(/\belse\b/.test(canonical)).toBe(false);
-    // then 无对应语义词、两引擎硬编码英文，故保留英文。
-    expect(canonical.includes(' then ')).toBe(true);
-    // 中文 else 的 canonical 仍能真编译真运行（回归防护：防 OTHERWISE 映射被移除）。
+    // 全中文 canonical 仍真编译真运行（回归防护：防 THEN/OTHERWISE 映射被移除）。
     const c = compile(canonical, { lexicon: SHERLOCK_LEXICON, domain: SHERLOCK_DOMAIN, tenantId: SHERLOCK_DOMAIN });
     expect(c.success, JSON.stringify(c.parseErrors)).toBe(true);
   });

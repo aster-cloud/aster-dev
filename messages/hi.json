@@ -171,7 +171,7 @@
     "displayView": "Display view",
     "displayHint": "Holmes's reasoning, a flowing deductive monologue.",
     "canonicalView": "Compiled view",
-    "canonicalHint": "The real compiled source — an inline-if decision chain with then/否则.",
+    "canonicalHint": "The real compiled source — an inline-if decision chain with 那么/否则.",
     "decoupleNote": "Same rule, two layouts — display reads as reasoning, compile runs the canonical chain (LayoutMap).",
     "compileError": "Compile error",
     "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
