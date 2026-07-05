@@ -3,12 +3,14 @@
     "docs": "Doku",
     "guide": "Sprachführer",
     "reference": "Referenz",
-    "playground": "Playground"
+    "playground": "Playground",
+    "demos": "Demos"
   },
   "devFooter": {
     "docs": "Dokumentation",
     "playground": "Playground",
-    "cloud": "Aster Cloud"
+    "cloud": "Aster Cloud",
+    "demos": "Demos"
   },
   "devSite": {
     "badge": "Open Source · Zwei Laufzeiten · Wiederholbar",
@@ -81,7 +83,7 @@
     },
     "eyebrow": "Demos",
     "title": "Aster in Aktion erleben",
-    "subtitle": "Drei Live-Demos — jede führt die echte Engine in Ihrem Browser aus, ohne Anmeldung.",
+    "subtitle": "Vier Live-Demos — jede führt die echte Engine in Ihrem Browser aus, ohne Anmeldung.",
     "enter": "Demo öffnen",
     "cards": {
       "kitten": {
@@ -92,9 +94,13 @@
         "title": "Poker-Showdown 🃏",
         "description": "Eine Poker-Vokabular-Regel entscheidet am selbst gebenden Tisch über das Siegerblatt — und vergibt den Pokal. Dieselbe beweisbare Engine wie beim Kredit-Demo, nur in Karten."
       },
-      "poem": {
-        "title": "Der Quelltext ist ein Gedicht 📜",
-        "description": "Ein Nachtgedicht, dessen jede Zeile Aster-Code IST — keine Zeichenketten. Es läuft nicht, um Verse auszugeben; es führt jede Zeile aus und berechnet einen Wert. In 中文 / Deutsch / हिन्दी."
+      "jingyesi": {
+        "title": "Gedanken in stiller Nacht",
+        "description": "Ein Li-Bai-Gedicht, das lauffähiges Aster ist — gibt den Titel aus."
+      },
+      "sherlock": {
+        "title": "Das gefleckte Band",
+        "description": "Sherlocks Deduktion als Entscheidungsregel — Hinweise rein, Täter raus."
       }
     }
   },
@@ -194,30 +200,43 @@
     "footer": "Albernes Vokabular, ernste Engine: Diese Katzenregel kompilierte und lief auf derselben Aster-Lang-Laufzeit wie eine Kreditrichtlinie. Ihre Worte — selbst diese — werden zu einer prüfbaren Entscheidung.",
     "idleHint": "Die Katze macht ihr eigenes Ding. Wähle unten eine Szene und sieh, wie sie reagiert."
   },
-  "poemPage": {
+  "jingyesiPage": {
     "seo": {
-      "title": "Quelltext als Gedicht — Aster-Demos",
-      "description": "Natürlichsprachiger Text, der zugleich lauffähiger Aster-Code ist: Li Bais Gedicht gibt seinen Titel aus; eine Sherlock-Deduktion nennt den Täter."
+      "title": "Gedanken in stiller Nacht — Aster-Demo",
+      "description": "Li Bais Gedicht ist Aster-Quelltext: ausgeführt gibt es den Titel aus. Anzeige-Layout via LayoutMap vom Kompilier-Quelltext entkoppelt."
     },
-    "eyebrow": "Fun-Demo",
-    "title": "Quelltext als Gedicht, Quelltext als Deduktion",
-    "subtitle": "Derselbe Text liest sich als Gedicht oder als Ermittlung — und kompiliert zu einem echten Aster-Programm. Keyword-Aliase + Literal-Makros, alles zur Canonicalize-Zeit.",
+    "eyebrow": "Quelltext als Gedicht",
+    "title": "Gedanken in stiller Nacht — Li Bai",
+    "subtitle": "Das ganze Gedicht in ursprünglicher Wortfolge ist lauffähiges Aster. Zwei Layouts desselben Programms — Anzeige liest sich als Gedicht, Canonical wird kompiliert.",
+    "displayView": "Anzeige",
+    "displayHint": "Li Bais Gedicht in seinen natürlichen vier Zeilen.",
+    "canonicalView": "Kompilier-Ansicht",
+    "canonicalHint": "Der kanonische Quelltext (was tatsächlich kompiliert) — Layout an Asters Grammatik angepasst.",
+    "decoupleNote": "Dasselbe Programm, zwei Layouts — Anzeige befreit das Gedicht, kompiliert wird der kanonische Quelltext (LayoutMap).",
     "compileError": "Kompilierfehler",
     "compiledTo": "Kompiliert zu Modul 「{module}」 · Regel 「{rule}」",
-    "jingyesi": {
-      "title": "Gedanken in stiller Nacht — Li Bai",
-      "description": "Das ganze Gedicht in ursprünglicher Wortfolge ist Aster-Quelltext. Ausgeführt gibt es den Titel des Gedichts aus.",
-      "runLabel": "Das Gedicht-als-Programm ausführen, es gibt den Namen des Gedichts aus:"
+    "runLabel": "Das Gedicht-als-Programm ausführen, es gibt den Namen aus:"
+  },
+  "sherlockPage": {
+    "seo": {
+      "title": "Das gefleckte Band — Aster-Demo",
+      "description": "Sherlocks Deduktion als Aster-Entscheidungsregel: Hinweise füttern, Täter ausgeben. Anzeige via LayoutMap vom Kompilier-Quelltext entkoppelt."
     },
-    "sherlock": {
-      "title": "Das gefleckte Band — Sherlocks Deduktion",
-      "description": "Sherlocks Argumentation als Aster-Entscheidungsregel. Mit den Fallhinweisen ausgeführt, ermittelt sie den Täter.",
-      "scenes": {
-        "original": "Originalfall (Klingelseil + Schlange im Safe)",
-        "roomOnly": "Nur Raumzugangs-Hinweis",
-        "wordsOnly": "Nur letzte Worte",
-        "insufficient": "Unzureichende Hinweise"
-      }
+    "eyebrow": "Quelltext als Deduktion",
+    "title": "Das gefleckte Band — Sherlocks Deduktion",
+    "subtitle": "Sherlocks Argumentation ist eine lauffähige Aster-Entscheidungsregel. Zwei Layouts — Anzeige liest sich als Monolog, Canonical ist die eingerückte Entscheidungskette.",
+    "displayView": "Anzeige",
+    "displayHint": "Sherlocks Argumentation als fließender Monolog.",
+    "canonicalView": "Kompilier-Ansicht",
+    "canonicalHint": "Der kanonische Quelltext (was kompiliert) — inline-if-Entscheidungskette mit then/else.",
+    "decoupleNote": "Dieselbe Regel, zwei Layouts — Anzeige liest sich als Argumentation, kompiliert wird die kanonische Kette (LayoutMap).",
+    "compileError": "Kompilierfehler",
+    "compiledTo": "Kompiliert zu Modul 「{module}」 · Regel 「{rule}」",
+    "scenes": {
+      "original": "Originalfall (Klingelseil + Schlange im Safe)",
+      "roomOnly": "Nur Raumzugangs-Hinweis",
+      "wordsOnly": "Nur letzte Worte",
+      "insufficient": "Unzureichende Hinweise"
     }
   }
 }

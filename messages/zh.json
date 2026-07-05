@@ -3,12 +3,14 @@
     "docs": "文档",
     "guide": "语言指南",
     "reference": "参考手册",
-    "playground": "演练场"
+    "playground": "演练场",
+    "demos": "演示"
   },
   "devFooter": {
     "docs": "文档",
     "playground": "演练场",
-    "cloud": "Aster Cloud"
+    "cloud": "Aster Cloud",
+    "demos": "演示"
   },
   "devSite": {
     "badge": "开源 · 双运行时 · 可回放",
@@ -81,7 +83,7 @@
     },
     "eyebrow": "Demo 演示",
     "title": "看 Aster 跑起来",
-    "subtitle": "三个在线演示 —— 每个都在你的浏览器里跑真实引擎，无需注册。",
+    "subtitle": "四个在线演示 —— 每个都在你的浏览器里跑真实引擎，无需注册。",
     "enter": "打开演示",
     "cards": {
       "kitten": {
@@ -92,9 +94,13 @@
         "title": "德州扑克摊牌 🃏",
         "description": "一条扑克词汇规则在自动发牌的牌桌上判定赢家——并颁出奖杯。和信贷 demo 同一套可证明引擎，只是换成了纸牌。"
       },
-      "poem": {
-        "title": "源码即诗 📜",
-        "description": "一首夜诗，每一行都是 Aster 代码——没有字符串。运行它不是打印诗句，而是执行每一句、算出值。中文 / Deutsch / हिन्दी。"
+      "jingyesi": {
+        "title": "静夜思",
+        "description": "李白的诗即可运行的 Aster——运行输出诗名。"
+      },
+      "sherlock": {
+        "title": "斑点带子案",
+        "description": "福尔摩斯推理即决策规则——喂线索，得真凶。"
       }
     }
   },
@@ -194,30 +200,43 @@
     "footer": "词汇很无厘头，引擎很认真：这条猫规则跑在与信贷策略同一套 Aster Lang 运行时上。你的词——哪怕是这些——也能变成一笔可审计的决策。",
     "idleHint": "主子正自顾自地溜达。在下面选个场景，看它作何反应。"
   },
-  "poemPage": {
+  "jingyesiPage": {
     "seo": {
-      "title": "源码即诗 — Aster demo",
-      "description": "一段自然语言既是诗又是可运行的 Aster：李白的诗输出诗名，福尔摩斯推理输出真凶。"
+      "title": "静夜思 — Aster demo",
+      "description": "李白的诗即 Aster 源码：运行输出诗名。用 LayoutMap 让显示排版与编译源码解耦。"
     },
-    "eyebrow": "趣味 demo",
-    "title": "源码即诗，源码即推理",
-    "subtitle": "同一段文字既读如诗、又像侦探推理，却能编译成货真价实的 Aster 程序。关键词别名 + 字面量宏，都只在 canonicalize 阶段生效。",
+    "eyebrow": "源码即诗",
+    "title": "静夜思 — 李白",
+    "subtitle": "整首诗按原词序就是可运行的 Aster。同一段程序两种排版——显示读如诗，canonical 才是编译真源。",
+    "displayView": "显示视图",
+    "displayHint": "李白原诗，工整四句。",
+    "canonicalView": "编译视图",
+    "canonicalHint": "编译真源（真正编译的那份）——排版迁就 Aster 语法。",
+    "decoupleNote": "同一段程序两种排版——显示还诗以自由，编译走 canonical 真源（LayoutMap）。",
     "compileError": "编译错误",
     "compiledTo": "编译成模块「{module}」·规则「{rule}」",
-    "jingyesi": {
-      "title": "静夜思 — 李白",
-      "description": "整首诗按原词序就是 Aster 源码。运行它，输出这首诗的名字。",
-      "runLabel": "运行诗句构造的源码，输出该诗的名字："
+    "runLabel": "运行诗句构造的源码，输出该诗的名字："
+  },
+  "sherlockPage": {
+    "seo": {
+      "title": "斑点带子案 — Aster demo",
+      "description": "福尔摩斯推理即 Aster 决策规则：喂线索输出真凶。用 LayoutMap 让推理独白与编译源码解耦。"
     },
-    "sherlock": {
-      "title": "斑点带子案 — 福尔摩斯的推断",
-      "description": "把福尔摩斯的推理写成 Aster 决策规则。喂入案发线索，它推断出真凶。",
-      "scenes": {
-        "original": "原案（铃绳直通通风口 + 保险箱藏毒蛇）",
-        "roomOnly": "仅密室线索",
-        "wordsOnly": "仅遗言线索",
-        "insufficient": "线索不足"
-      }
+    "eyebrow": "源码即推理",
+    "title": "斑点带子案 — 福尔摩斯的推断",
+    "subtitle": "福尔摩斯的推理是可运行的 Aster 决策规则。两种排版——显示读如他的推理独白，canonical 是编译的缩进决策链。",
+    "displayView": "显示视图",
+    "displayHint": "福尔摩斯的推理，连贯的推断独白。",
+    "canonicalView": "编译视图",
+    "canonicalHint": "编译真源（真正编译的那份）——inline-if 决策链，含 then/else。",
+    "decoupleNote": "同一规则两种排版——显示读如推理，编译走 canonical 决策链（LayoutMap）。",
+    "compileError": "编译错误",
+    "compiledTo": "编译成模块「{module}」·规则「{rule}」",
+    "scenes": {
+      "original": "原案（铃绳直通通风口 + 保险箱藏毒蛇）",
+      "roomOnly": "仅密室线索",
+      "wordsOnly": "仅遗言线索",
+      "insufficient": "线索不足"
     }
   }
 }
