@@ -13,6 +13,7 @@ import {
 import dynamic from 'next/dynamic';
 import type { Cat25DHandle } from './cat-25d-scene';
 import { cn } from '@/components/ui';
+import { DemoPlaygroundLink } from '@/components/demo-playground-link';
 
 // 2.5D 场景（纯 SVG + CSS，无 WebGL）；客户端动态加载，加载前显示占位。
 const Cat25DScene = dynamic(() => import('./cat-25d-scene').then((m) => m.Cat25DScene), {
@@ -152,6 +153,8 @@ export function CatMoodContent({ locale }: { locale: string }) {
       <div className="mt-10 rounded-xl border border-border bg-bg-subtle p-5 text-center">
         <p className="text-sm text-fg-muted">{t('footer')}</p>
       </div>
+
+      <DemoPlaygroundLink />
     </div>
   );
 }

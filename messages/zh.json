@@ -238,5 +238,11 @@
       "wordsOnly": "仅遗言线索",
       "insufficient": "线索不足"
     }
-  }
+  },
+  "playgroundDemos": {
+    "eyebrow": "探索",
+    "title": "看看 Aster 能做什么",
+    "subtitle": "四个在线 demo —— 每个都是真实、可运行的 Aster。玩一玩，再回到上面写你自己的规则。"
+  },
+  "demoBackToPlayground": "在演练场里写你自己的规则"
 }

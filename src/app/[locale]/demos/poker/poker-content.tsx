@@ -10,6 +10,7 @@ import {
 } from '@/config/poker';
 import { usePokerLoop } from './use-poker-loop';
 import { cn } from '@/components/ui';
+import { DemoPlaygroundLink } from '@/components/demo-playground-link';
 
 // 牌桌场景纯 SVG/CSS 可 SSR，但用 dynamic 与 kitten 一致（避免首屏闪烁）。
 const PokerTableScene = dynamic(() => import('./poker-table-scene').then((m) => m.PokerTableScene), {
@@ -162,6 +163,8 @@ export function PokerContent({ locale }: { locale: string }) {
       <div className="mt-10 rounded-xl border border-border bg-bg-subtle p-5 text-center">
         <p className="text-sm text-fg-muted">{t('footer')}</p>
       </div>
+
+      <DemoPlaygroundLink />
     </div>
   );
 }

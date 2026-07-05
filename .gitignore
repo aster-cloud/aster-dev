@@ -26,3 +26,9 @@ pnpm-debug.log*
 # cloudflare
 .open-next/
 .wrangler/
+
+# CCG task metadata
+.ccg/
+
+# IntelliJ project files
+*.iml
