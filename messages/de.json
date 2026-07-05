@@ -228,7 +228,7 @@
     "displayView": "Anzeige-Ansicht",
     "displayHint": "Holmes’ Argumentation, ein fließender deduktiver Monolog.",
     "canonicalView": "Kompilierte Ansicht",
-    "canonicalHint": "Der echte kompilierte Quelltext — eine Inline-if-Entscheidungskette mit then/否则.",
+    "canonicalHint": "Der echte kompilierte Quelltext — eine Inline-if-Entscheidungskette mit 那么/否则.",
     "decoupleNote": "Dieselbe Regel, zwei Layouts — Anzeige liest sich als Argumentation, kompiliert wird die kanonische Kette (LayoutMap).",
     "compileError": "Kompilierfehler",
     "compiledTo": "Kompiliert zu Modul 「{module}」 · Regel 「{rule}」",

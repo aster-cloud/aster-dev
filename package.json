@@ -15,7 +15,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
-    "@aster-cloud/aster-lang-ts": "1.0.13",
+    "@aster-cloud/aster-lang-ts": "1.0.14",
     "@aster-cloud/tokens": "^0.2.0",
     "@aster-cloud/ui": "^0.3.0",
     "@mdx-js/loader": "^3.1.0",
