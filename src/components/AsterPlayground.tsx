@@ -5,9 +5,11 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Play, Loader2, Share2, Check } from 'lucide-react';
 import { CodeEditor } from './code-editor';
 import { TracePanel, type DecisionTrace } from './trace-panel';
+import { DiagnosticsPanel } from './diagnostics-panel';
 import { templatesFor } from '@/lib/playground-templates';
 import { localeNames, type Locale } from '@/i18n/config';
 import { useAvailableLocales } from '@/hooks/useAvailableLocales';
+import { useClientCompile } from '@/hooks/useClientCompile';
 
 /**
  * AsterPlayground 全功能版（ADR 0018 Phase 3）。
@@ -80,6 +82,10 @@ export default function AsterPlayground() {
   const [running, setRunning] = useState(false);
   const [resp, setResp] = useState<EvalResponse | null>(null);
   const [shared, setShared] = useState(false);
+
+  // 纯客户端编译+类型检查（无后端）：编辑时即时行列诊断。有 error 时禁用运行，
+  // 避免把明显不可编译的源码打到后端。防抖 300ms。
+  const { diagnostics, errorCount, compiling } = useClientCompile(source, srcLocale);
 
   // 切换源码语言 → 载入该语言下同 id 的模板（保持选中项语义）。
   function switchSrcLocale(next: Locale) {
@@ -211,6 +217,12 @@ export default function AsterPlayground() {
         <CodeEditor value={source} onChange={setSource} />
       </div>
 
+      {/* 客户端编译诊断（行列标错）——纯前端，无后端往返 */}
+      <DiagnosticsPanel
+        diagnostics={diagnostics}
+        labels={{ errors: t('diagnosticsLabel') }}
+      />
+
       {/* 输入数据（context）：入口规则的参数值，JSON 格式 */}
       <label className="mt-4 block text-sm font-semibold text-fg">
         {t('inputLabel')} <span className="font-mono text-xs font-normal text-fg-subtle">{entry}(…)</span>
@@ -225,7 +237,10 @@ export default function AsterPlayground() {
 
       <button
         onClick={run}
-        disabled={running}
+        // 有编译错误时禁用运行（客户端已即时报错），避免把不可编译源码打到后端。
+        // compiling 期间也禁用：防抖窗口内诊断未刷新，防用户抢在报错前点运行。
+        disabled={running || compiling || errorCount > 0}
+        title={errorCount > 0 ? t('fixErrorsFirst') : undefined}
         className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg shadow-brand transition-colors hover:bg-primary-hover disabled:opacity-60"
       >
         {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}

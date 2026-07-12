@@ -53,7 +53,9 @@
     "traceStep": "Step",
     "traceMatched": "matched",
     "traceResult": "Final result",
-    "inputLabel": "Input"
+    "inputLabel": "Input",
+    "diagnosticsLabel": "Problems",
+    "fixErrorsFirst": "Fix parse errors before running"
   },
   "docsNav": {
     "gettingStarted": "Getting Started",

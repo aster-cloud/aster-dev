@@ -53,7 +53,9 @@
     "traceStep": "Schritt",
     "traceMatched": "passt",
     "traceResult": "Endergebnis",
-    "inputLabel": "Eingabe"
+    "inputLabel": "Eingabe",
+    "diagnosticsLabel": "Probleme",
+    "fixErrorsFirst": "Beheben Sie die Analysefehler vor dem Ausführen"
   },
   "docsNav": {
     "gettingStarted": "Erste Schritte",
