@@ -17,5 +17,10 @@ export const localeNames: Record<Locale, string> = {
   hi: 'हिन्दी',
 };
 
-/** 部分翻译的 locale（与 cloud partialLocales 一致；hi 约 7% 覆盖）。 */
-export const partialLocales: readonly Locale[] = ['hi'] as const;
+/**
+ * 部分翻译的 locale（与 cloud partialLocales 一致）。
+ *
+ * hi 已补齐至 100% 覆盖 en backbone（184/184 键，正规 Devanagari），故不再是 partial，
+ * 与 aster-cloud 的 partialLocales=[] 口径统一（此前 dev 声明 hi=partial 与 cloud 矛盾）。
+ */
+export const partialLocales: readonly Locale[] = [] as const;

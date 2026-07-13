@@ -6,198 +6,257 @@
     "playground": "प्लेग्राउंड",
     "demos": "डेमो"
   },
+  "devFooter": {
+    "docs": "दस्तावेज़",
+    "playground": "प्लेग्राउंड",
+    "cloud": "Aster Cloud",
+    "demos": "डेमो"
+  },
   "devSite": {
-    "badge": "ओपन-सोर्स · दो रनटाइम · दोहराने योग्य",
+    "badge": "ओपन-सोर्स · दो रनटाइम · पुनः चलाने योग्य",
     "heroName": "आपकी भाषा में नियम। ऐसे निर्णय जिन पर आप भरोसा कर सकें।",
-    "heroText": "प्राकृतिक भाषा — {languages} — में नीतियाँ, वर्कफ़्लो और निर्णय लिखें, और उन्हें एक नियतात्मक, ऑडिट-योग्य इंजन पर चलाएँ जहाँ हर निर्णय दोहराया जा सकता है।",
+    "heroText": "सरल {languages} में नीतियाँ, वर्कफ़्लो और निर्णय लिखें - और उन्हें एक नियतात्मक, ऑडिट-योग्य इंजन पर चलाएँ जहाँ हर निर्णय फिर से चलाया जा सकता है।",
     "heroLanguagesConjunction": "या",
-    "heroCodeHint": "असली Aster स्रोत — इसे प्लेग्राउंड में चलाएँ।",
+    "heroCodeHint": "वास्तविक Aster स्रोत - इसे प्लेग्राउंड में चलाएँ।",
     "tryPlayground": "प्लेग्राउंड में आज़माएँ",
     "quickStart": "5-मिनट क्विक स्टार्ट",
-    "choosePath": "अपना रास्ता चुनें"
+    "valueLanguageTitle": "आपकी भाषा",
+    "valueLanguageBody": "नियम उसी प्राकृतिक भाषा में लिखें जो आपकी टीम पहले से बोलती है। कोई DSL औपचारिकता नहीं, ऑपरेटरों की उलझन नहीं - स्रोत उसी नीति की तरह पढ़ा जाता है जिसे वह व्यक्त करता है।",
+    "valueDeterministicTitle": "नियतात्मक",
+    "valueDeterministicBody": "दो स्वतंत्र रनटाइम, एक मध्यवर्ती निरूपण, बाइट-दर-बाइट समान परिणाम। वही नियम कभी अपने-आप से असहमत नहीं होता।",
+    "valueAuditableTitle": "पुनः चलाने योग्य",
+    "valueAuditableBody": "हर निर्णय के साथ एक ट्रेस आता है जिसे आप फिर से चला सकते हैं - कौन-सा नियम चला, किन इनपुट पर, और किस परिणाम तक पहुँचा। कुछ छिपा नहीं, कुछ अनुमानित नहीं।",
+    "choosePath": "अपना रास्ता चुनें",
+    "businessExpertTitle": "मैं व्यवसाय विशेषज्ञ हूँ",
+    "businessExpertBody": "अनुपालन अधिकारी, जोखिम विश्लेषक या नीति लेखक। आप अपनी भाषा में नियम चाहते हैं, जहाँ AI पहला मसौदा लिखने में मदद करे।",
+    "businessExpertCta": "गाइड से शुरू करें",
+    "developerTitle": "मैं डेवलपर हूँ",
+    "developerBody": "आप एक एम्बेड करने योग्य, नियतात्मक और ऑडिट-योग्य नियम इंजन चाहते हैं - दो रनटाइम, एक IR, हर निर्णय पुनः चलाने योग्य।",
+    "developerCta": "संदर्भ पढ़ें"
+  },
+  "playground": {
+    "title": "प्लेग्राउंड",
+    "subtitle": "एक नियम लिखें, उसे चलाएँ, निर्णय को फिर से चलाएँ।",
+    "sourceLabel": "नीति स्रोत",
+    "templateLabel": "उदाहरण",
+    "langLabel": "भाषा",
+    "run": "चलाएँ",
+    "running": "चल रहा है…",
+    "resultLabel": "परिणाम",
+    "errorLabel": "त्रुटि",
+    "share": "साझा करें",
+    "shared": "लिंक कॉपी हो गया",
+    "copy": "कॉपी करें",
+    "copied": "कॉपी हो गया",
+    "traceLabel": "निर्णय ट्रेस",
+    "traceHint": "कौन-सा नियम चला, किन इनपुट पर, और किस परिणाम तक पहुँचा।",
+    "traceStep": "चरण",
+    "traceMatched": "मेल खाया",
+    "traceResult": "अंतिम परिणाम",
+    "inputLabel": "इनपुट",
+    "diagnosticsLabel": "समस्याएँ",
+    "fixErrorsFirst": "चलाने से पहले पार्स त्रुटियाँ ठीक करें"
+  },
+  "docsNav": {
+    "gettingStarted": "शुरुआत",
+    "overview": "Aster क्या है?",
+    "quickstart": "क्विक स्टार्ट",
+    "languageGuide": "भाषा गाइड",
+    "syntax": "सिंटैक्स",
+    "types": "प्रकार",
+    "expressions": "अभिव्यक्तियाँ",
+    "functions": "नियम और फ़ंक्शन",
+    "modules": "मॉड्यूल",
+    "lexicons": "लेक्सिकॉन",
+    "stdlib": "मानक लाइब्रेरी",
+    "reference": "भाषा संदर्भ",
+    "tooling": "टूलिंग",
+    "browserApi": "ब्राउज़र API",
+    "deployment": "डिप्लॉयमेंट",
+    "editions": "संस्करण",
+    "examples": "उदाहरण",
+    "onThisPage": "इस पृष्ठ पर",
+    "sectionsLabel": "अनुभाग"
   },
   "demosIndex": {
     "seo": {
       "title": "डेमो — Aster Lang",
-      "description": "Interactive demos: a playful cat-mood engine, a Texas hold’em showdown judge, and source-as-poem/deduction — all run the real engine in your browser."
+      "description": "इंटरैक्टिव डेमो: एक खेल-खेल में बना बिल्ली-मूड इंजन, टेक्सस होल्ड'एम शोडाउन निर्णायक, और स्रोत-के-रूप-में-कविता/निष्कर्ष - सभी आपके ब्राउज़र में वास्तविक इंजन चलाते हैं।"
     },
     "eyebrow": "डेमो",
-    "title": "Aster को क्रिया में देखें",
-    "subtitle": "Four live demos — each runs the real engine in your browser, no signup.",
+    "title": "Aster को काम करते देखें",
+    "subtitle": "चार लाइव डेमो - हर एक आपके ब्राउज़र में वास्तविक इंजन चलाता है, कोई साइनअप नहीं।",
     "enter": "डेमो खोलें",
     "cards": {
       "kitten": {
-        "title": "कैट-मूड इंजन 🐱",
-        "description": "एक मज़ेदार: एक काव्यात्मक बिल्ली-शब्दावली नियम एक छोटे हाथ से बनाए बिल्ली एनिमेशन को चलाता है। प्रमाण कि Aster नियम सामान्य भाषा की तरह पढ़े जाते हैं।"
+        "title": "बिल्ली-मूड इंजन 🐱",
+        "description": "एक खेल-खेल वाला डेमो: काव्यात्मक बिल्ली-शब्दावली वाला नियम एक छोटे हाथ से बनाए बिल्ली एनिमेशन को चलाता है। प्रमाण कि Aster नियम साधारण भाषा की तरह पढ़े जाते हैं।"
       },
       "poker": {
         "title": "पोकर शोडाउन 🃏",
-        "description": "एक पोकर-शब्दावली नियम स्वयं-वितरित मेज़ पर विजयी हाथ तय करता है — और ट्रॉफी देता है। क्रेडिट डेमो जैसा ही प्रमाणयोग्य इंजन, बस पत्तों में।"
+        "description": "पोकर-शब्दावली वाला नियम स्वयं पत्ते बाँटने वाली मेज़ पर विजयी हाथ तय करता है - और ट्रॉफी देता है। वही प्रमाणयोग्य इंजन, बस पत्तों में बाँटा गया।"
       },
       "jingyesi": {
-        "title": "Quiet Night Thoughts",
-        "description": "A Li Bai poem that is runnable Aster — outputs the poem’s title."
+        "title": "शांत रात्रि विचार",
+        "description": "ली बाई की कविता जो चलने योग्य Aster है - चलाने पर कविता का शीर्षक देती है।"
       },
       "sherlock": {
-        "title": "The Speckled Band",
-        "description": "Sherlock’s deduction as a decision rule — feed clues, get the culprit."
+        "title": "चितकबरी पट्टी",
+        "description": "शरलॉक का निष्कर्ष एक निर्णय नियम के रूप में - सुराग दें, अपराधी पाएँ।"
       }
     }
   },
   "pokerPage": {
     "seo": {
       "title": "पोकर शोडाउन — Aster Lang",
-      "description": "एक पोकर-शब्दावली नियम स्वयं-वितरित मेज़ पर विजयी हाथ तय करता है। असली इंजन आपके ब्राउज़र में चलता है; विजेता को ट्रॉफी मिलती है।"
+      "description": "पोकर-शब्दावली वाला नियम स्वयं पत्ते बाँटने वाली मेज़ पर विजयी हाथ तय करता है। वास्तविक इंजन आपके ब्राउज़र में चलता है; विजेता को ट्रॉफी मिलती है।"
     },
     "eyebrow": "मज़ेदार डेमो",
     "title": "पोकर शोडाउन इंजन 🃏",
-    "subtitle": "पोकर शब्दों में लिखा एक नियम तय करता है कौन जीता — क्रेडिट डेमो जैसा ही प्रमाणयोग्य इंजन, बस पत्तों में। मेज़ स्वयं पत्ते बाँटती है, लूप में।",
+    "subtitle": "पोकर शब्दों में लिखा नियम तय करता है कि कौन जीतेगा - क्रेडिट डेमो जैसा ही प्रमाणयोग्य इंजन, बस पत्तों में। मेज़ लूप में अपने-आप पत्ते बाँटती है।",
     "player1": "खिलाड़ी 1",
     "player2": "खिलाड़ी 2",
     "phases": {
       "shuffling": "फेंटा जा रहा है…",
       "dealing": "9 पत्ते बाँटे जा रहे हैं…",
-      "revealing": "पत्ते मेज़ पर",
+      "revealing": "पत्ते मेज़ पर हैं",
       "judging": "इंजन विजेता तय कर रहा है…",
       "winner": "{player} ने पॉट जीता 🏆",
-      "tie": "बँटा पॉट — टाई"
+      "tie": "पॉट बँटा - बराबरी"
     },
     "controls": {
       "pause": "रोकें",
       "resume": "जारी रखें",
-      "deal": "अगला बाँटें"
+      "deal": "अगला हाथ बाँटें"
     },
     "ruleTitle": "विजेता तय करने वाला नियम",
-    "legendTerm": "हाइलाइट किए",
-    "legend": "शब्द पोकर डोमेन शब्दावली हैं, जो इंजन में डाले जाते हैं और किसी भी अन्य नियम की तरह कंपाइल होते हैं।",
-    "handsTitle": "हाथ क्रम (कमज़ोर → मज़बूत)",
-    "handsHint": "हर खिलाड़ी अपने 2 पत्तों और मेज़ के 5 पत्तों से अपना सर्वश्रेष्ठ पाँच-पत्ता हाथ बनाता है। मज़बूत हाथ जीतता है।",
+    "legendTerm": "हाइलाइट किए गए",
+    "legend": "शब्द पोकर डोमेन की शब्दावली हैं, जिन्हें इंजन में जोड़ा जाता है और किसी भी अन्य नियम की तरह संकलित किया जाता है।",
+    "handsTitle": "हाथ की रैंकिंग (सबसे कमजोर → सबसे मजबूत)",
+    "handsHint": "हर खिलाड़ी अपने दो पत्तों और मेज़ पर रखे पाँच पत्तों से अपना सर्वश्रेष्ठ पाँच-पत्तों वाला हाथ बनाता है। मजबूत हाथ जीतता है।",
     "hands": {
       "high": "हाई कार्ड",
       "pair": "जोड़ा",
       "twoPair": "दो जोड़े",
-      "trips": "तीन एक तरह के",
+      "trips": "तीन समान",
       "straight": "स्ट्रेट",
       "flush": "फ्लश",
       "fullHouse": "फुल हाउस",
-      "quads": "चार एक तरह के",
+      "quads": "चार समान",
       "straightFlush": "स्ट्रेट फ्लश"
     },
-    "footer": "डोमेन शब्दावली कुछ भी हो सकती है — क्रेडिट, क्लेम, या पोकर का एक हाथ। जो इंजन यह मेज़ बाँटता है, वही एक ऋण तय करता है।"
+    "footer": "डोमेन शब्दावली कुछ भी हो सकती है - क्रेडिट, क्लेम या पोकर का एक हाथ। जो इंजन यह मेज़ बाँटता है, वही ऋण का निर्णय करता है।"
   },
   "catMoodPage": {
     "seo": {
-      "title": "The Cat Mood Engine — a poetic Aster Lang demo",
-      "description": "Write a rule in cat-whisperer vocabulary, run it through the real engine, and watch a 5-second sketch cat react. Domain vocabulary, but make it whiskers."
+      "title": "बिल्ली-मूड इंजन — एक काव्यात्मक Aster Lang डेमो",
+      "description": "बिल्ली-समझने वालों की शब्दावली में नियम लिखें, उसे वास्तविक इंजन से चलाएँ, और 5-सेकंड की रेखाचित्र बिल्ली को प्रतिक्रिया करते देखें। डोमेन शब्दावली, लेकिन मूँछों वाली।"
     },
-    "eyebrow": "Fun demo · cat vocabulary",
-    "title": "The Cat Mood Engine",
-    "subtitle": "A rule written in the sacred vocabulary of cat-whisperers — compiled and run by the very same engine that decides loans. The cat does not care, but it will react.",
-    "poem": "Where the sunbeam pools and the bowl is full,\nthe small god decides what mood to rule.\nNo intruder? Then warmth, or a purr, or — pfft —\nthe slow blink of judgment, exquisitely cool.",
-    "ruleTitle": "The rule (in fluent cat)",
-    "legendTerm": "Highlighted",
-    "legend": "= cat vocabulary the engine learned for this demo.",
-    "sceneTitle": "Set the scene",
+    "eyebrow": "मज़ेदार डेमो · बिल्ली शब्दावली",
+    "title": "बिल्ली-मूड इंजन",
+    "subtitle": "बिल्ली-समझने वालों की पवित्र शब्दावली में लिखा नियम - उसी इंजन से संकलित और चलाया गया जो ऋणों का निर्णय करता है। बिल्ली को परवाह नहीं, लेकिन वह प्रतिक्रिया देगी।",
+    "poem": "जहाँ धूप ठहरती है और कटोरा भरा है,\nछोटा देवता तय करता है कि कौन-सा मूड राज करेगा।\nकोई घुसपैठिया नहीं? तो गर्माहट, या घुरघुराहट, या - फुस्स -\nनिर्णय की धीमी पलक, बेहद ठंडी और नपी-तुली।",
+    "ruleTitle": "नियम (धाराप्रवाह बिल्ली भाषा में)",
+    "legendTerm": "हाइलाइट किया गया",
+    "legend": "= इस डेमो के लिए इंजन ने सीखी हुई बिल्ली शब्दावली।",
+    "sceneTitle": "दृश्य सेट करें",
     "scenes": {
       "perch": {
-        "label": "Claim High Ground"
+        "label": "ऊँची जगह कब्ज़े में"
       },
       "purr": {
-        "label": "Well-fed"
+        "label": "अच्छी तरह खाया हुआ"
       },
       "loaf": {
-        "label": "Sunbeam o’clock"
+        "label": "धूप सेंकने का समय"
       },
       "floof": {
-        "label": "Stranger!"
+        "label": "अजनबी!"
       },
       "judge": {
-        "label": "Unimpressed"
+        "label": "अप्रभावित"
       }
     },
     "moods": {
       "perch": {
-        "name": "🐈 Perch",
-        "quip": "High ground secured. From this throne the whole domain is under surveillance. As it should be."
+        "name": "🐈 ऊँचा आसन",
+        "quip": "ऊँची जगह सुरक्षित। इस सिंहासन से पूरा डोमेन निगरानी में है। जैसा होना चाहिए।"
       },
       "purr": {
-        "name": "😌 Purr",
-        "quip": "Belly full, world forgiven. The motor is running. You may continue to exist."
+        "name": "😌 घुरघुराहट",
+        "quip": "पेट भरा, दुनिया माफ़। मोटर चल रही है। आपको अस्तित्व में बने रहने की अनुमति है।"
       },
       "loaf": {
-        "name": "🍞 Loaf",
-        "quip": "Warmth detected. Bones now optional. The cat has become bread."
+        "name": "🍞 बिल्ली-लोफ",
+        "quip": "गर्माहट मिली। हड्डियाँ अब वैकल्पिक हैं। बिल्ली रोटी बन गई है।"
       },
       "floof": {
-        "name": "🙀 Floof",
-        "quip": "A STRANGER. Double in size, triple in suspicion. This is fine. (It is not fine.)"
+        "name": "🙀 फूली हुई",
+        "quip": "एक अजनबी। आकार दोगुना, शक तीन गुना। सब ठीक है। (ठीक नहीं है।)"
       },
       "judge": {
-        "name": "😼 Judgment",
-        "quip": "No sun, no snacks, no patience. You are being evaluated. You did not pass."
+        "name": "😼 निर्णय",
+        "quip": "न धूप, न नाश्ता, न धैर्य। आपका मूल्यांकन हो रहा है। आप पास नहीं हुए।"
       }
     },
-    "footer": "Silly vocabulary, serious engine: this cat rule compiled and ran on the same Aster Lang runtime as a credit policy. Your words — even these — become an auditable decision.",
-    "idleHint": "The cat is doing its own thing. Pick a scene below to see how it reacts."
-  },
-  "devFooter": {
-    "demos": "डेमो"
+    "footer": "शब्दावली मज़ाकिया, इंजन गंभीर: यह बिल्ली नियम उसी Aster Lang रनटाइम पर संकलित और चला जिस पर क्रेडिट नीति चलती है। आपके शब्द - ये भी - ऑडिट-योग्य निर्णय बन जाते हैं।",
+    "idleHint": "बिल्ली अपने काम में लगी है। वह कैसे प्रतिक्रिया देती है, देखने के लिए नीचे कोई दृश्य चुनें।"
   },
   "jingyesiPage": {
     "seo": {
-      "title": "Quiet Night Thoughts — Aster demo",
-      "description": "Li Bai’s poem is Aster source: run it and it outputs the poem’s title. Display layout decoupled from compile source via LayoutMap."
+      "title": "शांत रात्रि विचार — Aster डेमो",
+      "description": "ली बाई की कविता Aster स्रोत है: इसे चलाएँ और यह कविता का शीर्षक देती है। LayoutMap के जरिए प्रदर्शन लेआउट को संकलन स्रोत से अलग किया गया है।"
     },
-    "eyebrow": "Source as poem",
-    "title": "Quiet Night Thoughts — Li Bai",
-    "subtitle": "The whole poem, in original word order, is runnable Aster. Two layouts of the same program — display reads as the poem, canonical is what compiles.",
-    "displayView": "Display view",
-    "displayHint": "Li Bai’s poem, its natural four lines.",
-    "canonicalView": "Compile view",
-    "canonicalHint": "The canonical source (what actually compiles) — layout bent to Aster’s grammar.",
-    "decoupleNote": "Same program, two layouts — display frees the poem, compile runs the canonical source (LayoutMap).",
-    "compileError": "Compile error",
-    "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
-    "runLabel": "Run the poem-as-program, it outputs the poem’s name:"
+    "eyebrow": "स्रोत के रूप में कविता",
+    "title": "शांत रात्रि विचार — ली बाई",
+    "subtitle": "पूरी कविता, मूल शब्द-क्रम में, चलने योग्य Aster है। उसी प्रोग्राम के दो लेआउट - प्रदर्शन कविता की तरह पढ़ा जाता है, कैनोनिकल वही है जो संकलित होता है।",
+    "displayView": "प्रदर्शन दृश्य",
+    "displayHint": "ली बाई की कविता, उसकी स्वाभाविक चार पंक्तियाँ।",
+    "canonicalView": "संकलन दृश्य",
+    "canonicalHint": "कैनोनिकल स्रोत (जो वास्तव में संकलित होता है) - लेआउट Aster के व्याकरण के अनुरूप मोड़ा गया।",
+    "decoupleNote": "वही प्रोग्राम, दो लेआउट - प्रदर्शन कविता को मुक्त करता है, संकलन कैनोनिकल स्रोत चलाता है (LayoutMap)।",
+    "compileError": "संकलन त्रुटि",
+    "compiledTo": "मॉड्यूल 「{module}」 · नियम 「{rule}」 में संकलित",
+    "runLabel": "कविता-के-रूप-में-प्रोग्राम चलाएँ; यह कविता का नाम देता है:"
   },
   "sherlockPage": {
     "seo": {
-      "title": "The Speckled Band — Aster demo",
-      "description": "Sherlock’s deduction as an Aster decision rule: feed clues, it outputs the culprit. Display reasoning decoupled from compile source via LayoutMap."
+      "title": "चितकबरी पट्टी — Aster डेमो",
+      "description": "शरलॉक का निष्कर्ष Aster निर्णय नियम के रूप में: सुराग दें, यह अपराधी बताता है। LayoutMap के जरिए प्रदर्शन तर्क को संकलन स्रोत से अलग किया गया है।"
     },
-    "eyebrow": "Source as deduction",
-    "title": "The Speckled Band — Sherlock’s deduction",
-    "subtitle": "Sherlock’s reasoning is a runnable Aster decision rule. Two layouts — display reads as his monologue, canonical is the indented decision chain that compiles.",
-    "displayView": "Display view",
-    "displayHint": "Holmes's reasoning, a flowing deductive monologue.",
-    "canonicalView": "Compiled view",
-    "canonicalHint": "The real compiled source — an inline-if decision chain with 那么/否则.",
-    "decoupleNote": "Same rule, two layouts — display reads as reasoning, compile runs the canonical chain (LayoutMap).",
-    "compileError": "Compile error",
-    "compiledTo": "Compiled to module 「{module}」 · rule 「{rule}」",
-    "boardTitle": "Deduction board",
-    "boardHint": "Tick the clues found at the crime scene — Holmes's rule re-deduces the culprit in real time. The rule is compiled once; changing clues re-runs the decision instantly.",
+    "eyebrow": "स्रोत के रूप में निष्कर्ष",
+    "title": "चितकबरी पट्टी — शरलॉक का निष्कर्ष",
+    "subtitle": "शरलॉक का तर्क चलने योग्य Aster निर्णय नियम है। दो लेआउट - प्रदर्शन उसके एकालाप की तरह पढ़ा जाता है, कैनोनिकल वह इंडेंटेड निर्णय शृंखला है जो संकलित होती है।",
+    "displayView": "प्रदर्शन दृश्य",
+    "displayHint": "होम्स का तर्क, बहता हुआ निष्कर्षात्मक एकालाप।",
+    "canonicalView": "संकलित दृश्य",
+    "canonicalHint": "वास्तविक संकलित स्रोत - 那么/否则 वाली inline-if निर्णय शृंखला।",
+    "decoupleNote": "वही नियम, दो लेआउट - प्रदर्शन तर्क की तरह पढ़ा जाता है, संकलन कैनोनिकल शृंखला चलाता है (LayoutMap)।",
+    "compileError": "संकलन त्रुटि",
+    "compiledTo": "मॉड्यूल 「{module}」 · नियम 「{rule}」 में संकलित",
+    "boardTitle": "निष्कर्ष बोर्ड",
+    "boardHint": "अपराध-स्थल पर मिले सुरागों पर टिक करें - होम्स का नियम वास्तविक समय में अपराधी का फिर से निष्कर्ष निकालता है। नियम एक बार संकलित होता है; सुराग बदलते ही निर्णय तुरंत फिर चलता है।",
     "clues": {
-      "bellRope": "A dummy bell-rope leads to the ventilator",
-      "safeSnake": "A venomous snake is kept in the safe",
-      "onlyStepfather": "Only the stepfather can enter the sealed room",
-      "dyingWords": "The sister’s dying words: “the speckled band”"
+      "bellRope": "नकली घंटी की रस्सी वेंटिलेटर तक जाती है",
+      "safeSnake": "तिजोरी में विषैला साँप रखा है",
+      "onlyStepfather": "केवल सौतेला पिता बंद कमरे में प्रवेश कर सकता है",
+      "dyingWords": "बहन के अंतिम शब्द: “चितकबरी पट्टी”"
     },
-    "verdictLabel": "Holmes's verdict",
-    "presetsLabel": "Try these clue combinations:",
+    "verdictLabel": "होम्स का फैसला",
+    "presetsLabel": "इन सुराग संयोजनों को आज़माएँ:",
     "presets": {
-      "original": "The full case",
-      "roomOnly": "Sealed-room clue only",
-      "wordsOnly": "Dying words only",
-      "insufficient": "No clues at all"
+      "original": "पूरा मामला",
+      "roomOnly": "केवल बंद-कमरे का सुराग",
+      "wordsOnly": "केवल अंतिम शब्द",
+      "insufficient": "कोई सुराग नहीं"
     },
-    "clearAll": "Clear clues",
-    "ruleTitle": "The rule itself"
+    "clearAll": "सुराग साफ़ करें",
+    "ruleTitle": "नियम स्वयं"
   },
   "playgroundDemos": {
-    "eyebrow": "Explore",
-    "title": "See Aster in action",
-    "subtitle": "Four live demos — each is real, runnable Aster. Poke at them, then write your own rules above."
+    "eyebrow": "एक्सप्लोर करें",
+    "title": "Aster को काम करते देखें",
+    "subtitle": "चार लाइव डेमो - हर एक वास्तविक, चलने योग्य Aster है। उन्हें आज़माएँ, फिर ऊपर अपने नियम लिखें।"
   },
-  "demoBackToPlayground": "Try your own rules in the Playground"
+  "demoBackToPlayground": "प्लेग्राउंड में अपने नियम आज़माएँ"
 }
