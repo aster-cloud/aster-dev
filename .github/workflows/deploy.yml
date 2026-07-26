@@ -12,6 +12,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# 最小权限：部署经 Cloudflare API token（secrets.CLOUDFLARE_API_TOKEN）完成，不依赖
+# GitHub OIDC id-token；构建/部署也不回写仓库、不评论 PR、不推镜像。故 GITHUB_TOKEN
+# 顶层只需只读 contents（供 actions/checkout 拉取源码），收回默认宽泛读写权限。
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
