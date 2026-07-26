@@ -14,6 +14,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# 最小权限：本 workflow 仅 checkout + install + typecheck/lint/test，无任何写操作
+# （不推 commit/tag/release、不评论 PR、不传 SARIF、不推镜像、不走 OIDC 云登录），
+# 故顶层只授予只读 contents，收回默认宽泛 GITHUB_TOKEN。
+permissions:
+  contents: read
+
 jobs:
   quality:
     runs-on: ubuntu-latest
