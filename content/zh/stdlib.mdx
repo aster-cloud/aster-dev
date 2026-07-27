@@ -1,0 +1,157 @@
+# 标准库
+
+Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript 与 JVM）上运行结果一致。用括号调用，例如 `List.sum(xs)`。下面每个示例都按原样可编译、可运行。
+
+> 确定性：这里刻意**没有** `today()` / `now()` / `random()`。当前日期作为输入传入（见 `Date.*`）。正是这一点让决策可回放、两套引擎字节级一致。
+
+## Text（文本）
+
+| 函数 | 签名 | 结果 |
+| --- | --- | --- |
+| `Text.concat(a, b)` | `(Text, Text) → Text` | `a` 后接 `b`（也可直接用 `a plus b`） |
+| `Text.toUpper(t)` | `(Text) → Text` | 转大写 |
+| `Text.toLower(t)` | `(Text) → Text` | 转小写 |
+| `Text.length(t)` | `(Text) → Int` | 字符数 |
+| `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | 子串测试 |
+| `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | 前缀测试 |
+| `Text.indexOf(t, sub)` | `(Text, Text) → Int` | 首次出现的下标，否则 `-1` |
+| `Text.split(t, delimiter)` | `(Text, Text) → List` | 拆分为列表 |
+| `Text.trim(t)` | `(Text) → Text` | 去除首尾空白 |
+| `Text.substring(t, start[, end])` | `(Text, Int[, Int]) → Text` | 切片 `[start, end)` |
+| `Text.replace(t, target, replacement)` | `(Text, Text, Text) → Text` | 替换出现处 |
+
+```aster
+Module text_demo.
+
+Rule shout given name as Text, produce Text:
+  Return Text.toUpper(name) plus "!".
+```
+
+## List（列表）
+
+| 函数 | 签名 | 结果 |
+| --- | --- | --- |
+| `List.length(xs)` | `(List) → Int` | 元素个数 |
+| `List.get(xs, i)` | `(List, Int) → T` | 下标 `i` 处的元素（越界 → 报错） |
+| `List.contains(xs, v)` | `(List, T) → Bool` | 成员测试 |
+| `List.append(xs, v)` | `(List, T) → List` | 追加 `v` 后的新列表 |
+| `List.concat(xs, ys)` | `(List, List) → List` | 连接两个列表 |
+| `List.slice(xs, start[, end])` | `(List, Int[, Int]) → List` | 切片 `[start, end)` |
+| `List.distinct(xs)` | `(List) → List` | 去重，保序 |
+| `List.range(start, end)` | `(Int, Int) → List` | 整数 `[start, end)` |
+| `List.sum(xs)` | `(List) → Num` | 求和（空 → 0） |
+| `List.min(xs)` / `List.max(xs)` | `(List) → Num` | 最小 / 最大（空 → 报错） |
+| `List.sort(xs)` | `(List) → List` | 升序，稳定 |
+| `List.combinations(xs, k)` | `(List, Int) → List` | 全部 `k` 元组合（字典序） |
+
+```aster
+Module list_demo.
+
+Rule total given amounts as List, produce Int:
+  Return List.sum(amounts).
+```
+
+`List.combinations` 出于安全做了限制：输入至多 64 个元素，且组合数量设了上限（超大输入会报错而非卡死）。
+
+### 高阶（lambda）列表函数
+
+`List.map` / `List.filter` / `List.reduce` / `List.count` / `List.sortBy` / `List.minBy` / `List.maxBy` / `List.groupBy` 接受一个函数参数。把该函数定义为具名规则，按名传入。
+
+```aster
+Module hof_demo.
+
+Rule increment given x as Int, produce Int:
+  Return x plus 1.
+
+Rule bumpAll given xs as List, produce List:
+  Return List.map(xs, increment).
+```
+
+## Map（映射）
+
+`Map` 把字符串键映射到值。所有操作都返回新映射（不可变）。
+
+| 函数 | 签名 | 结果 |
+| --- | --- | --- |
+| `Map.empty()` | `() → Map` | 空映射 |
+| `Map.get(m, key)` | `(Map, Text) → T` | 值，若不存在则 `null` |
+| `Map.put(m, key, value)` | `(Map, Text, T) → Map` | 设置该条目后的新映射 |
+| `Map.remove(m, key)` | `(Map, Text) → Map` | 移除该键后的新映射 |
+| `Map.contains(m, key)` | `(Map, Text) → Bool` | 键存在测试 |
+| `Map.keys(m)` | `(Map) → List` | 所有键 |
+| `Map.values(m)` | `(Map) → List` | 所有值 |
+| `Map.size(m)` | `(Map) → Int` | 条目数 |
+
+```aster
+Module map_demo.
+
+Rule lookup given score as Int, produce Int:
+  Let table be Map.put(Map.empty(), "gold", score).
+  Return Map.get(table, "gold").
+```
+
+## Date（日期）
+
+日期表示为自 1970-01-01 起的整数天数（「epoch-day」）。比较或平移日期就是整数运算。没有 `today()`——把求值日期作为输入传入。
+
+| 函数 | 签名 | 结果 |
+| --- | --- | --- |
+| `Date.fromISO(iso)` | `(Text) → Int` | 严格解析 `YYYY-MM-DD` → epoch-day |
+| `Date.daysBetween(a, b)` | `(Int, Int) → Int` | `b - a` 的天数（可为负） |
+| `Date.addDays(d, n)` | `(Int, Int) → Int` | 平移 `n` 天 |
+| `Date.year(d)` / `Date.month(d)` / `Date.day(d)` | `(Int) → Int` | 提取字段 |
+
+```aster
+Module date_demo.
+
+Rule ageInDays given birthday as Text, asOf as Text, produce Int:
+  Return Date.daysBetween(Date.fromISO(birthday), Date.fromISO(asOf)).
+```
+
+错误：格式错误或超范围的日期会抛 `Date.InvalidISODate`；运算结果超出支持范围（0001-01-01 … 9999-12-31）会抛 `Date.OutOfRange`。
+
+## Decimal（十进制）
+
+用于金额与费率的精确十进制数。写 Decimal 字面量时加 `m` 后缀（`1.08m`）。`+`、`-`、`*` 是精确的；除法与舍入必须显式。
+
+| 函数 | 签名 | 结果 |
+| --- | --- | --- |
+| `Decimal.round(x, scale, mode)` | `(Decimal, Int, Text) → Decimal` | 舍入到 `scale` 位小数 |
+| `Decimal.divide(x, y, scale, mode)` | `(Decimal, Decimal, Int, Text) → Decimal` | 精确除法后舍入 |
+
+`scale` 取 `0…18`。`mode` 为 `"HALF_UP"`、`"HALF_EVEN"`（银行家舍入）或 `"DOWN"`（截断）——与 JVM 同名的 `RoundingMode` 一致。
+
+```aster
+Module money_demo.
+
+Rule withTax given price as Decimal, produce Decimal:
+  Return Decimal.round(price times 1.08m, 2, "HALF_EVEN").
+```
+
+把 `Decimal` 与二进制浮点（`Double`）混用会在求值时被拒——请改为把 `Int` 提升为 `Decimal`。`Decimal.divide` 除以零会报错。
+
+## Maybe / Option 与 Result
+
+用 `Some(x)` / `None` 构造可选值，用 `Ok(x)` / `Err(e)` 构造可失败值。用下面的辅助函数（或用 `Match`）检视它们。
+
+| 函数 | 结果 |
+| --- | --- |
+| `Maybe.isSome(o)` / `Maybe.isNone(o)` | `Bool` |
+| `Maybe.withDefault(o, fallback)` | 值，若为 `None` 则 `fallback` |
+| `Maybe.unwrap(o)` | 值（为 `None` 时报错） |
+| `Result.isOk(r)` / `Result.isErr(r)` | `Bool` |
+| `Result.unwrap(r)` / `Result.unwrapErr(r)` | Ok 值 / Err 值 |
+
+`Option.*` 是 `Maybe.*` 的别名。
+
+```aster
+Module maybe_demo.
+
+Rule scoreOrZero given raw as Int, produce Int:
+  Let maybeScore be Some(raw).
+  Return Maybe.withDefault(maybeScore, 0).
+```
+
+## 不提供的能力
+
+`Math.*` 和真正的 `IO.*`（文件/网络）**不**属于标准库——运行时按设计是沙箱化且确定性的。算术请用运算符（`plus`、`minus`、`times`、`divided by`、`modulo`）；I/O 请从你的应用调用规则、在那里做 I/O。

@@ -1,0 +1,73 @@
+# 部署
+
+把一条策略从源码送到生产环境、跑在 Aster 引擎（`aster-api`）上，并带版本管理与审计地大规模调用。
+
+## 策略生命周期
+
+```
+编写 ──► 校验 ──► 部署 ──► 求值 ──► 监控
+(CNL)   (浏览器)  (REST)   (REST)   (审计 + 版本)
+```
+
+## 1. 编写
+
+在 [演练场](/playground) 或任意编辑器里写策略。
+
+```aster
+Module Pricing.
+
+Rule discountedPrice given amount as Int, tier as Text, produce Int:
+  If tier is equal to "gold"
+    Return amount times 80 divided by 100.
+  Return amount.
+```
+
+## 2. 本地校验
+
+用 [浏览器 API](/docs/browser-api)（`compileAndTypecheck`）或演练场，在部署**之前**就抓出语法与类型错误——无需服务器。
+
+## 3. 提取 schema
+
+`extractSchema` 推导出每条规则的输入/输出形状，让你确切知道已部署策略期望什么。
+
+## 4. 部署
+
+把源码提交到 REST API。引擎会编译、类型检查并存储它，返回一个版本 id。
+
+```bash
+curl -X POST https://policy.aster-lang.dev/api/v1/policies \
+  -H 'Content-Type: application/json' \
+  -d '{ "source": "...", "locale": "en-US" }'
+```
+
+## 5. 执行
+
+调用已部署的策略（或直接对源码求值）：
+
+```bash
+curl -X POST https://policy.aster-lang.dev/api/v1/policies/evaluate-source \
+  -H 'Content-Type: application/json' \
+  -d '{ "source": "...", "context": { "amount": 200, "tier": "gold" } }'
+```
+
+加上 `?trace=true` 可获得决策轨迹——哪条规则、在什么输入上、得出什么结果触发——这是**可回放**决策的基石。
+
+## 6. 监控与审计
+
+- **审计日志** —— 每次求值都被记录。
+- **哈希链完整性** —— 审计轨迹可防篡改。
+- **异常检测** —— 浮现异常的决策模式。
+
+## 版本管理
+
+- **列出版本** —— 查看一条策略的每个已部署修订。
+- **部署新版本** —— 提交更新后的源码；旧版本仍可调用。
+- **回滚** —— 把执行钉到某个历史版本。由于每次决策都记录了它所运行的确切版本，历史完全可重建。
+
+## 检查清单
+
+- [ ] 已本地校验 + 类型检查
+- [ ] 已复核 schema（输入/输出符合预期）
+- [ ] 已部署并记录版本 id
+- [ ] 已用代表性输入冒烟测试（含边界情况）
+- [ ] 已确认审计 + 监控
