@@ -102,6 +102,20 @@ describe('docs search index', () => {
     expect(differing).toBeGreaterThan(en.length / 2);
   });
 
+  // ★回归：CodeQL js/incomplete-multi-character-sanitization。
+  //   原实现用单次 replace(/<!--[\s\S]*?-->/g,'')，对嵌套输入不完整——
+  //   '<!-- <!-- x --> -->' 替换后残留 ' -->'。索引内容会进 UI 与 LLM prompt，
+  //   残留标记既可能破坏渲染，也可能被当成有意义的文本。
+  it('★索引中不含任何 HTML 注释残留标记', () => {
+    for (const locale of LOCALES) {
+      for (const e of readIndex(locale).entries) {
+        const all = [e.title, e.description, ...e.headings].join(' ');
+        expect(all, `${locale}/${e.slug} 残留注释标记`).not.toContain('<!--');
+        expect(all, `${locale}/${e.slug} 残留注释标记`).not.toContain('-->');
+      }
+    }
+  });
+
   it('locale 字段与文件名一致（消费侧据此拼 URL 前缀）', () => {
     for (const locale of LOCALES) {
       expect(readIndex(locale).locale).toBe(locale);

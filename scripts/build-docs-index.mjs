@@ -47,10 +47,54 @@ function routedSlugs() {
   return out;
 }
 
+/**
+ * 剥离 HTML 注释。
+ *
+ * <p>★用线性扫描而非 `replace(/<!--[\s\S]*?-->/g, '')`：单次正则替换对嵌套
+ * 输入不完整——`<!-- <!-- x --> -->` 替换后残留 ` -->`，CodeQL 的
+ * js/incomplete-multi-character-sanitization 正是报这个。索引内容会进 UI 与
+ * LLM prompt，残留标记既可能破坏渲染，也可能被当成有意义的文本。
+ * 扫描一次到底则没有"替换后又产生新标记"的问题。
+ */
+function stripHtmlComments(raw) {
+  let out = '';
+  let i = 0;
+  while (i < raw.length) {
+    const open = raw.indexOf('<!--', i);
+    if (open === -1) {
+      out += raw.slice(i);
+      break;
+    }
+    out += raw.slice(i, open);
+    // 深度计数：`<!-- <!-- x --> -->` 若只吃到第一个 `-->`，外层的 `-->`
+    // 会残留在输出里（HTML 规范不支持嵌套注释，但**输入是不可信的文本**，
+    // 必须按最坏情况处理，否则就退回到 CodeQL 报的那个不完整清理）。
+    let depth = 1;
+    let j = open + 4;
+    while (depth > 0 && j < raw.length) {
+      const nextOpen = raw.indexOf('<!--', j);
+      const nextClose = raw.indexOf('-->', j);
+      if (nextClose === -1) {
+        j = raw.length; // 未闭合：丢弃剩余全部，不留裸标记
+        depth = 0;
+        break;
+      }
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        j = nextOpen + 4;
+      } else {
+        depth--;
+        j = nextClose + 3;
+      }
+    }
+    i = j;
+  }
+  return out;
+}
+
 /** 去掉 MDX 里的 import/export 行与 HTML 注释，避免它们混进标题/描述。 */
 function cleanBody(raw) {
-  return raw
-    .replace(/<!--[\s\S]*?-->/g, '')
+  return stripHtmlComments(raw)
     .split(/\r?\n/)
     .filter((l) => !/^\s*(import|export)\s/.test(l))
     .join('\n');
