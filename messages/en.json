@@ -258,5 +258,9 @@
     "title": "See Aster in action",
     "subtitle": "Four live demos — each is real, runnable Aster. Poke at them, then write your own rules above."
   },
-  "demoBackToPlayground": "Try your own rules in the Playground"
+  "demoBackToPlayground": "Try your own rules in the Playground",
+  "docsFallback": {
+    "title": "Not translated yet",
+    "body": "This page is not available in your language yet, so the English version is shown."
+  }
 }

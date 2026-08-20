@@ -1,16 +1,171 @@
 # 语言参考
 
-Aster 语法、类型与求值语义的形式参考。这是权威规范；[语言指南](/docs/language-guide)
-是教程式的入门。
+Aster 语法、类型与求值语义的权威参考。[语言指南](/docs/language-guide) 是教程式的
+入门；本页是规范。
 
 ## 语法
 
 Aster 的表层语法由每个 locale 的**词法表**（关键词集）定义在共享的核心语法之上。
-英文词法表用 `Module`、`Rule`、`given`、`has`、`return`、`if`/`then`/`else`。其他
-locale 翻译关键词；核心语法与中间表示完全相同。
+英文词法表用 `Module`、`Rule`、`given`、`has`、`Return`、`If`。其他 locale 翻译
+关键词；核心语法与中间表示完全相同。
+
+```ebnf
+module      = "Module" Name "." declaration+ ;
+declaration = define | rule ;
+define      = "Define" Name "has" field ("," field)* "." ;
+rule        = "Rule" Name "given" params ("," "produce" Type)? ":" body ;
+ifStmt      = "If" condition body ;
+body        = statement+ ;
+statement   = ifStmt | "Return" expression "." ;
+```
+
+## 类型系统
+
+Aster 提供四种内置原始类型，外加用户自定义结构体。类型是**推断**的——你很少需要写出来。
+
+### 原始类型
+
+| 类型 | 说明 | 示例 |
+| --- | --- | --- |
+| `Int` | 整数 | `0`、`42`、`-7` |
+| `Float` | 浮点数 | `3.14`、`0.5`、`-1.0` |
+| `Text` | 字符串（双引号） | `"hello"`、`"gold"` |
+| `Bool` | 布尔值 | `true`、`false` |
+
+> **DateTime 推断**——`DateTime` 不是关键词。编译器会为名字符合时间模式的字段
+> （`createdAt`、`birthday`、`expiryDate`）推断出该类型。
+
+### 自定义类型（结构体）
+
+任何由 `Define` 声明引入的名字都成为合法类型：
+
+```aster
+Module Insurance.
+
+Define Policy has premium as Int, deductible as Int.
+
+Rule quote given age as Int, produce Policy:
+  If age is less than 25
+    Return Policy with premium set to 500, deductible set to 1000.
+  Return Policy with premium set to 300, deductible set to 500.
+```
+
+## 控制流
+
+条件逻辑用 `If … Return …`。分支自上而下求值；第一个条件为 `true` 的分支返回并
+终止该规则。结尾不带 `If` 的 `Return` 是默认分支。
+
+```aster
+Module Grading.
+
+Rule classify given score as Int, produce Text:
+  If score is at least 90
+    Return "excellent".
+  If score is at least 70
+    Return "good".
+  If score is at least 50
+    Return "average".
+  Return "poor".
+```
+
+条件应尽量用 `and` / `or` 组合，而非层层缩进。
+
+## 运算符
+
+### 算术
+
+| 运算符 | 含义 | 示例 |
+| --- | --- | --- |
+| `plus` | 加 | `amount plus 10` |
+| `minus` | 减 | `price minus discount` |
+| `times` | 乘 | `quantity times unitPrice` |
+| `divided by` | 除 | `total divided by count` |
+| `modulo` | 取余 | `n modulo 2` |
+| `integer divided by` | 截断除法 | `n integer divided by 2` |
+
+`times`、`divided by`、`modulo` 与 `integer divided by` 的结合力强于 `plus` 和 `minus`。
+
+### 比较
+
+| 运算符 | 含义 | 示例 |
+| --- | --- | --- |
+| `is greater than` | `>` | `age is greater than 18` |
+| `is less than` | `<` | `score is less than 50` |
+| `is at least` | `>=` | `income is at least 30000` |
+| `is at most` | `<=` | `balance is at most 0` |
+| `is equal to` | `==` | `tier is equal to "gold"` |
+
+前导的 `is` 可省略——`score is at least 700` 与 `score at least 700` 编译结果完全
+相同。哪个读起来更顺就用哪个。
+
+### 逻辑
+
+| 运算符 | 含义 | 示例 |
+| --- | --- | --- |
+| `not` | 非 | `not isExpired` |
+| `and` | 与 | `age is at least 18 and income is at least 30000` |
+| `or` | 或 | `tier is equal to "gold" or tier is equal to "platinum"` |
+
+`and` 的结合力强于 `or`，故 `x or y and z` 读作 `x or (y and z)`。
 
 ## 求值
 
-规则是其输入的纯函数。求值是确定性的：相同输入总产生相同结果，且 JVM（Truffle）与
-TypeScript 两套运行时降到**同一份中间表示**，保证逐字节一致。每次求值都可产出
-**决策轨迹**用于回放。
+规则是其输入的纯函数。求值是**确定性**的：相同输入总产生相同结果，且 JVM（Truffle）
+与 TypeScript 两套运行时降到**同一份中间表示**，保证结果逐字节一致。每次求值都可
+产出**决策轨迹**用于回放——哪条规则、在什么输入上、得出什么结果触发。
+
+## 副作用与纯度
+
+规则默认是纯的。副作用（I/O、外部调用）必须经由 effect capability 显式声明，
+从而让审计面保持诚实。
+
+## 多语言
+
+同一个程序可以用 English、中文、Deutsch 或 हिन्दी 书写——只有关键词不同。所有
+locale 编译到完全相同的 IR，故一条中文策略与它的英文译本产出逐字节一致的决策。
+可在[演练场](/playground)里切换源语言试试。
+
+## 特性稳定性
+
+Aster 处于**技术预览**阶段。特性分三档。可以放心地在 **Stable** 档上构建；
+**Experimental** 档请视为可能变化。
+
+### Stable —— 生产可用、双引擎已验证
+
+这些由逐字节等价性测试套件覆盖（两套引擎降到同一份 Core IR 并产出相同结果）：
+
+- **声明**：`Module`、`Rule … given … produce:`、`Define … has …`（结构体）、
+  `Define … as one of …`（枚举）、带类型的参数 `given p as T`、`type X as Y`（类型别名）
+- **语句**：`Let … be …`、`Return …`、`If … / Otherwise`、
+  `Match … When …`（含 `When null` 与构造子模式）
+- **表达式**：字段访问 `a.b`、结构体构造 `T with f set to v`、函数调用、lambda、
+  `Some/None/Ok/Err`、字符串/数字/decimal 字面量、列表
+- **运算符**：全部算术（`plus`、`minus`、`times`、`divided by`、
+  `integer divided by`、`modulo`）、比较（`less than`、`greater than`、
+  `at least`、`at most`、`equals to`、`is (not) equal to`）与逻辑
+  （`and`、`or`、`not`）——短路语义已锁定
+- **标准库**：`Text.*`、`List.*`（含 `map`/`filter`/`reduce`/`combinations`）、
+  `Map.*`、`Date.*`、`Decimal.*`、`Maybe`/`Option`、`Result`
+  （见[标准库](/docs/stdlib)）—— 但该页标 † 的六个函数（`Text.substring`、
+  `Text.replace`、`List.slice`、`Maybe.unwrap`、`Result.unwrap`、
+  `Result.unwrapErr`）目前仅 JVM 可用
+- **`@entry`** 注解
+
+### Experimental —— 可用，但语义可能变化
+
+已实现且可解析，但**尚未**被等价性测试套件锁定。可以探索；暂时不要在生产中
+依赖其确切行为。
+
+- **工作流**（`Start … async`、`Wait for …`）—— 异步，无确定性 golden
+- **跨模块 `Use … version N`** —— 跨模块的值级引用需要多模块运行时；
+  `aster.modules.enabled` 默认关闭
+- **Effect 系统**（`It performs io [Http, Sql, …]`）—— 编译期能力推断；
+  能力集合可能增补或变化
+- **PII 类型系统**（`@pii` + 流分析）—— CI 中已强制，但跨运行时的 PII 契约
+  尚未单独冻结
+- **执行注解**（`@cpu`、`@example`、`@deprecated`）
+
+### 尚不可用
+
+`Set`（可变重新赋值）、多参数 `apply`、泛型、`Math.*` 以及真正的 `IO.*` 不在预览
+范围内。请改用 `Let` 绑定、`List.*` 高阶函数，以及带括号的调用 `f(x, y)`。

@@ -1,6 +1,12 @@
 # 标准库
 
-Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript 与 JVM）上运行结果一致。用括号调用，例如 `List.sum(xs)`。下面每个示例都按原样可编译、可运行。
+Aster 内置的函数。全部是**确定性的**。用括号调用，例如 `List.sum(xs)`。下面每个示例都按原样可编译、可运行。
+
+> **† 目前仅 JVM 可用。** `Text.substring`、`Text.replace`、`List.slice`、
+> `Maybe.unwrap`、`Result.unwrap`、`Result.unwrapErr` 在 JVM 引擎已实现，
+> TypeScript 引擎尚未实现，故在浏览器演练场与 `@aster-cloud/aster-lang-ts` 中调用会报
+> `Undefined function`。TS 实现正在补齐；在此之前请勿在浏览器侧代码中使用——
+> `Maybe.withDefault` 能覆盖多数 `unwrap` 场景。本页其余函数在两套引擎上行为一致。
 
 > 确定性：这里刻意**没有** `today()` / `now()` / `random()`。当前日期作为输入传入（见 `Date.*`）。正是这一点让决策可回放、两套引擎字节级一致。
 
@@ -17,8 +23,8 @@ Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript
 | `Text.indexOf(t, sub)` | `(Text, Text) → Int` | 首次出现的下标，否则 `-1` |
 | `Text.split(t, delimiter)` | `(Text, Text) → List` | 拆分为列表 |
 | `Text.trim(t)` | `(Text) → Text` | 去除首尾空白 |
-| `Text.substring(t, start[, end])` | `(Text, Int[, Int]) → Text` | 切片 `[start, end)` |
-| `Text.replace(t, target, replacement)` | `(Text, Text, Text) → Text` | 替换出现处 |
+| `Text.substring(t, start[, end])` † | `(Text, Int[, Int]) → Text` | 切片 `[start, end)` |
+| `Text.replace(t, target, replacement)` † | `(Text, Text, Text) → Text` | 替换全部出现处（字面量，非正则） |
 
 ```aster
 Module text_demo.
@@ -36,7 +42,7 @@ Rule shout given name as Text, produce Text:
 | `List.contains(xs, v)` | `(List, T) → Bool` | 成员测试 |
 | `List.append(xs, v)` | `(List, T) → List` | 追加 `v` 后的新列表 |
 | `List.concat(xs, ys)` | `(List, List) → List` | 连接两个列表 |
-| `List.slice(xs, start[, end])` | `(List, Int[, Int]) → List` | 切片 `[start, end)` |
+| `List.slice(xs, start[, end])` † | `(List, Int[, Int]) → List` | 切片 `[start, end)` |
 | `List.distinct(xs)` | `(List) → List` | 去重，保序 |
 | `List.range(start, end)` | `(Int, Int) → List` | 整数 `[start, end)` |
 | `List.sum(xs)` | `(List) → Num` | 求和（空 → 0） |
@@ -138,9 +144,9 @@ Rule withTax given price as Decimal, produce Decimal:
 | --- | --- |
 | `Maybe.isSome(o)` / `Maybe.isNone(o)` | `Bool` |
 | `Maybe.withDefault(o, fallback)` | 值，若为 `None` 则 `fallback` |
-| `Maybe.unwrap(o)` | 值（为 `None` 时报错） |
+| `Maybe.unwrap(o)` † | 值（为 `None` 时报错） |
 | `Result.isOk(r)` / `Result.isErr(r)` | `Bool` |
-| `Result.unwrap(r)` / `Result.unwrapErr(r)` | Ok 值 / Err 值 |
+| `Result.unwrap(r)` / `Result.unwrapErr(r)` † | Ok 值 / Err 值 |
 
 `Option.*` 是 `Maybe.*` 的别名。
 

@@ -33,24 +33,39 @@ catch syntax and type errors **before** deploying — no server needed.
 `extractSchema` derives each rule's input/output shape, so you know exactly what the
 deployed policy expects.
 
-## 4. Deploy
+## 4. Save the policy
 
-Submit the source to the REST API. The engine compiles, type-checks and stores it,
-returning a version id.
+Policies are created and versioned in the **editor** at
+[aster-lang.cloud](https://aster-lang.cloud) — saving compiles, type-checks and
+stores a new version. There is no public "create policy" REST endpoint; the API is
+for *listing and executing* what you have saved.
+
+List what is deployed (requires an API key):
 
 ```bash
-curl -X POST https://policy.aster-lang.dev/api/v1/policies \
-  -H 'Content-Type: application/json' \
-  -d '{ "source": "...", "locale": "en-US" }'
+curl https://aster-lang.cloud/api/v1/policies \
+  -H 'Authorization: Bearer YOUR_API_KEY'
 ```
 
 ## 5. Execute
 
-Call the deployed policy (or evaluate source directly):
+Run a saved policy by id:
+
+```bash
+curl -X POST https://aster-lang.cloud/api/v1/policies/POLICY_ID/execute \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{ "context": { "amount": 200, "tier": "gold" } }'
+```
+
+Or evaluate source directly, without saving anything. This is the **trial**
+endpoint used by the docs playground, so it requires an `Origin` header from the
+allow-list rather than an API key:
 
 ```bash
 curl -X POST https://policy.aster-lang.dev/api/v1/policies/evaluate-source \
   -H 'Content-Type: application/json' \
+  -H 'Origin: https://aster-lang.dev' \
   -d '{ "source": "...", "context": { "amount": 200, "tier": "gold" } }'
 ```
 

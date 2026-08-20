@@ -258,5 +258,9 @@
     "title": "Aster in Aktion",
     "subtitle": "Vier Live-Demos — jede ist echtes, lauffähiges Aster. Ausprobieren, dann oben eigene Regeln schreiben."
   },
-  "demoBackToPlayground": "Eigene Regeln im Playground ausprobieren"
+  "demoBackToPlayground": "Eigene Regeln im Playground ausprobieren",
+  "docsFallback": {
+    "title": "Noch nicht übersetzt",
+    "body": "Diese Seite ist noch nicht in Ihrer Sprache verfügbar, daher wird die englische Fassung angezeigt."
+  }
 }

@@ -1,5 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { loadDoc } from '@/lib/load-doc';
+import { DocsFallbackNotice } from '@/components/docs-fallback-notice';
 
 export default async function LanguageGuidePage({
   params,
@@ -8,6 +9,11 @@ export default async function LanguageGuidePage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const Content = await loadDoc(locale, 'language-guide');
-  return <Content />;
+  const { Content, fellBack } = await loadDoc(locale, 'language-guide');
+  return (
+    <>
+      {fellBack && <DocsFallbackNotice locale={locale} />}
+      <Content />
+    </>
+  );
 }
