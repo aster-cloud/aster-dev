@@ -53,3 +53,89 @@ Rule discountedPrice given amount as Int, produce Int:
 
 核心负责规范化与降级。语法契约见[参考手册](/docs/reference)，在[演练场](/playground)
 试试非英文源码。
+
+## 关键词别名
+
+一个词法表可以为**同一个关键词接受多种拼写**。别名只存在于**识别侧**：规范化器
+会先把它改写成规范拼写，下游看到的完全一样——所以用别名写的源码与用规范拼写写的
+源码降到同一份 Core IR，求值结果也一致。
+
+别名是可选的。内置的 `en-US` / `zh-CN` / `de-DE` / `hi-IN` 都**不带**任何别名，
+需要时由你按团队习惯添加：
+
+```ts
+import { EN_US } from '@aster-cloud/aster-lang-ts/lexicons/en-US';
+
+// 让这个团队可以用 `Yield` 代替 `Return`
+const teamLexicon = { ...EN_US, aliases: { RETURN: ['Yield'] } };
+
+compile(source, { lexicon: teamLexicon });
+```
+
+三条关键性质：
+
+- **规范拼写继续可用**。注册 `Yield` 不会让 `Return` 失效，两者都能编译。
+- **IR 不变**。只有源码位置会变（别名与规范拼写长度不同会让列号平移），
+  语义树与求值结果完全一致。
+- **不注册就只是个不认识的词**，编译失败。别名不会跨词法表泄漏。
+
+正因为别名在降级前就折叠掉了，它没有任何运行期开销，也不可能改变决策结果——
+这才使得把它交给非工程师是安全的。
+
+## 领域词汇
+
+词法表翻译的是**关键词**；**领域词汇**翻译的是**标识符**——结构体名、字段名、
+函数与枚举值——好让规则能用业务真正在说的词来写。
+
+每条术语把稳定的 `canonical` 名与 `localized` 拼写配成一对：
+
+```ts
+import { vocabularyRegistry } from '@aster-cloud/aster-lang-ts/lexicons/identifiers/registry';
+import { IdentifierKind } from '@aster-cloud/aster-lang-ts/lexicons/identifiers/types';
+
+vocabularyRegistry.registerCustom('acme-tenant', {
+  id: 'lending', name: 'lending', locale: 'en-US', version: '1',
+  structs: [{ canonical: 'Applicant', localized: 'Borrower', kind: IdentifierKind.STRUCT }],
+  fields: [{ canonical: 'score', localized: 'creditScore',
+             kind: IdentifierKind.FIELD, parent: 'Applicant' }],
+  functions: [], enumValues: [],
+});
+
+compile(source, { lexicon: EN_US, domain: 'lending', tenantId: 'acme-tenant' });
+```
+
+规则随即可以用该领域的词来写：
+
+```aster
+Module lend.
+
+Define Borrower has
+  creditScore as Int.
+
+Rule decide given who as Borrower, produce Text:
+  If who.creditScore at least 680:
+    Return "APPROVED".
+  Return "REFER".
+```
+
+### 求值输入用的是 canonical 名
+
+这一条几乎人人都会踩。**源码**用 localized 词书写，但 `evaluate` 收发的是
+**canonical** 名——因为编译产物 IR 里存的就是 canonical：
+
+```ts
+evaluate(core, 'decide', { who: { score: 700 } });      // ✅ canonical
+evaluate(core, 'decide', { who: { creditScore: 700 } }); // ❌ 找不到该字段
+```
+
+术语还可带 `aliases`（同一标识符的其它拼写）与 `description`，二者均可选；
+标识符别名与关键词别名一样，也只作用于识别侧。
+
+### 为什么要分成两套机制
+
+关键词别名与领域词汇看着相似，但刻意分开：关键词属于**语言**本身、来自受信的
+词法表；标识符属于**租户**、在运行期按租户注册。正是这条分界让不受信的租户能
+提供自己的词汇，却无法重新定义语法。
+
+`/demos` 下的页面就是可运行的实例——猫咪心情 demo 用一整套「撸猫术语」写成的规则
+真编译真执行，底层与信贷 demo 是同一套引擎。
