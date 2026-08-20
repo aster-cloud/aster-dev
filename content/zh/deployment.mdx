@@ -30,23 +30,37 @@ Rule discountedPrice given amount as Int, tier as Text, produce Int:
 
 `extractSchema` 推导出每条规则的输入/输出形状，让你确切知道已部署策略期望什么。
 
-## 4. 部署
+## 4. 保存策略
 
-把源码提交到 REST API。引擎会编译、类型检查并存储它，返回一个版本 id。
+策略在 [aster-lang.cloud](https://aster-lang.cloud) 的**编辑器**里创建与版本化——
+保存时会编译、类型检查并存下一个新版本。**没有公开的「创建策略」REST 端点**；
+API 用于*列出与执行*你已保存的策略。
+
+列出已部署的策略（需要 API key）：
 
 ```bash
-curl -X POST https://policy.aster-lang.dev/api/v1/policies \
-  -H 'Content-Type: application/json' \
-  -d '{ "source": "...", "locale": "en-US" }'
+curl https://aster-lang.cloud/api/v1/policies \
+  -H 'Authorization: Bearer YOUR_API_KEY'
 ```
 
 ## 5. 执行
 
-调用已部署的策略（或直接对源码求值）：
+按 id 执行已保存的策略：
+
+```bash
+curl -X POST https://aster-lang.cloud/api/v1/policies/POLICY_ID/execute \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{ "context": { "amount": 200, "tier": "gold" } }'
+```
+
+或者不保存、直接对源码求值。这是文档演练场用的**试用**端点，故它要求
+allow-list 内的 `Origin` 头而非 API key：
 
 ```bash
 curl -X POST https://policy.aster-lang.dev/api/v1/policies/evaluate-source \
   -H 'Content-Type: application/json' \
+  -H 'Origin: https://aster-lang.dev' \
   -d '{ "source": "...", "context": { "amount": 200, "tier": "gold" } }'
 ```
 

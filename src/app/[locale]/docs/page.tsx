@@ -1,5 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { loadDoc } from '@/lib/load-doc';
+import { DocsFallbackNotice } from '@/components/docs-fallback-notice';
 
 /**
  * 文档首页 = quickstart（ADR 0018 Phase 3）。按 locale 加载 MDX，缺失 fallback en。
@@ -12,6 +13,11 @@ export default async function DocsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const Content = await loadDoc(locale, 'quickstart');
-  return <Content />;
+  const { Content, fellBack } = await loadDoc(locale, 'quickstart');
+  return (
+    <>
+      {fellBack && <DocsFallbackNotice locale={locale} />}
+      <Content />
+    </>
+  );
 }
