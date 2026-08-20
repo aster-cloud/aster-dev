@@ -65,3 +65,97 @@ A lexicon is pure data plus an SPI registration — no compiler changes. You pro
 The core handles canonicalization and lowering. See the
 [Reference](/docs/reference#multi-language) for the grammar contract, and try a
 non-English source in the [Playground](/playground).
+
+## Keyword aliases
+
+A lexicon can accept **more than one spelling for the same keyword**. Aliases live
+on the *recognition* side only: the canonicalizer rewrites them to the canonical
+spelling before anything downstream sees them, so an aliased source and a canonical
+source lower to the same Core IR and evaluate identically.
+
+Aliases are opt-in. The bundled `en-US` / `zh-CN` / `de-DE` / `hi-IN` lexicons ship
+with **none** — you add them when a team prefers different wording:
+
+```ts
+import { EN_US } from '@aster-cloud/aster-lang-ts/lexicons/en-US';
+
+// Let this team write `Yield` wherever `Return` is expected.
+const teamLexicon = { ...EN_US, aliases: { RETURN: ['Yield'] } };
+
+compile(source, { lexicon: teamLexicon });
+```
+
+Three properties worth knowing, all of them load-bearing:
+
+- **The canonical spelling keeps working.** Registering `Yield` does not retire
+  `Return`; both compile.
+- **The IR is unchanged.** Only source positions differ (an alias of a different
+  length shifts columns) — the semantic tree and the evaluation result are identical.
+- **Without registration the alias is just an unknown word**, and compilation fails.
+  Aliases never leak between lexicons.
+
+Because aliases collapse before lowering, they cost nothing at runtime and cannot
+change a decision — which is what makes them safe to hand to non-engineers.
+
+## Domain vocabulary
+
+A lexicon translates *keywords*. A **domain vocabulary** translates *identifiers* —
+your struct names, field names, functions and enum values — so a rule can be written
+in the words a business actually uses.
+
+Each term pairs a stable `canonical` name with a `localized` spelling:
+
+```ts
+import { vocabularyRegistry } from '@aster-cloud/aster-lang-ts/lexicons/identifiers/registry';
+import { IdentifierKind } from '@aster-cloud/aster-lang-ts/lexicons/identifiers/types';
+
+vocabularyRegistry.registerCustom('acme-tenant', {
+  id: 'lending', name: 'lending', locale: 'en-US', version: '1',
+  structs: [{ canonical: 'Applicant', localized: 'Borrower', kind: IdentifierKind.STRUCT }],
+  fields: [{ canonical: 'score', localized: 'creditScore',
+             kind: IdentifierKind.FIELD, parent: 'Applicant' }],
+  functions: [], enumValues: [],
+});
+
+compile(source, { lexicon: EN_US, domain: 'lending', tenantId: 'acme-tenant' });
+```
+
+The rule is then written in the domain's words:
+
+```aster
+Module lend.
+
+Define Borrower has
+  creditScore as Int.
+
+Rule decide given who as Borrower, produce Text:
+  If who.creditScore at least 680:
+    Return "APPROVED".
+  Return "REFER".
+```
+
+### Evaluation inputs use canonical names
+
+This is the one thing that catches everyone. The **source** is written in localized
+words, but `evaluate` receives and returns **canonical** ones — because that is what
+the compiled IR contains:
+
+```ts
+evaluate(core, 'decide', { who: { score: 700 } });      // ✅ canonical
+evaluate(core, 'decide', { who: { creditScore: 700 } }); // ❌ field not found
+```
+
+Terms may also carry `aliases` (extra spellings for the same identifier) and a
+`description`; both are optional, and identifier aliases work the same
+recognition-only way keyword aliases do.
+
+### Why it is a separate mechanism
+
+Keyword aliases and domain vocabulary look similar but are deliberately separate:
+keywords are part of the *language* and come from a trusted lexicon, while
+identifiers belong to a *tenant* and are registered per tenant at runtime. Keeping
+them apart is what lets an untrusted tenant supply vocabulary without being able to
+redefine the grammar.
+
+The `/demos` pages are working examples — the cat-mood demo compiles and runs a rule
+written entirely in cat-care terminology, on the same engine as the credit demo.

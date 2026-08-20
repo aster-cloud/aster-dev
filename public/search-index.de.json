@@ -31,7 +31,7 @@
         "1. Author",
         "2. Validate locally",
         "3. Extract the schema",
-        "4. Deploy",
+        "4. Save the policy",
         "5. Execute",
         "6. Monitor & audit",
         "Version management",
@@ -68,7 +68,11 @@
         "How it works",
         "Official lexicons",
         "In progress",
-        "Authoring a lexicon"
+        "Authoring a lexicon",
+        "Keyword aliases",
+        "Domain vocabulary",
+        "⚠️ Evaluation inputs use canonical names",
+        "Why it is a separate mechanism"
       ]
     },
     {
@@ -108,7 +112,7 @@
     {
       "slug": "stdlib",
       "title": "Standard Library",
-      "description": "The built-in functions Aster ships with. All are deterministic and run identically on both engines (TypeScript and JVM). Call them with parentheses, e.g. List.sum(xs). Every example below compiles ...",
+      "description": "The built-in functions Aster ships with. All are deterministic. Call them with parentheses, e.g. List.sum(xs). Every example below compiles and runs as written.",
       "headings": [
         "Text",
         "List",
