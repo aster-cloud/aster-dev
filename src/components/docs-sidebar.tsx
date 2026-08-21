@@ -25,10 +25,12 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
     {
       title: t('languageGuide'),
       items: [
+        // ★这里曾有 #types / #expressions / #functions 三条锚点链接，
+        // 在**中文页是死链**：rehype-slug 按标题文本生成 id，zh 页只有
+        // id="类型"/"表达式"/"规则与函数"（de/hi 因回落英文页而被掩盖）。
+        // 页内导航改由右栏 DocsToc 承担——它从运行时 DOM 读 id，天然跟随语言，
+        // 也不会随文档增删小节而过期。见 issue #24。
         { href: '/docs/language-guide', label: t('syntax') },
-        { href: '/docs/language-guide#types', label: t('types') },
-        { href: '/docs/language-guide#expressions', label: t('expressions') },
-        { href: '/docs/language-guide#functions', label: t('functions') },
         { href: '/docs/lexicons', label: t('lexicons') },
       ],
     },
