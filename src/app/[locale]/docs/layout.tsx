@@ -1,11 +1,15 @@
 import { setRequestLocale } from 'next-intl/server';
 import { DocsSidebar } from '@/components/docs-sidebar';
 import { DocsSidebarDrawer } from '@/components/docs-sidebar-drawer';
+import { DocsToc } from '@/components/docs-toc';
 import type { ReactNode } from 'react';
 
 /**
- * 文档布局：左固定分组导航 + 右正文（prose）。语言规范标准三栏式，
- * 后续里程碑右侧补 TOC（on this page）。
+ * 文档布局：左固定分组导航 + 中正文（prose）+ 右页内目录（on this page）。
+ *
+ * 右栏 TOC 从**运行时 DOM** 读标题 id，因此天然跟随当前语言——
+ * rehype-slug 按标题文本生成 id（en `types` / zh `类型`），任何写死的
+ * 锚点表都会在非英文页失效（issue #24）。
  */
 export default async function DocsLayout({
   children,
@@ -18,7 +22,7 @@ export default async function DocsLayout({
   setRequestLocale(locale);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[220px_1fr]">
+    <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_200px]">
       <aside className="hidden lg:block">
         <div className="sticky top-20">
           <DocsSidebar />
@@ -33,6 +37,13 @@ export default async function DocsLayout({
         </div>
         {children}
       </article>
+      {/* 页内目录：仅 xl 以上显示——lg 档宽度要留给正文与代码块，塞第三栏会把
+          正文挤到换行频繁。移动端已有 DocsSidebarDrawer 提供章节导航。 */}
+      <aside className="hidden xl:block">
+        <div className="sticky top-20">
+          <DocsToc />
+        </div>
+      </aside>
     </div>
   );
 }
