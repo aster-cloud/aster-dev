@@ -1,15 +1,8 @@
 # Standard Library
 
-The built-in functions Aster ships with. All are **deterministic**. Call them with
-parentheses, e.g. `List.sum(xs)`. Every example below compiles and runs as written.
-
-> **† JVM-only right now.** `Text.substring`, `Text.replace`, `List.slice`,
-> `Maybe.unwrap`, `Result.unwrap` and `Result.unwrapErr` are implemented in the JVM
-> engine but not yet in the TypeScript one, so they raise `Undefined function` in
-> the browser playground and in `@aster-cloud/aster-lang-ts`. The TS implementation
-> is on the way; until it ships, avoid them in browser-side code — `Maybe.withDefault`
-> covers most `unwrap` uses. Everything else on this page runs identically on both
-> engines.
+The built-in functions Aster ships with. All are **deterministic** and run
+identically on both engines (TypeScript and JVM). Call them with parentheses,
+e.g. `List.sum(xs)`. Every example below compiles and runs as written.
 
 > Determinism: there is intentionally **no** `today()` / `now()` / `random()`.
 > The current date is passed in as an input (see `Date.*`). This is what makes a
@@ -28,8 +21,8 @@ parentheses, e.g. `List.sum(xs)`. Every example below compiles and runs as writt
 | `Text.indexOf(t, sub)` | `(Text, Text) → Int` | first index, or `-1` |
 | `Text.split(t, delimiter)` | `(Text, Text) → List` | split into a list |
 | `Text.trim(t)` | `(Text) → Text` | strip leading/trailing whitespace |
-| `Text.substring(t, start[, end])` † | `(Text, Int[, Int]) → Text` | slice `[start, end)` |
-| `Text.replace(t, target, replacement)` † | `(Text, Text, Text) → Text` | replace all occurrences (literal, not regex) |
+| `Text.substring(t, start[, end])` | `(Text, Int[, Int]) → Text` | slice `[start, end)` |
+| `Text.replace(t, target, replacement)` | `(Text, Text, Text) → Text` | replace all occurrences (literal, not regex) |
 
 ```aster
 Module text_demo.
@@ -47,7 +40,7 @@ Rule shout given name as Text, produce Text:
 | `List.contains(xs, v)` | `(List, T) → Bool` | membership test |
 | `List.append(xs, v)` | `(List, T) → List` | new list with `v` appended |
 | `List.concat(xs, ys)` | `(List, List) → List` | join two lists |
-| `List.slice(xs, start[, end])` † | `(List, Int[, Int]) → List` | slice `[start, end)` |
+| `List.slice(xs, start[, end])` | `(List, Int[, Int]) → List` | slice `[start, end)` |
 | `List.distinct(xs)` | `(List) → List` | dedupe, order-preserving |
 | `List.range(start, end)` | `(Int, Int) → List` | integers `[start, end)` |
 | `List.sum(xs)` | `(List) → Num` | sum (empty → 0) |
@@ -159,9 +152,9 @@ Build optional values with `Some(x)` / `None`, and fallible values with `Ok(x)` 
 | --- | --- |
 | `Maybe.isSome(o)` / `Maybe.isNone(o)` | `Bool` |
 | `Maybe.withDefault(o, fallback)` | the value, or `fallback` if `None` |
-| `Maybe.unwrap(o)` † | the value (raises on `None`) |
+| `Maybe.unwrap(o)` | the value (raises on `None`) |
 | `Result.isOk(r)` / `Result.isErr(r)` | `Bool` |
-| `Result.unwrap(r)` / `Result.unwrapErr(r)` † | the Ok value / the Err value |
+| `Result.unwrap(r)` / `Result.unwrapErr(r)` | the Ok value / the Err value |
 
 `Option.*` are aliases of `Maybe.*`.
 

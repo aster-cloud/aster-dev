@@ -112,7 +112,7 @@
     {
       "slug": "stdlib",
       "title": "Standard Library",
-      "description": "The built-in functions Aster ships with. All are deterministic. Call them with parentheses, e.g. List.sum(xs). Every example below compiles and runs as written.",
+      "description": "The built-in functions Aster ships with. All are deterministic and run identically on both engines (TypeScript and JVM). Call them with parentheses, e.g. List.sum(xs). Every example below compiles ...",
       "headings": [
         "Text",
         "List",
