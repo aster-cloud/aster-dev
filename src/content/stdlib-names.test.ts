@@ -18,9 +18,9 @@
  * 只把 `Undefined function` 判为失败（参数类型/元数不匹配等其它错误说明函数
  * 存在，不算）。名单不硬编码在这里——硬编码的名单自己也会漂移，直接问引擎。
  *
- * ★ 已知的 JVM-only 例外集中登记在 `JVM_ONLY` 并在文档里标 †；
- *   等 TS 引擎补齐后（aster-lang-ts#112），把它们从这里删掉即可，
- *   删掉后本测试会自动开始要求它们在 TS 引擎中存在。
+ * ★ 已知的 JVM-only 例外集中登记在 `JVM_ONLY` 并在文档里标 †。
+ *   2026-08：aster-lang-ts#112 已补齐原先那六个，随 1.0.23 发版，故该集合现为空。
+ *   将来若又出现 JVM-only 函数，加进去并在文档标 †；补齐后不移除则断言报红。
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -39,13 +39,11 @@ const CONTENT_ROOT = fileURLToPath(new URL('../../content', import.meta.url));
  * 已知只在 JVM 引擎实现、TS 引擎尚缺的内置函数。文档中已用 † 标注。
  * TS 侧补齐后应清空本集合（见 aster-lang-ts#112）。
  */
-const JVM_ONLY = new Set([
-  'Text.substring',
-  'Text.replace',
-  'List.slice',
-  'Maybe.unwrap',
-  'Result.unwrap',
-  'Result.unwrapErr',
+const JVM_ONLY = new Set<string>([
+  // 1.0.23 起为空：aster-lang-ts#112 已在 TS 侧补齐原先那六个仅 JVM 可用的函数，
+  // 随 1.0.23 列车发到 npm（实测 @aster-cloud/aster-lang-ts@1.0.23 六个全部可求值）。
+  // 下方"名单不含已补齐函数"的断言会盯着这里：若将来又有 JVM-only 函数写进文档，
+  // 加进本集合并在文档标 † 即可；补齐后不移除则该断言报红。
 ]);
 
 /** 文档里 stdlib 命名空间白名单——只检查这些前缀，避免把示例里的用户模块名当成内置。 */
