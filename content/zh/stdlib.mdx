@@ -74,7 +74,7 @@ Rule bumpAll given xs as List, produce List:
 | 函数 | 签名 | 结果 |
 | --- | --- | --- |
 | `Map.empty()` | `() → Map` | 空映射 |
-| `Map.get(m, key)` | `(Map, Text) → T` | 值，若不存在则 `null` |
+| `Map.get(m, key)` | `(Map, Text) → Maybe` | `Some(值)`，若不存在则 `None` |
 | `Map.put(m, key, value)` | `(Map, Text, T) → Map` | 设置该条目后的新映射 |
 | `Map.remove(m, key)` | `(Map, Text) → Map` | 移除该键后的新映射 |
 | `Map.contains(m, key)` | `(Map, Text) → Bool` | 键存在测试 |
@@ -82,12 +82,17 @@ Rule bumpAll given xs as List, produce List:
 | `Map.values(m)` | `(Map) → List` | 所有值 |
 | `Map.size(m)` | `(Map) → Int` | 条目数 |
 
+> **破坏性变更（1.0.26 起）。** `Map.get` 现在返回 `Maybe` 而非裸值/`null`：
+> 缺键是 `None`，命中是 `Some(值)`。这让「键可能不存在」在代码里**显式可见**，
+> 而不是等到表达式深处才冒出一个运行期类型错误。
+> 迁移：需要兜底用 `Maybe.withDefault(...)`，需要分支用 `Match ... When null`。
+
 ```aster
 Module map_demo.
 
 Rule lookup given score as Int, produce Int:
   Let table be Map.put(Map.empty(), "gold", score).
-  Return Map.get(table, "gold").
+  Return Maybe.withDefault(Map.get(table, "gold"), 0).
 ```
 
 ## Date（日期）
