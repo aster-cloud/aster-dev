@@ -81,7 +81,7 @@ A `Map` maps string keys to values. All operations return a new map (immutable).
 | Function | Signature | Result |
 | --- | --- | --- |
 | `Map.empty()` | `() → Map` | empty map |
-| `Map.get(m, key)` | `(Map, Text) → T` | value, or `null` if absent |
+| `Map.get(m, key)` | `(Map, Text) → Maybe` | `Some(value)`, or `None` if absent |
 | `Map.put(m, key, value)` | `(Map, Text, T) → Map` | new map with the entry set |
 | `Map.remove(m, key)` | `(Map, Text) → Map` | new map without the key |
 | `Map.contains(m, key)` | `(Map, Text) → Bool` | key-present test |
@@ -89,12 +89,18 @@ A `Map` maps string keys to values. All operations return a new map (immutable).
 | `Map.values(m)` | `(Map) → List` | all values |
 | `Map.size(m)` | `(Map) → Int` | entry count |
 
+> **Breaking change (from 1.0.26).** `Map.get` now returns a `Maybe` instead of a
+> bare value or `null`. A missing key is `None`; a hit is `Some(value)`. This makes
+> "key might be absent" visible in the code instead of surfacing as a runtime type
+> error deep inside an expression. Migrate with `Maybe.withDefault(...)` for a
+> fallback, or `Match ... When null` to branch explicitly.
+
 ```aster
 Module map_demo.
 
 Rule lookup given score as Int, produce Int:
   Let table be Map.put(Map.empty(), "gold", score).
-  Return Map.get(table, "gold").
+  Return Maybe.withDefault(Map.get(table, "gold"), 0).
 ```
 
 ## Date
