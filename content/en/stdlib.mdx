@@ -16,6 +16,7 @@ e.g. `List.sum(xs)`. Every example below compiles and runs as written.
 | `Text.toUpper(t)` | `(Text) → Text` | uppercase |
 | `Text.toLower(t)` | `(Text) → Text` | lowercase |
 | `Text.length(t)` | `(Text) → Int` | character count |
+| `Text.equals(a, b)` | `(Text, Text) → Bool` | exact equality after coercing both sides to text |
 | `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | substring test |
 | `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | prefix test |
 | `Text.indexOf(t, sub)` | `(Text, Text) → Int` | first index, or `-1` |
@@ -31,11 +32,19 @@ Rule shout given name as Text, produce Text:
   Return Text.toUpper(name) plus "!".
 ```
 
+`Text.equals` is **not** the same as the `is equal to` operator. It converts both
+arguments to text first, so `Text.equals(5, "5")` is `True` while `5 is equal to "5"`
+is not. Both engines coerce identically, so this is consistent — but when you are
+comparing values that are already `Text`, prefer `is equal to`: it keeps the type
+mismatch visible instead of silently stringifying it.
+
 ## List
 
 | Function | Signature | Result |
 | --- | --- | --- |
+| `List.empty()` | `() → List` | a new empty list |
 | `List.length(xs)` | `(List) → Int` | element count |
+| `List.isEmpty(xs)` | `(List) → Bool` | `True` when `xs` has no elements |
 | `List.get(xs, i)` | `(List, Int) → T` | element at index `i` (out of range → error) |
 | `List.contains(xs, v)` | `(List, T) → Bool` | membership test |
 | `List.append(xs, v)` | `(List, T) → List` | new list with `v` appended |
@@ -103,6 +112,19 @@ Rule lookup given score as Int, produce Int:
   Return Maybe.withDefault(Map.get(table, "gold"), 0).
 ```
 
+To branch on the two cases instead of collapsing them, use `Match`. Note the
+**comma** after each pattern — that is the required form:
+
+```aster
+Module map_match_demo.
+
+Rule lookup given key as Text, produce Int:
+  Let table be Map.put(Map.empty(), "gold", 7).
+  Match Map.get(table, key):
+    When null, Return 0.
+    When Some(v), Return v.
+```
+
 ## Date
 
 Dates are represented as an integer number of days since 1970-01-01 (an
@@ -158,11 +180,32 @@ Build optional values with `Some(x)` / `None`, and fallible values with `Ok(x)` 
 | --- | --- |
 | `Maybe.isSome(o)` / `Maybe.isNone(o)` | `Bool` |
 | `Maybe.withDefault(o, fallback)` | the value, or `fallback` if `None` |
+| `Maybe.unwrapOr(o, fallback)` | identical to `withDefault` — see the note below |
 | `Maybe.unwrap(o)` | the value (raises on `None`) |
+| `Maybe.map(o, f)` | `Some(f(value))`, or `None` unchanged |
 | `Result.isOk(r)` / `Result.isErr(r)` | `Bool` |
 | `Result.unwrap(r)` / `Result.unwrapErr(r)` | the Ok value / the Err value |
+| `Result.mapOk(r, f)` | `Ok(f(value))`, or the `Err` unchanged |
+| `Result.mapErr(r, f)` | `Err(f(error))`, or the `Ok` unchanged |
+| `Result.tapError(r, f)` | runs `f(error)` and returns `r` **unchanged** |
 
-`Option.*` are aliases of `Maybe.*`.
+`Option.*` aliases cover **four** helpers — `Option.isSome`, `Option.isNone`,
+`Option.unwrap`, `Option.unwrapOr` — which behave identically to their `Maybe.*`
+counterparts. Pick one spelling per codebase for consistency.
+
+The alias set is **not** exhaustive: `Maybe.withDefault` and `Maybe.map` have no
+`Option.*` equivalent guaranteed across both engines. Use the `Maybe.*` spelling
+for those two.
+
+**`Maybe.unwrapOr` and `Maybe.withDefault` behave identically** — same arity, same
+result, both return `fallback` on `None`. Both spellings are kept for
+familiarity (`unwrapOr` reads naturally to Rust users, `withDefault` to Elm/OCaml
+users). Either works; `withDefault` is what the examples here use.
+
+`Result.tapError` inspects an error without consuming it. Note that the runtime is
+sandboxed and deterministic, so a callback cannot log or perform I/O — it is
+rarely useful inside a rule. Prefer returning the `Result` and handling the error
+in the calling application.
 
 ```aster
 Module maybe_demo.
@@ -170,6 +213,21 @@ Module maybe_demo.
 Rule scoreOrZero given raw as Int, produce Int:
   Let maybeScore be Some(raw).
   Return Maybe.withDefault(maybeScore, 0).
+```
+
+Mapping keeps the wrapper and only touches the payload — a `None` or an `Err`
+passes straight through, which is what makes these safe to chain. As with
+`List.map`, the function argument is a **named rule passed by name**:
+
+```aster
+Module maybe_map_demo.
+
+Rule double given x as Int, produce Int:
+  Return x times 2.
+
+Rule doubledOrZero given raw as Int, produce Int:
+  Let doubled be Maybe.map(Some(raw), double).
+  Return Maybe.withDefault(doubled, 0).
 ```
 
 ## Not available
