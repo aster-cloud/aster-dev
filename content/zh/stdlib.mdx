@@ -12,7 +12,7 @@ Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript
 | `Text.toUpper(t)` | `(Text) → Text` | 转大写 |
 | `Text.toLower(t)` | `(Text) → Text` | 转小写 |
 | `Text.length(t)` | `(Text) → Int` | 字符数 |
-| `Text.equals(a, b)` | `(Text, Text) → Bool` | 完全相等（等价于 `a is equal to b`） |
+| `Text.equals(a, b)` | `(Text, Text) → Bool` | 两侧先转成文本再判等 |
 | `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | 子串测试 |
 | `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | 前缀测试 |
 | `Text.indexOf(t, sub)` | `(Text, Text) → Int` | 首次出现的下标，否则 `-1` |
@@ -27,6 +27,11 @@ Module text_demo.
 Rule shout given name as Text, produce Text:
   Return Text.toUpper(name) plus "!".
 ```
+
+`Text.equals` 与 `is equal to` 运算符**并不等价**。它会先把两个参数转成文本，
+因此 `Text.equals(5, "5")` 为 `True`，而 `5 is equal to "5"` 不是。
+两个引擎的转换行为一致，所以结果是确定的——但如果要比较的本来就是 `Text`，
+更推荐用 `is equal to`：它会让类型不匹配暴露出来，而不是被静默转成字符串。
 
 ## List（列表）
 

@@ -16,7 +16,7 @@ e.g. `List.sum(xs)`. Every example below compiles and runs as written.
 | `Text.toUpper(t)` | `(Text) → Text` | uppercase |
 | `Text.toLower(t)` | `(Text) → Text` | lowercase |
 | `Text.length(t)` | `(Text) → Int` | character count |
-| `Text.equals(a, b)` | `(Text, Text) → Bool` | exact equality (same as `a is equal to b`) |
+| `Text.equals(a, b)` | `(Text, Text) → Bool` | exact equality after coercing both sides to text |
 | `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | substring test |
 | `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | prefix test |
 | `Text.indexOf(t, sub)` | `(Text, Text) → Int` | first index, or `-1` |
@@ -31,6 +31,12 @@ Module text_demo.
 Rule shout given name as Text, produce Text:
   Return Text.toUpper(name) plus "!".
 ```
+
+`Text.equals` is **not** the same as the `is equal to` operator. It converts both
+arguments to text first, so `Text.equals(5, "5")` is `True` while `5 is equal to "5"`
+is not. Both engines coerce identically, so this is consistent — but when you are
+comparing values that are already `Text`, prefer `is equal to`: it keeps the type
+mismatch visible instead of silently stringifying it.
 
 ## List
 
