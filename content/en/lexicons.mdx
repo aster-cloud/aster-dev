@@ -149,6 +149,50 @@ Terms may also carry `aliases` (extra spellings for the same identifier) and a
 `description`; both are optional, and identifier aliases work the same
 recognition-only way keyword aliases do.
 
+### Literal macros: expanding a term into fixed text
+
+A fifth collection, `literals`, is different from the other four. Instead of
+renaming an identifier it expands a term into a **fixed string** — useful when a
+regulated wording has to appear verbatim and must not be retyped by hand.
+
+Note the inversion: for `IdentifierKind.LITERAL`, `canonical` is **not** an
+identifier, it is the string content that gets substituted (without quotes).
+
+```ts
+vocabularyRegistry.registerCustom('acme-tenant', {
+  id: 'poem', name: 'poem', locale: 'en-US', version: '1',
+  structs: [], fields: [], functions: [], enumValues: [],
+  literals: [{ canonical: 'Quiet Night Thoughts', localized: 'homesick',
+               kind: IdentifierKind.LITERAL }],
+});
+```
+
+The trigger word then stands in for the text:
+
+```aster
+Module poem_demo.
+
+Rule title produce Text:
+  Return homesick.
+```
+
+Evaluating `title` returns `"Quiet Night Thoughts"`.
+
+**Expression position only.** A literal macro expands to a *string*, so using its
+trigger word where a name is expected — a rule name, a field, a struct — is a
+compile error. `Rule homesick produce Int:` does not compile.
+
+**The content is strictly validated** to keep an untrusted tenant from injecting
+source code at compile time. Rejected: empty content, control characters or
+newlines, and any quote delimiter or backslash — `"`, `\`, `「」`, `『』`, `«»`, and
+the curly quotes `“ ” ‘ ’`. Ordinary visible text, including CJK characters and
+punctuation, is fine (`静夜思——李白` validates).
+
+**Trigger words must be globally unique.** A literal macro's `localized` spelling
+(and its aliases) may not collide with *any* other mapping, including plain
+identifiers. Because substitution is context-free, a colliding word would be
+ambiguous — expanding to a string in one place and an identifier in another.
+
 ### Why it is a separate mechanism
 
 Keyword aliases and domain vocabulary look similar but are deliberately separate:
