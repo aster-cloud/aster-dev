@@ -12,6 +12,7 @@ Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript
 | `Text.toUpper(t)` | `(Text) → Text` | 转大写 |
 | `Text.toLower(t)` | `(Text) → Text` | 转小写 |
 | `Text.length(t)` | `(Text) → Int` | 字符数 |
+| `Text.equals(a, b)` | `(Text, Text) → Bool` | 完全相等（等价于 `a is equal to b`） |
 | `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | 子串测试 |
 | `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | 前缀测试 |
 | `Text.indexOf(t, sub)` | `(Text, Text) → Int` | 首次出现的下标，否则 `-1` |
@@ -31,7 +32,9 @@ Rule shout given name as Text, produce Text:
 
 | 函数 | 签名 | 结果 |
 | --- | --- | --- |
+| `List.empty()` | `() → List` | 新建一个空列表 |
 | `List.length(xs)` | `(List) → Int` | 元素个数 |
+| `List.isEmpty(xs)` | `(List) → Bool` | `xs` 无元素时为 `True` |
 | `List.get(xs, i)` | `(List, Int) → T` | 下标 `i` 处的元素（越界 → 报错） |
 | `List.contains(xs, v)` | `(List, T) → Bool` | 成员测试 |
 | `List.append(xs, v)` | `(List, T) → List` | 追加 `v` 后的新列表 |
@@ -143,11 +146,30 @@ Rule withTax given price as Decimal, produce Decimal:
 | --- | --- |
 | `Maybe.isSome(o)` / `Maybe.isNone(o)` | `Bool` |
 | `Maybe.withDefault(o, fallback)` | 值，若为 `None` 则 `fallback` |
+| `Maybe.unwrapOr(o, fallback)` | 与 `withDefault` 完全相同——见下方说明 |
 | `Maybe.unwrap(o)` | 值（为 `None` 时报错） |
+| `Maybe.map(o, f)` | `Some(f(值))`；为 `None` 时原样返回 |
 | `Result.isOk(r)` / `Result.isErr(r)` | `Bool` |
 | `Result.unwrap(r)` / `Result.unwrapErr(r)` | Ok 值 / Err 值 |
+| `Result.mapOk(r, f)` | `Ok(f(值))`；为 `Err` 时原样返回 |
+| `Result.mapErr(r, f)` | `Err(f(错误))`；为 `Ok` 时原样返回 |
+| `Result.tapError(r, f)` | 执行 `f(错误)`，返回**原样**的 `r` |
 
-`Option.*` 是 `Maybe.*` 的别名。
+`Option.*` 别名覆盖**四个**辅助函数——`Option.isSome`、`Option.isNone`、
+`Option.unwrap`、`Option.unwrapOr`——行为与对应的 `Maybe.*` 完全一致。
+建议一个代码库内统一用一种写法。
+
+别名集合**并不完整**：`Maybe.withDefault` 与 `Maybe.map` 没有在两个引擎上
+都保证可用的 `Option.*` 对应物。这两个请统一用 `Maybe.*` 写法。
+
+**`Maybe.unwrapOr` 与 `Maybe.withDefault` 是同一个函数**——参数个数相同、行为相同，
+`None` 时都返回 `fallback`。保留两种写法是为了照顾不同背景的读者
+（`unwrapOr` 对 Rust 用户更自然，`withDefault` 对 Elm/OCaml 用户更自然）。
+两者皆可，本文示例统一用 `withDefault`。
+
+`Result.tapError` 用于在不消费错误的前提下查看它。但运行时是沙箱化且确定性的，
+回调**无法**记录日志或做 I/O，因此在规则内部很少有实际用途——
+更推荐把 `Result` 返回给调用方应用去处理错误。
 
 ```aster
 Module maybe_demo.
@@ -155,6 +177,20 @@ Module maybe_demo.
 Rule scoreOrZero given raw as Int, produce Int:
   Let maybeScore be Some(raw).
   Return Maybe.withDefault(maybeScore, 0).
+```
+
+map 系列只改变载荷、保留外层包装——`None` 与 `Err` 会原样穿过，
+这正是它们可以安全串联的原因。与 `List.map` 一样，函数参数是**具名规则，按名传入**：
+
+```aster
+Module map_demo.
+
+Rule double given x as Int, produce Int:
+  Return x times 2.
+
+Rule doubledOrZero given raw as Int, produce Int:
+  Let doubled be Maybe.map(Some(raw), double).
+  Return Maybe.withDefault(doubled, 0).
 ```
 
 ## 不提供的能力
