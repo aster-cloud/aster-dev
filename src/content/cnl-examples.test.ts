@@ -19,18 +19,14 @@
  *
  * 故本测试分两层：
  *   1. 每个块必须能编译（原有行为）
- *   2. 块内**每条规则**都要真跑一次 `evaluate`，断言不出现 `Undefined function`
+ *   2. **静态遍历 Core IR** 收集全部 `Call` 节点，逐个确认被调函数在引擎里存在
  *
- * <p>第 2 层为何只断言 `Undefined function` 而不要求 `success`：入参是由 schema
- * **合成**的占位值（`generateInputValues`），并非示例作者的本意，因此合法示例也会
- * 因数据不合适而失败——实测 52 条规则里有 8 条属此类（空日期串 → `Date.InvalidISODate`、
- * List 形参被合成成标量 → `List.sum: expected List`）。把这些也判失败会让守卫变得吵闹，
- * 最终被人关掉。收窄到"函数是否存在"，是**当前能稳定断言的最强命题**。
- *
- * <p>有些示例依赖测试无从知晓的外部状态（如字面量宏需要先 `registerCustom` 词汇表，
- * 且编译时要传 `domain`/`tenantId`）。在这类块**上方**加一行
- * `{@literal <!-- aster-example: compile-only -->}` 即可跳过第 2 层，只做编译检查。
- * 该注释不会渲染到页面上。
+ * <p>★第 2 层曾写成"合成入参跑一遍 evaluate 看报错"，被对抗性审查证伪：
+ * 求值只覆盖**入参恰好走到的那条路径**，69 处注入变异有 32 处漏检（46.4%），
+ * 含 Quickstart 的门面规则。三种漏法都实证过——If 分支未覆盖、Match 臂未命中、
+ * 前置调用先抛异常导致后续调用根本没被解析。
+ * 改为遍历 IR 后与执行路径**无关**，覆盖率 100%，且不再需要合成入参，
+ * 那批"数据不合适"的噪音（`Date.InvalidISODate` 等）随之消失。
  *
  * 仅检查 ```aster 块。形式语法（EBNF）等非源码块请用 ```ebnf 等其它语言标签，本测试
  * 不会尝试编译它们。
@@ -42,8 +38,6 @@ import { fileURLToPath } from 'node:url';
 import {
   compile,
   evaluate,
-  extractSchema,
-  generateInputValues,
   initializeAllBundledLexicons,
   EN_US,
   ZH_CN,
@@ -63,9 +57,6 @@ const LEXICONS: ReadonlyArray<readonly [string, Lexicon]> = [
   ['hi-IN', HI_IN],
 ];
 
-/** 块上方出现此标记时跳过求值层（该示例依赖测试无从构造的外部状态）。 */
-const COMPILE_ONLY_MARKER = '<!-- aster-example: compile-only -->';
-
 interface AsterBlock {
   /** 相对 content/ 的文件路径，便于定位。 */
   file: string;
@@ -73,8 +64,6 @@ interface AsterBlock {
   index: number;
   /** 块内源码（已去尾部空白）。 */
   source: string;
-  /** 是否只做编译检查、跳过求值层。 */
-  compileOnly: boolean;
 }
 
 /** 递归收集 content/ 下所有 .mdx 文件的绝对路径。 */
@@ -98,13 +87,7 @@ function extractAsterBlocks(absPath: string): AsterBlock[] {
   let index = 0;
   while ((match = re.exec(text)) !== null) {
     index += 1;
-    // 标记须紧邻块上方（允许中间只有空白），避免文件里任意位置的一个标记
-    // 意外豁免掉全部块。
-    const before = text.slice(0, match.index);
-    const compileOnly = new RegExp(
-      `${COMPILE_ONLY_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`,
-    ).test(before);
-    blocks.push({ file, index, source: match[1].replace(/\s+$/, ''), compileOnly });
+    blocks.push({ file, index, source: match[1].replace(/\s+$/, '') });
   }
   return blocks;
 }
@@ -125,39 +108,85 @@ function compileInAnyLexicon(
   return { ok: false, errors };
 }
 
-/**
- * 求值块内每条规则，收集「函数不存在」类错误。
- *
- * <p>入参由 schema 合成（`generateInputValues`），仅用于让规则体真正执行到——
- * `evaluate` 会在跑函数体**之前**校验必填参数，若传空对象则一律停在
- * `Missing required parameter`，函数体里的未定义调用永远暴露不出来。
- */
-function undefinedFunctionErrors(
-  source: string,
-  lexicon: Lexicon,
-  core: unknown,
-): string[] {
-  const found: string[] = [];
-  const decls =
-    (core as { decls?: Array<{ kind?: string; name?: string }> } | null)?.decls ?? [];
-  for (const decl of decls) {
-    if (decl.kind !== 'Func' || !decl.name) continue;
-    let inputs: Record<string, unknown> = {};
-    try {
-      const schema = extractSchema(source, { lexicon, functionName: decl.name });
-      inputs = generateInputValues(schema.parameters ?? []) as Record<string, unknown>;
-    } catch {
-      // schema 抽取失败不阻断——用空入参兜底，最坏情况是这条规则没被真正跑到。
+/** 从 Core IR 里递归收集所有 `Call` 节点的被调名 + 源码位置。 */
+function collectCalls(core: unknown): Array<{ name: string; line?: number }> {
+  const out: Array<{ name: string; line?: number }> = [];
+  const seen = new Set<unknown>();
+  (function walk(node: unknown): void {
+    if (!node || typeof node !== 'object') return;
+    if (seen.has(node)) return; // 防御 IR 里可能的共享/环状引用
+    seen.add(node);
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
     }
-    const outcome = evaluate(core as never, decl.name, inputs) as {
+    const n = node as {
+      kind?: string;
+      target?: { kind?: string; name?: string; origin?: { start?: { line?: number } } };
+    };
+    if (n.kind === 'Call' && n.target?.kind === 'Name' && n.target.name) {
+      out.push({ name: n.target.name, line: n.target.origin?.start?.line });
+    }
+    Object.values(node as Record<string, unknown>).forEach(walk);
+  })(core);
+  return out;
+}
+
+/**
+ * 判断一个函数名在引擎里是否存在。
+ *
+ * <p>不自己维护"合法名单"——那会与引擎漂移。改为**问引擎本身**：编一个只调该名字的
+ * 探针模块并求值，若报 `Undefined function` 即不存在；存在的函数会因参数个数/类型
+ * 报别的错，同样说明"名字是认识的"。
+ *
+ * <p>★探针**必须传一个实参**。解释器按 arity 分派构造器：零参的 `Some()` 会报
+ * `Undefined function 'Some'`，而 `Some(0)` 正常——若探针写成零参，`Some`/`Ok`/`Err`
+ * 这些真实存在的构造器会被误判成"不存在"（实测确认）。传 1 个参数对
+ * `List.empty`（零参 builtin）也不影响判定，因为参数个数不符报的是别的错。
+ *
+ * <p>结果缓存：同一个名字在整个 content/ 里会出现很多次。
+ */
+const nameExistsCache = new Map<string, boolean>();
+function functionExists(name: string): boolean {
+  const cached = nameExistsCache.get(name);
+  if (cached !== undefined) return cached;
+  const probe = compile(`Module probe.\n\nRule probe produce Int:\n  Return ${name}(0).\n`, {
+    lexicon: EN_US,
+  });
+  let exists = true;
+  if (probe.success) {
+    const outcome = evaluate(probe.core as never, 'probe', {}) as {
       success: boolean;
       error?: string;
     };
-    if (!outcome.success && /Undefined function/.test(outcome.error ?? '')) {
-      found.push(`${decl.name}: ${outcome.error}`);
-    }
+    exists = !/Undefined function/.test(outcome.error ?? '');
   }
-  return found;
+  // 探针本身编译失败（名字不是合法调用语法）时不下结论，交回原样通过，
+  // 避免把测试的局限当成文档的错。
+  nameExistsCache.set(name, exists);
+  return exists;
+}
+
+/**
+ * 收集块内所有**不存在**的被调函数。
+ *
+ * <p>★为什么扫 IR 而不是"跑一遍看报错"：求值只覆盖**入参恰好走到的那条路径**。
+ * 实测 `If x at least 1000000: Return List.definitelyNotReal(x).` 在合成入参
+ * `{x:0}` 下走 else 分支，整条规则返回 success——未定义函数完全漏网。
+ * content/ 下有 16 个文件含分支示例，这不是理论问题。
+ *
+ * <p>扫 IR 则与执行路径无关：`Call` 节点在编译期就已全部存在，
+ * 分支、未被调用的规则、lambda 体内的调用都能覆盖到。
+ */
+function undefinedCalls(core: unknown, moduleFuncs: Set<string>): string[] {
+  const found: string[] = [];
+  for (const call of collectCalls(core)) {
+    // 模块内自定义的规则名不是 builtin，跳过。
+    if (moduleFuncs.has(call.name)) continue;
+    if (functionExists(call.name)) continue;
+    found.push(`第 ${call.line ?? '?'} 行: ${call.name}`);
+  }
+  return [...new Set(found)];
 }
 
 describe('文档 CNL 示例可编译', () => {
@@ -181,22 +210,29 @@ describe('文档 CNL 示例可编译', () => {
     expect(outcome.ok).toBe(true);
   });
 
-  const evaluated = blocks.filter((b) => !b.compileOnly);
+  // ★硬编码块数：新增/删除示例必须显式改这个数字，让"覆盖面变了"在 review 里可见。
+  // 用 toBeGreaterThan(0) 挡不住"豁免掉 45/46 个块仍然全绿"这类静默塌缩
+  // （对抗性审查实证：豁免机制会让用例数 94→93 而报告仍显示 all pass）。
+  const EXPECTED_BLOCK_COUNT = 47;
 
-  it('存在需要求值的块（防止全被 compile-only 豁免后静默失效）', () => {
-    expect(evaluated.length).toBeGreaterThan(0);
+  it(`content/ 下恰有 ${EXPECTED_BLOCK_COUNT} 个 aster 块（变动需显式更新此数）`, () => {
+    expect(blocks.length).toBe(EXPECTED_BLOCK_COUNT);
   });
 
-  it.each(evaluated)(
+  it.each(blocks)(
     '$file 第 $index 个 aster 块所调用的函数都存在',
     ({ source }) => {
       const outcome = compileInAnyLexicon(source);
       if (!outcome.ok) return; // 编译失败已由上一条用例报出，此处不重复报错
-      const missing = undefinedFunctionErrors(source, outcome.lexicon, outcome.core);
+      const moduleFuncs = new Set(
+        ((outcome.core as { decls?: Array<{ kind?: string; name?: string }> }).decls ?? [])
+          .filter((d) => d.kind === 'Func' && d.name)
+          .map((d) => d.name as string),
+      );
+      const missing = undefinedCalls(outcome.core, moduleFuncs);
       if (missing.length > 0) {
         throw new Error(
-          `示例调用了引擎里不存在的函数（compile 不校验这一点，只有 evaluate 会报）：\n` +
-            `${source}\n\n` +
+          `示例调用了引擎里不存在的函数（compile 不校验这一点）：\n${source}\n\n` +
             missing.map((m) => `  - ${m}`).join('\n'),
         );
       }
