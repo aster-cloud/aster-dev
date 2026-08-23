@@ -193,6 +193,11 @@ punctuation, is fine (`静夜思——李白` validates).
 identifiers. Because substitution is context-free, a colliding word would be
 ambiguous — expanding to a string in one place and an identifier in another.
 
+`aliases` work here too: every alias is an additional trigger that expands to the
+same text. Expansion is **one-way**, though — unlike the other four kinds, a
+literal macro builds no reverse mapping, so localizing an already-canonical source
+will not turn the text back into the trigger word.
+
 ### Why it is a separate mechanism
 
 Keyword aliases and domain vocabulary look similar but are deliberately separate:
