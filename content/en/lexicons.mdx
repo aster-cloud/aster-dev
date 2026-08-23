@@ -149,6 +149,79 @@ Terms may also carry `aliases` (extra spellings for the same identifier) and a
 `description`; both are optional, and identifier aliases work the same
 recognition-only way keyword aliases do.
 
+### Literal macros: expanding a term into fixed text
+
+A fifth collection, `literals`, is different from the other four. Instead of
+renaming an identifier it expands a term into a **fixed string** — useful when a
+regulated wording has to appear verbatim and must not be retyped by hand.
+
+Note the inversion: for `IdentifierKind.LITERAL`, `canonical` is **not** an
+identifier, it is the string content that gets substituted (without quotes).
+
+```ts
+vocabularyRegistry.registerCustom('acme-tenant', {
+  id: 'poem', name: 'poem', locale: 'en-US', version: '1',
+  structs: [], fields: [], functions: [], enumValues: [],
+  literals: [{ canonical: 'Quiet Night Thoughts', localized: 'homesick',
+               kind: IdentifierKind.LITERAL }],
+});
+```
+
+Compile with the same `domain` + `tenantId` you registered under — without both,
+the vocabulary is never consulted and the trigger word stays an unknown name:
+
+```ts
+compile(source, { lexicon: EN_US, domain: 'poem', tenantId: 'acme-tenant' });
+```
+
+The trigger word then stands in for the text:
+
+```aster
+Module poem_demo.
+
+Rule title produce Text:
+  Return homesick.
+```
+
+Evaluating `title` returns `"Quiet Night Thoughts"`.
+
+If you forget either option, `compile` still reports success and the failure only
+surfaces at evaluation as `Undefined variable 'homesick'` — which reads like a typo
+rather than a missing option. Check `domain` and `tenantId` first.
+
+**Expression position only.** A literal macro expands to a *string*, so using its
+trigger word where a name is expected — a rule name, a field, a struct — is a
+compile error. `Rule homesick produce Int:` does not compile.
+
+**The content is strictly validated** to keep an untrusted tenant from injecting
+source code at compile time. Rejected: empty content, control characters or
+newlines, and quote delimiters or backslash — `"`, `\`, `「」`, `『』`, `«»`.
+Ordinary visible text, including CJK characters and punctuation, is fine
+(`静夜思——李白` validates).
+
+The TypeScript engine additionally rejects the curly quotes `“ ” ‘ ’` at
+registration time; the JVM engine currently accepts them there and catches them
+later, when the macro is expanded. Either way the content cannot escape its string
+— but if you register vocabulary against the JVM engine, expect that particular
+rejection to arrive at compile time rather than at `registerCustom`.
+
+There is **no limit** on how many literals a vocabulary may hold, nor on the length
+of a single expansion — "strictly validated" refers to the character rules above,
+not to size. Apply your own bounds if tenants supply this content.
+
+**Trigger words must be globally unique.** A literal macro's `localized` spelling
+(and its aliases) may not collide with *any* other mapping, including plain
+identifiers. Because substitution is context-free, a colliding word would be
+ambiguous — expanding to a string in one place and an identifier in another.
+
+`parent` does not apply to literal macros — it is accepted without warning and
+silently ignored, so do not rely on it for scoping.
+
+`aliases` work here too: every alias is an additional trigger that expands to the
+same text. Expansion is **one-way**, though — unlike the other four kinds, a
+literal macro builds no reverse mapping, so localizing an already-canonical source
+will not turn the text back into the trigger word.
+
 ### Why it is a separate mechanism
 
 Keyword aliases and domain vocabulary look similar but are deliberately separate:
