@@ -112,6 +112,19 @@ Rule lookup given score as Int, produce Int:
   Return Maybe.withDefault(Map.get(table, "gold"), 0).
 ```
 
+To branch on the two cases instead of collapsing them, use `Match`. Note the
+**comma** after each pattern — that is the required form:
+
+```aster
+Module map_match_demo.
+
+Rule lookup given key as Text, produce Int:
+  Let table be Map.put(Map.empty(), "gold", 7).
+  Match Map.get(table, key):
+    When null, Return 0.
+    When Some(v), Return v.
+```
+
 ## Date
 
 Dates are represented as an integer number of days since 1970-01-01 (an
@@ -184,8 +197,8 @@ The alias set is **not** exhaustive: `Maybe.withDefault` and `Maybe.map` have no
 `Option.*` equivalent guaranteed across both engines. Use the `Maybe.*` spelling
 for those two.
 
-**`Maybe.unwrapOr` and `Maybe.withDefault` are the same function** — same arity,
-same behaviour, both return `fallback` on `None`. Both spellings are kept for
+**`Maybe.unwrapOr` and `Maybe.withDefault` behave identically** — same arity, same
+result, both return `fallback` on `None`. Both spellings are kept for
 familiarity (`unwrapOr` reads naturally to Rust users, `withDefault` to Elm/OCaml
 users). Either works; `withDefault` is what the examples here use.
 
@@ -207,7 +220,7 @@ passes straight through, which is what makes these safe to chain. As with
 `List.map`, the function argument is a **named rule passed by name**:
 
 ```aster
-Module map_demo.
+Module maybe_map_demo.
 
 Rule double given x as Int, produce Int:
   Return x times 2.

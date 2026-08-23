@@ -16,7 +16,7 @@
     "docs:index": "node scripts/build-docs-index.mjs"
   },
   "dependencies": {
-    "@aster-cloud/aster-lang-ts": "1.0.23",
+    "@aster-cloud/aster-lang-ts": "1.0.26",
     "@aster-cloud/tokens": "^0.2.0",
     "@aster-cloud/ui": "^0.3.0",
     "@mdx-js/loader": "^3.1.0",

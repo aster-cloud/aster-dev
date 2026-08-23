@@ -103,6 +103,19 @@ Rule lookup given score as Int, produce Int:
   Return Maybe.withDefault(Map.get(table, "gold"), 0).
 ```
 
+若要分别处理两种情况而不是合并掉，用 `Match`。注意每个模式后面的**逗号**——
+这是必需的写法：
+
+```aster
+Module map_match_demo.
+
+Rule lookup given key as Text, produce Int:
+  Let table be Map.put(Map.empty(), "gold", 7).
+  Match Map.get(table, key):
+    When null, Return 0.
+    When Some(v), Return v.
+```
+
 ## Date（日期）
 
 日期表示为自 1970-01-01 起的整数天数（「epoch-day」）。比较或平移日期就是整数运算。没有 `today()`——把求值日期作为输入传入。
@@ -167,7 +180,7 @@ Rule withTax given price as Decimal, produce Decimal:
 别名集合**并不完整**：`Maybe.withDefault` 与 `Maybe.map` 没有在两个引擎上
 都保证可用的 `Option.*` 对应物。这两个请统一用 `Maybe.*` 写法。
 
-**`Maybe.unwrapOr` 与 `Maybe.withDefault` 是同一个函数**——参数个数相同、行为相同，
+**`Maybe.unwrapOr` 与 `Maybe.withDefault` 行为完全相同**——参数个数相同、结果相同，
 `None` 时都返回 `fallback`。保留两种写法是为了照顾不同背景的读者
 （`unwrapOr` 对 Rust 用户更自然，`withDefault` 对 Elm/OCaml 用户更自然）。
 两者皆可，本文示例统一用 `withDefault`。
@@ -188,7 +201,7 @@ map 系列只改变载荷、保留外层包装——`None` 与 `Err` 会原样�
 这正是它们可以安全串联的原因。与 `List.map` 一样，函数参数是**具名规则，按名传入**：
 
 ```aster
-Module map_demo.
+Module maybe_map_demo.
 
 Rule double given x as Int, produce Int:
   Return x times 2.
