@@ -199,11 +199,13 @@ newlines, and quote delimiters or backslash — `"`, `\`, `「」`, `『』`, `�
 Ordinary visible text, including CJK characters and punctuation, is fine
 (`静夜思——李白` validates).
 
-The TypeScript engine additionally rejects the curly quotes `“ ” ‘ ’` at
-registration time; the JVM engine currently accepts them there and catches them
-later, when the macro is expanded. Either way the content cannot escape its string
-— but if you register vocabulary against the JVM engine, expect that particular
-rejection to arrive at compile time rather than at `registerCustom`.
+**Both engines** reject the curly quotes `“ ” ‘ ’` at registration time. (Until
+aster-lang-core v1.0.27 the JVM engine accepted them at registration and only
+caught them at expansion; that divergence is gone.) The reason they must be
+rejected early: the canonicalizer normalises `“ ”` to ASCII `"`, so content that
+passed validation would turn into a real quote after expansion — recompiling the
+canonical output would then fail with an unterminated string, i.e. expansion
+would not be idempotent.
 
 There is **no limit** on how many literals a vocabulary may hold, nor on the length
 of a single expansion — "strictly validated" refers to the character rules above,

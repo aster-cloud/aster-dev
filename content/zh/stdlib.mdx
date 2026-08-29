@@ -1,6 +1,6 @@
 # 标准库
 
-Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript 与 JVM）上运行结果一致。用括号调用，例如 `List.sum(xs)`。下面每个示例都按原样可编译、可运行。
+Aster 内置的函数。全部是**确定性的**。除**标 † 的两个**外，在两套引擎（TypeScript 与 JVM）上运行结果一致——标 † 的仅 JVM 可用，在浏览器演练场或 TypeScript 引擎上调用会报 `Undefined function`。用括号调用，例如 `List.sum(xs)`。下面每个示例都按原样可编译、可运行。
 
 > 确定性：这里刻意**没有** `today()` / `now()` / `random()`。当前日期作为输入传入（见 `Date.*`）。正是这一点让决策可回放、两套引擎字节级一致。
 
@@ -11,7 +11,7 @@ Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript
 | `Text.concat(a, b)` | `(Text, Text) → Text` | `a` 后接 `b`（也可直接用 `a plus b`） |
 | `Text.toUpper(t)` | `(Text) → Text` | 转大写 |
 | `Text.toLower(t)` | `(Text) → Text` | 转小写 |
-| `Text.length(t)` | `(Text) → Int` | 字符数 |
+| `Text.length(t)` | `(Text) → Int` | UTF-16 code unit 数——**不是**字符数或码位数。`Text.length("a😀b")` 得 `4` 而非 `3`（两引擎一致：JS `String.length` / Java `String.length()`） |
 | `Text.equals(a, b)` | `(Text, Text) → Bool` | 两侧先转成文本再判等 |
 | `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | 子串测试 |
 | `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | 前缀测试 |
@@ -20,6 +20,7 @@ Aster 内置的函数。全部是**确定性的**，在两套引擎（TypeScript
 | `Text.trim(t)` | `(Text) → Text` | 去除首尾空白 |
 | `Text.substring(t, start[, end])` | `(Text, Int[, Int]) → Text` | 切片 `[start, end)` |
 | `Text.replace(t, target, replacement)` | `(Text, Text, Text) → Text` | 替换全部出现处（字面量，非正则） |
+| `Text.redact(t)` **†** | `(Text) → Text` | 仅 JVM。用于日志/输出前脱敏。TypeScript 引擎未实现 |
 
 ```aster
 Module text_demo.
@@ -46,7 +47,7 @@ Rule shout given name as Text, produce Text:
 | `List.concat(xs, ys)` | `(List, List) → List` | 连接两个列表 |
 | `List.slice(xs, start[, end])` | `(List, Int[, Int]) → List` | 切片 `[start, end)` |
 | `List.distinct(xs)` | `(List) → List` | 去重，保序 |
-| `List.range(start, end)` | `(Int, Int) → List` | 整数 `[start, end)` |
+| `List.range(start, end)` | `(Int, Int) → List` | 整数 `[start, end)`。结果长度超过 1,000,000 时**抛错**（防内存耗尽，两引擎一致） |
 | `List.sum(xs)` | `(List) → Num` | 求和（空 → 0） |
 | `List.min(xs)` / `List.max(xs)` | `(List) → Num` | 最小 / 最大（空 → 报错） |
 | `List.sort(xs)` | `(List) → List` | 升序，稳定 |
@@ -173,12 +174,12 @@ Rule withTax given price as Decimal, produce Decimal:
 | `Result.mapErr(r, f)` | `Err(f(错误))`；为 `Ok` 时原样返回 |
 | `Result.tapError(r, f)` | 执行 `f(错误)`，返回**原样**的 `r` |
 
-`Option.*` 别名覆盖**四个**辅助函数——`Option.isSome`、`Option.isNone`、
-`Option.unwrap`、`Option.unwrapOr`——行为与对应的 `Maybe.*` 完全一致。
+`Option.*` 别名覆盖**五个**辅助函数——`Option.isSome`、`Option.isNone`、
+`Option.unwrap`、`Option.unwrapOr`、`Option.map`——行为与对应的 `Maybe.*` 完全一致。
 建议一个代码库内统一用一种写法。
 
-别名集合**并不完整**：`Maybe.withDefault` 与 `Maybe.map` 没有在两个引擎上
-都保证可用的 `Option.*` 对应物。这两个请统一用 `Maybe.*` 写法。
+别名集合**并不完整**：`Maybe.withDefault` 在两个引擎上都没有 `Option.*` 对应物，
+请统一用 `Maybe.*` 写法。
 
 **`Maybe.unwrapOr` 与 `Maybe.withDefault` 行为完全相同**——参数个数相同、结果相同，
 `None` 时都返回 `fallback`。保留两种写法是为了照顾不同背景的读者
@@ -210,6 +211,15 @@ Rule doubledOrZero given raw as Int, produce Int:
   Let doubled be Maybe.map(Some(raw), double).
   Return Maybe.withDefault(doubled, 0).
 ```
+
+## PII
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `PII.unwrap(v)` **†** | `(T) → T` | 仅 JVM。为受控出口解包 PII 标记值。TypeScript 引擎未实现 |
+
+**†** 这两个只由 JVM（Truffle）引擎注册。用到它们的策略在浏览器演练场以及任何
+跑 TypeScript 引擎的地方都会报 `Undefined function`——需要双引擎运行的策略请避开。
 
 ## 不提供的能力
 

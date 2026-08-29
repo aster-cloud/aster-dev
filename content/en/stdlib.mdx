@@ -1,7 +1,9 @@
 # Standard Library
 
-The built-in functions Aster ships with. All are **deterministic** and run
-identically on both engines (TypeScript and JVM). Call them with parentheses,
+The built-in functions Aster ships with. All are **deterministic**. Everything
+runs identically on both engines (TypeScript and JVM) **except the two entries
+marked †**, which are JVM-only — calling those from the browser playground or the
+TypeScript engine fails with `Undefined function`. Call them with parentheses,
 e.g. `List.sum(xs)`. Every example below compiles and runs as written.
 
 > Determinism: there is intentionally **no** `today()` / `now()` / `random()`.
@@ -15,7 +17,7 @@ e.g. `List.sum(xs)`. Every example below compiles and runs as written.
 | `Text.concat(a, b)` | `(Text, Text) → Text` | `a` followed by `b` (or just use `a plus b`) |
 | `Text.toUpper(t)` | `(Text) → Text` | uppercase |
 | `Text.toLower(t)` | `(Text) → Text` | lowercase |
-| `Text.length(t)` | `(Text) → Int` | character count |
+| `Text.length(t)` | `(Text) → Int` | UTF-16 code-unit count — **not** grapheme or code-point count. `Text.length("a😀b")` is `4`, not `3` (both engines: JS `String.length` / Java `String.length()`) |
 | `Text.equals(a, b)` | `(Text, Text) → Bool` | exact equality after coercing both sides to text |
 | `Text.contains(haystack, needle)` | `(Text, Text) → Bool` | substring test |
 | `Text.startsWith(t, prefix)` | `(Text, Text) → Bool` | prefix test |
@@ -24,6 +26,7 @@ e.g. `List.sum(xs)`. Every example below compiles and runs as written.
 | `Text.trim(t)` | `(Text) → Text` | strip leading/trailing whitespace |
 | `Text.substring(t, start[, end])` | `(Text, Int[, Int]) → Text` | slice `[start, end)` |
 | `Text.replace(t, target, replacement)` | `(Text, Text, Text) → Text` | replace all occurrences (literal, not regex) |
+| `Text.redact(t)` **†** | `(Text) → Text` | JVM-only. Masks the value for logging/output. Not implemented in the TypeScript engine |
 
 ```aster
 Module text_demo.
@@ -51,7 +54,7 @@ mismatch visible instead of silently stringifying it.
 | `List.concat(xs, ys)` | `(List, List) → List` | join two lists |
 | `List.slice(xs, start[, end])` | `(List, Int[, Int]) → List` | slice `[start, end)` |
 | `List.distinct(xs)` | `(List) → List` | dedupe, order-preserving |
-| `List.range(start, end)` | `(Int, Int) → List` | integers `[start, end)` |
+| `List.range(start, end)` | `(Int, Int) → List` | integers `[start, end)`. **Raises** if the resulting length would exceed 1,000,000 (memory-exhaustion guard, identical in both engines) |
 | `List.sum(xs)` | `(List) → Num` | sum (empty → 0) |
 | `List.min(xs)` / `List.max(xs)` | `(List) → Num` | min / max (empty → error) |
 | `List.sort(xs)` | `(List) → List` | ascending, stable |
@@ -189,13 +192,12 @@ Build optional values with `Some(x)` / `None`, and fallible values with `Ok(x)` 
 | `Result.mapErr(r, f)` | `Err(f(error))`, or the `Ok` unchanged |
 | `Result.tapError(r, f)` | runs `f(error)` and returns `r` **unchanged** |
 
-`Option.*` aliases cover **four** helpers — `Option.isSome`, `Option.isNone`,
-`Option.unwrap`, `Option.unwrapOr` — which behave identically to their `Maybe.*`
-counterparts. Pick one spelling per codebase for consistency.
+`Option.*` aliases cover **five** helpers — `Option.isSome`, `Option.isNone`,
+`Option.unwrap`, `Option.unwrapOr`, `Option.map` — which behave identically to
+their `Maybe.*` counterparts. Pick one spelling per codebase for consistency.
 
-The alias set is **not** exhaustive: `Maybe.withDefault` and `Maybe.map` have no
-`Option.*` equivalent guaranteed across both engines. Use the `Maybe.*` spelling
-for those two.
+The alias set is **not** exhaustive: `Maybe.withDefault` has no `Option.*`
+equivalent in either engine. Use the `Maybe.*` spelling for it.
 
 **`Maybe.unwrapOr` and `Maybe.withDefault` behave identically** — same arity, same
 result, both return `fallback` on `None`. Both spellings are kept for
@@ -229,6 +231,16 @@ Rule doubledOrZero given raw as Int, produce Int:
   Let doubled be Maybe.map(Some(raw), double).
   Return Maybe.withDefault(doubled, 0).
 ```
+
+## PII
+
+| Function | Signature | Notes |
+| --- | --- | --- |
+| `PII.unwrap(v)` **†** | `(T) → T` | JVM-only. Unwraps a PII-tagged value for a sanctioned sink. Not implemented in the TypeScript engine |
+
+**†** These are registered by the JVM (Truffle) engine only. A policy that calls
+them will fail with `Undefined function` in the browser playground and anywhere
+the TypeScript engine runs — keep them out of policies that must run on both.
 
 ## Not available
 

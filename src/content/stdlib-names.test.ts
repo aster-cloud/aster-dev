@@ -40,14 +40,19 @@ const CONTENT_ROOT = fileURLToPath(new URL('../../content', import.meta.url));
  * TS 侧补齐后应清空本集合（见 aster-lang-ts#112）。
  */
 const JVM_ONLY = new Set<string>([
-  // 1.0.23 起为空：aster-lang-ts#112 已在 TS 侧补齐原先那六个仅 JVM 可用的函数，
-  // 随 1.0.23 列车发到 npm（实测 @aster-cloud/aster-lang-ts@1.0.23 六个全部可求值）。
-  // 下方"名单不含已补齐函数"的断言会盯着这里：若将来又有 JVM-only 函数写进文档，
-  // 加进本集合并在文档标 † 即可；补齐后不移除则该断言报红。
+  // 1.0.23 起原先那六个已由 aster-lang-ts#112 在 TS 侧补齐（实测
+  // @aster-cloud/aster-lang-ts@1.0.23 六个全部可求值），故不再列在此处。
+  //
+  // ★以下两个是 2026-08-30 补记（issue #35）：Truffle 一直注册着它们且能正常工作，
+  //   TS 侧 interpreter.ts 的注释也自认未实现——但文档从未收录，
+  //   于是 † 机制与本集合双双为空，分叉无处提示。
+  //   JVM 侧策略若用了它们，在 playground/TS 必炸 Undefined function。
+  'Text.redact',
+  'PII.unwrap',
 ]);
 
 /** 文档里 stdlib 命名空间白名单——只检查这些前缀，避免把示例里的用户模块名当成内置。 */
-const NAMESPACES = ['Text', 'List', 'Map', 'Date', 'Decimal', 'Num', 'Maybe', 'Option', 'Result'];
+const NAMESPACES = ['Text', 'List', 'Map', 'Date', 'Decimal', 'Num', 'Maybe', 'Option', 'Result', 'PII'];
 
 function collectMdx(dir: string): string[] {
   const out: string[] = [];
