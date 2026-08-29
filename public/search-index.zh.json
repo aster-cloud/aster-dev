@@ -111,7 +111,7 @@
     {
       "slug": "stdlib",
       "title": "标准库",
-      "description": "Aster 内置的函数。全部是确定性的，在两套引擎（TypeScript 与 JVM）上运行结果一致。用括号调用，例如 List.sum(xs)。下面每个示例都按原样可编译、可运行。",
+      "description": "Aster 内置的函数。全部是确定性的。除标 † 的两个外，在两套引擎（TypeScript 与 JVM）上运行结果一致——标 † 的仅 JVM 可用，在浏览器演练场或 TypeScript 引擎上调用会报 Undefined function。用括号调用，例如 List.sum(xs)。下面每个示例都按原样可编译、可运行。",
       "headings": [
         "Text（文本）",
         "List（列表）",
@@ -120,6 +120,7 @@
         "Date（日期）",
         "Decimal（十进制）",
         "Maybe / Option 与 Result",
+        "PII",
         "不提供的能力"
       ]
     }
