@@ -12,7 +12,9 @@
     </linearGradient>
   </defs>
 
-  <rect width="1024" height="1024" fill="white"/>
+  <!-- ★无背景矩形：本 logo 以 28/24px 内联在 header/footer，需随主题透出背景。
+       原先这里有一块 fill="white" 的满幅矩形，在 [data-theme="dark"] 下会变成
+       一个刺眼的白方块。 -->
 
   <!-- Aster A: left blade -->
   <path d="M505 143 L93 896 L441 681 L371 640 L505 397 Z" fill="url(#blue)"/>
@@ -20,6 +22,11 @@
   <!-- Aster A: right blade -->
   <path d="M519 143 L931 896 L583 681 L653 640 L519 397 Z" fill="url(#orange)"/>
 
-  <!-- central white aperture -->
-  <path d="M512 405 L371 640 L512 706 L653 640 Z" fill="white"/>
+  <!-- ★原先此处还有一条 fill="white" 的「中心孔洞」路径
+       （M512 405 L371 640 L512 706 L653 640 Z），一并移除。
+       它画在两刃之间**本就为空**的区域上：y=640 处左刃止于 x=371、
+       右刃始于 x=653，中间 282px 从来就没有填充。该路径唯一作用是
+       用白色盖住上面那块白底——白底去掉后它就成了悬在暗色背景上的
+       白色三角（已在浏览器中实测确认）。两者必须同时删，只删背景
+       反而更难看。 -->
 </svg>
