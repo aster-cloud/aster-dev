@@ -65,13 +65,32 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      # 用于在升级分支上显式派发 ci.yml（见末步说明）。
-      actions: write
     env:
       VERSION: ${{ needs.resolve.outputs.version }}
       BRANCH: ${{ needs.resolve.outputs.branch }}
     steps:
+      # 用 org 已有的 CROSS_REPO_TOKEN（fine-grained PAT）推分支、开 PR：
+      # public 仓库对 bot（github.token）触发的 run 挂 action_required，required check `quality` 永不报告；
+      # PAT 触发的 pull_request CI 照常自动运行。未配时回落 github.token，PR 仍会开出但 CI 需人工处理。
+      - name: Resolve token (CROSS_REPO_TOKEN, fallback to github.token)
+        id: tok
+        env:
+          PAT: ${{ secrets.CROSS_REPO_TOKEN }}
+          FALLBACK: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PAT:-}" ]; then
+            echo "token=${PAT}" >> "$GITHUB_OUTPUT"
+            echo "::notice::使用 CROSS_REPO_TOKEN —— 升级 PR 的 CI 将自动运行"
+          else
+            echo "token=${FALLBACK}" >> "$GITHUB_OUTPUT"
+            echo "::warning::未配 CROSS_REPO_TOKEN，回落 github.token —— 升级 PR 的 CI 不会自动运行（public 仓库 bot 审批门）"
+          fi
+
+      # checkout 必须带同一令牌：git push 用的是 checkout 写入的凭据，push 决定 CI run 的触发者。
       - uses: actions/checkout@v6
+        with:
+          token: ${{ steps.tok.outputs.token }}
 
       - uses: pnpm/action-setup@v6
 
@@ -96,7 +115,7 @@ jobs:
 
       - name: Create upgrade PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.tok.outputs.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -115,16 +134,5 @@ jobs:
 
           - \`package.json\` pin bumped (exact)
           - \`pnpm typecheck\`, \`pnpm lint\` and \`pnpm test\` passed in the upgrade run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-
-          **CI note:** this PR was opened with the repo \`GITHUB_TOKEN\`, which by GitHub design does not fire \`pull_request\` workflows. The upgrade run dispatches \`ci.yml\` on this branch via \`workflow_dispatch\` instead, so the CI checks attach to the head commit. If no CI run appears (or it sits in \`action_required\`), run: \`gh workflow run ci.yml -R ${GITHUB_REPOSITORY} --ref ${BRANCH}\` or approve it with \`gh api -X POST repos/${GITHUB_REPOSITORY}/actions/runs/<id>/approve\`.
           BODY
           )"
-
-      # GITHUB_TOKEN 开的 PR 不会触发 pull_request 事件，但 workflow_dispatch 是官方豁免项：
-      # 在升级分支上显式派发 ci.yml，让完整 CI 跑在 PR 的 head commit 上。尽力而为，失败只告警。
-      - name: Dispatch CI on upgrade branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run ci.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}" \
-            || echo "::warning::CI 派发失败，请手动执行: gh workflow run ci.yml --ref ${BRANCH}"
