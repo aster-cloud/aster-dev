@@ -71,6 +71,12 @@
     "browserApi": "浏览器 API",
     "deployment": "部署",
     "editions": "版本对比",
+    "governance": "治理",
+    "governanceOverview": "策略即治理",
+    "actionGuard": "Action Guard（行动守卫）",
+    "evidence": "证据与重放",
+    "cedarExport": "导出到 Cedar",
+    "aiAssist": "AI 辅助与自带 Key",
     "examples": "示例",
     "onThisPage": "本页目录",
     "sectionsLabel": "章节"

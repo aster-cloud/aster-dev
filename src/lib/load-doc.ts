@@ -20,6 +20,11 @@ const SLUGS = [
   'browser-api',
   'deployment',
   'editions',
+  'governance',
+  'action-guard',
+  'evidence',
+  'cedar-export',
+  'ai-assist',
 ] as const;
 export type DocSlug = (typeof SLUGS)[number];
 
