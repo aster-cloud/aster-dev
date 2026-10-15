@@ -20,8 +20,8 @@ it does not.
 A rule is exportable when it
 
 - has an `@id`;
-- takes exactly one parameter whose type has the eight
-  [Action Guard](/docs/action-guard) request fields — `principal_id`,
+- takes exactly one parameter whose type has exactly the eight
+  [Action Guard](/docs/action-guard) request fields — no more, no fewer — `principal_id`,
   `principal_type`, `principal_roles`, `action`, `resource_type`, `resource_id`,
   `context`, `agent_model` (matched by field name);
 - returns `Verdict` (see [Policies as governance](/docs/governance)).
@@ -41,7 +41,7 @@ All entity types live in the `Aster` namespace:
 
 A context key's type is inferred from how the rule uses it: compared with or
 computed on integers → `Long`; compared with text → `String`; used on its own as a
-condition or compared with a boolean → `Bool`. Only one level of keys is supported.
+condition or compared with a boolean → `Boolean`. Only one level of keys is supported.
 
 Inside the rule body the translatable subset is:
 
@@ -69,11 +69,11 @@ can fall through without returning a verdict.
 ## How outcomes map
 
 Cedar has only `permit` and `forbid`, so the four verdicts are folded onto two
-effects and the Aster outcome travels in annotations:
+effects and the Aster outcome travels in annotations on every policy:
 
 | Verdict | Cedar |
 | --- | --- |
-| `allow()` | `permit` |
+| `allow()` | `permit` with `@aster_outcome("allow")` |
 | `deny(reason)` | `forbid` with `@aster_outcome("deny")`, `@aster_reason` |
 | `escalate(reason)` | `forbid` with `@aster_outcome("escalate")`, `@aster_reason` |
 | `require_approval(role, reason)` | `forbid` with `@aster_outcome("require_approval")`, `@aster_approver`, `@aster_reason` |
@@ -117,6 +117,11 @@ Rule decide given req as GuardRequest, produce Verdict:
     Return Verdict.escalate("large refund").
   Otherwise allow.
 ```
+
+The editor's type checker flags `req.context.amount` (E011, *Unknown field 'amount'
+for Text*): like every guard request, `context` is declared without a type and the
+checker treats untyped fields as Text. The policy API compiles, evaluates and
+exports the rule as shown.
 
 It exports as four policies, `GCS-001#1` to `GCS-001#4`: three `forbid`s and a
 final `permit`. The third, for the large refund, has this header (condition
@@ -233,4 +238,5 @@ you can match a deployed Cedar file to its audit record.
 
 - Pushing to AWS Verified Permissions or another service — the output is plain files.
 - Importing Cedar into Aster, or Cedar pre-checks inside Action Guard.
-- Decimal values, inlining calls to other rules, and a live Cedar preview in the editor.
+- Decimal values, inlining calls to other rules, parameter-annotation mapping, and a
+  live Cedar preview in the editor.

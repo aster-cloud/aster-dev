@@ -15,7 +15,7 @@ Aster 仍是唯一事实源。导出是单向的，并且只有在 Cedar 结果�
 规则同时满足以下条件才可导出：
 
 - 带 `@id`；
-- 只有一个参数，其类型具有 [Action Guard](/docs/action-guard) 请求的八个字段——`principal_id`、`principal_type`、
+- 只有一个参数，其类型的字段恰好是 [Action Guard](/docs/action-guard) 请求的八个字段（不多不少）——`principal_id`、`principal_type`、
   `principal_roles`、`action`、`resource_type`、`resource_id`、`context`、`agent_model`（按字段名匹配）；
 - 返回 `Verdict`（见[策略即治理](/docs/governance)）。
 
@@ -31,7 +31,7 @@ Aster 仍是唯一事实源。导出是单向的，并且只有在 Cedar 结果�
 | `agent_model` | `context.agent_model` |
 | `context.<key>` | `context.<key>`，可选，类型按用法推断 |
 
-context 键的类型由规则中的用法推断：与整数比较或参与整数运算 → `Long`；与文本比较 → `String`；单独作条件或与布尔比较 → `Bool`。
+context 键的类型由规则中的用法推断：与整数比较或参与整数运算 → `Long`；与文本比较 → `String`；单独作条件或与布尔比较 → `Boolean`。
 只支持一层键。
 
 规则体中可翻译的子集：
@@ -51,11 +51,11 @@ context 键的类型由规则中的用法推断：与整数比较或参与整数
 
 ## 结论如何映射
 
-Cedar 只有 `permit` 与 `forbid`，四种结论被折叠成两种效果，Aster 的结论放在注解里：
+Cedar 只有 `permit` 与 `forbid`，四种结论被折叠成两种效果，Aster 的结论放在每条策略的注解里：
 
 | Verdict | Cedar |
 | --- | --- |
-| `allow()` | `permit` |
+| `allow()` | `permit`，带 `@aster_outcome("allow")` |
 | `deny(reason)` | `forbid`，带 `@aster_outcome("deny")`、`@aster_reason` |
 | `escalate(reason)` | `forbid`，带 `@aster_outcome("escalate")`、`@aster_reason` |
 | `require_approval(role, reason)` | `forbid`，带 `@aster_outcome("require_approval")`、`@aster_approver`、`@aster_reason` |
@@ -93,6 +93,9 @@ Rule decide given req as GuardRequest, produce Verdict:
     Return Verdict.escalate("large refund").
   Otherwise allow.
 ```
+
+编辑器的类型检查会对 `req.context.amount` 报 E011（*Unknown field 'amount' for Text*）：与所有守卫请求一样，`context`
+未声明类型，检查器把无类型字段视为 Text。策略 API 能照常编译、求值并导出这条规则。
 
 它导出为四条策略 `GCS-001#1` 到 `GCS-001#4`：三条 `forbid` 与最后一条 `permit`。第三条（大额退款）的头部如下
 （条件从略——其中写出了上文所述的顺序守卫与范围守卫）：
@@ -190,4 +193,4 @@ jq -n --rawfile src decide.aster '{source: $src, locale: "en-US"}' |
 
 - 推送到 AWS Verified Permissions 或其他服务——产物就是普通文件。
 - 把 Cedar 导入 Aster，或在 Action Guard 内做 Cedar 预检。
-- Decimal 值、内联对其他规则的调用，以及编辑器内的实时 Cedar 预览。
+- Decimal 值、内联对其他规则的调用、参数注解式映射，以及编辑器内的实时 Cedar 预览。
