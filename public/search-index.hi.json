@@ -63,6 +63,19 @@
       ]
     },
     {
+      "slug": "evidence",
+      "title": "Evidence & replay",
+      "description": "A governance decision is only as good as what you can show about it afterwards. For every execution, an auditor wants to know which rule decided, which control that rule serves, which agent was act...",
+      "headings": [
+        "A rule worth evidencing",
+        "The execution evidence chain",
+        "Evidence export bundles",
+        "The Article 14 mapping",
+        "What-If: four-state replay",
+        "Verify the chain yourself"
+      ]
+    },
+    {
       "slug": "governance",
       "title": "Policies as governance",
       "description": "Most Aster rules compute a value: a price, a tier, a yes/no eligibility flag. A growing class of rules does something different — it decides whether an action may happen at all. An AI agent wants t...",

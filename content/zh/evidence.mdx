@@ -1,0 +1,168 @@
+# 证据与重放
+
+治理决策的价值，取决于事后能拿出多少关于它的证据。对每一次执行，审计方都想知道：哪条规则判的、
+这条规则服务于哪个控制点、当时是哪个 Agent 在行动、谁复核过结果、记录之后有没有被改过。
+Aster 把这些证据放在两处，彼此互相指向：
+
+- **aster-api 的审计哈希链**是权威。每一次评估、每一次 [Action Guard](/docs/action-guard)
+  决策与审批都追加到按租户划分的链上，每条记录都带着上一条的哈希。
+- **Aster Cloud 的执行记录**是你浏览与导出的对象。每条记录带一个相关键（correlation id），
+  可据此找回它在链上的收据（ADR 0041）。
+
+本页跟着一条规则，从执行一直走到导出的证据，再介绍如何在上线新版本之前，用它重放已记录的执行。
+
+## 一条值得留证的规则
+
+信贷试点（ADR 0044）用一条带稳定身份与两个法规控制点的决策规则，所在模块声明了欧盟人工智能法高风险档案：
+
+```aster
+Module aster.pilot.credit.
+Profile "eu-ai-act-high-risk".
+
+Define Applicant has creditScore as Int, monthlyIncome as Decimal, monthlyDebt as Decimal, requestedAmount as Decimal, activeDefaults as Int.
+
+@id("CP-DECIDE")
+@control("EU_AI_ACT:ART14")
+@control("GDPR:ART22")
+Rule decide given applicant as Applicant, produce Verdict:
+  When applicant.activeDefaults at least 1, deny "active_default".
+  When applicant.monthlyDebt greater than applicant.monthlyIncome times 0.45m, deny "dti_exceeds_limit".
+  When applicant.requestedAmount at least 50000m, require approval by "Credit Officer" because "large_exposure".
+  When applicant.creditScore at least 620 and applicant.creditScore at most 679, escalate "borderline_credit_score".
+  Otherwise allow.
+```
+
+一笔 60 000 的申请，没有在途违约、负债率也不高，结论是 `require approval by "Credit Officer"`。
+下面看这一次执行留下了什么。
+
+## 执行证据链
+
+**链上（aster-api）。** 评估会追加一条 `POLICY_EVALUATION` 事件，metadata 带 `correlationId`、
+`outcome`（`REQUIRE_APPROVAL`）、`ruleId`（`CP-DECIDE`）、`controls`、Verdict 的 `role` 与 `reason`、
+模块声明的 `profile`，以及扁平键形式的 Agent 身份（`agentProvider`、`agentModel` 等，
+`agentSource: "declared"`——这是调用方的自报，不是经过认证的事实）。返回给调用方的响应带
+`evidence.correlationId`。
+
+**执行记录（Aster Cloud）。** 记录保存决策结论、aster-api 计算的规范化输入 / 输出哈希与 trace 哈希、
+源端与运行端的 toolchain id（哪个引擎编译、哪个引擎执行了这条规则）、可重放性状态，以及
+`outcome`、`ruleId`、`controls`、`agent`、`profile`、`evidenceCorrelationId` 等列。
+
+**审批。** 因为结论需要审批，Cloud 以这条链上事件开出守卫决策，并把 `guardDecisionId` 写进该执行的
+metadata。信贷主管（Credit Officer）在审批收件箱里批准后，链上追加一条 `ACTION_GUARD_APPROVAL` 事件，
+指回决策收据的哈希。
+
+## 证据导出包
+
+在 Aster Cloud 的**报告**页，可以把一条策略（或全部策略）在某个时间段内的执行导出为 JSON 或 JSONL
+证据包：一个 manifest 加一组有序条目。条目从不包含明文输入或输出——只有哈希、身份与引用。
+`manifest.bundleHash` 是对有序条目计算的 SHA-256，`manifest.notes.verification` 给出重算方法。
+
+上面那次执行对应的条目（节选）：
+
+```json
+{
+  "executionId": "…",
+  "policyId": "pol-credit-pilot",
+  "policyVersion": 3,
+  "decision": "require_approval",
+  "outcome": "REQUIRE_APPROVAL",
+  "ruleId": "CP-DECIDE",
+  "controls": ["EU_AI_ACT:ART14", "GDPR:ART22"],
+  "reasonCodes": ["large_exposure"],
+  "profile": "eu-ai-act-high-risk",
+  "canonicalInputHash": "…",
+  "canonicalizationVersion": "aster-canonical-json/v1",
+  "replayabilityStatus": "REPLAYABLE",
+  "agent": null,
+  "evidenceCorrelationId": "…",
+  "receipt": { "auditId": 88214, "currentHash": "…", "prevHash": "…", "hashVersion": 2 },
+  "reviewers": [
+    { "userId": "…", "role": "Credit Officer", "source": "guard-approval", "outcome": "APPROVED",
+      "decidedAt": "…", "ref": "88231", "roleVerified": true }
+  ],
+  "whatIf": { "batchId": "…", "baseOutcome": "REQUIRE_APPROVAL", "targetOutcome": "ALLOW", "baseLegacy": false }
+}
+```
+
+`receipt` 记录评估事件在链上的坐标；取不到时如实标注：`{ "status": "legacy" }`（没有相关键的旧行）、
+`"missing"`（aster-api 找不到该事件）或 `"unavailable"`（导出时查询失败；导出照常完成，manifest 计数）。
+`reviewers` 合并三种来源：`guard-approval`（运行期审批人，来自守卫决策）、`policy-proof`（版本的设计期复核）
+与 `version-approval`（批准该版本的人）。`roleVerified` 表示角色是否经过验证；自 ADR 0042 起，守卫审批的角色都已验证。
+
+证据包格式有版本号，已存的证据包始终按写入时的原样下载：
+
+| `schemaVersion` | 新增内容 |
+| --- | --- |
+| `2` | 链收据 `receipt`，`outcome` / `ruleId` / `controls` / `agent`，统一的 `reviewers`，`agentTally` 与 `reviewerTally` |
+| `3` | 条目级 `whatIf`；manifest 中固定的第 14 条对照 |
+| `4` | 由控制注册表驱动、按控制点分组并带 `registryVersion` 的 `regulatoryMapping` |
+| `5` | 条目级 `profile`；`manifest.profilesUsed` 列出出现过的全部治理档案及其多语言标题 |
+
+### 第 14 条对照
+
+`manifest.regulatoryMapping` 把证据包对照到每个「在注册表中带条款、且出现在条目上」的控制点。
+对 `EU_AI_ACT:ART14`（人工监督），注册表定义了**九款**：14(1)、14(2)、14(3)、14(4)(a) 至 (e) 与 14(5)。
+每款给出 `evidenced`、`partial` 或 `none`，只依据条目上的字段判定，并附 `{ executionId, field }` 引用：
+
+| 款 | 由什么证明 |
+| --- | --- |
+| 14(1) 监督设计 | 某条目的 `controls` 含 `EU_AI_ACT:ART14` |
+| 14(2) 风险配置 | 存在结论为 `REQUIRE_APPROVAL` 或 `ESCALATE` 的条目 |
+| 14(3) 监督措施内建 | 14(1) **且**存在带任一复核者的条目（只满足其一：partial） |
+| 14(4)(a) 理解能力 | 一次已完成的 What-If 比对——最多 `partial` |
+| 14(4)(b) 自动化偏见 | 没有字段能证明——恒为 `none` |
+| 14(4)(c) 解读输出 | `ruleId` 与 `reasonCodes` 均存在 |
+| 14(4)(d) 否决 / 不使用 | 有已验证的守卫审批人 `REJECTED`（只有 `APPROVED`：partial） |
+| 14(4)(e) 干预 / 停止 | 有已验证的守卫审批人（只有 `REQUIRE_APPROVAL` 而无审批人：partial） |
+| 14(5) 双人验证 | 某条目有两名已验证的守卫审批人 |
+
+只有 `roleVerified: true` 的 `guard-approval` 复核者算作对某条输出的人工干预；版本级复核不算。
+在试点运行中，七款为 evidenced 或 partial，14(4)(b) 与 14(5) 为 `none`。
+对照表描述的是证据包里已有的证据，不是合规结论，也不打分。
+
+## What-If：四态重放
+
+激活新版本之前，先用它重放已记录的执行。一个 What-If 批次取**基线**版本、**目标**版本与一个时间窗口
+（`LAST_MONTH`、`LAST_QUARTER`、`LAST_HALF_YEAR`、`LAST_YEAR` 或 `CUSTOM`），挑出窗口内可重放的执行，
+在目标版本上逐条重新评估。
+
+自 ADR 0043 起，两侧都按结论码比较——`ALLOW`、`DENY`、`REQUIRE_APPROVAL`、`ESCALATE`——而不是是 / 否标志，
+所以 `REQUIRE_APPROVAL` 变成 `DENY` 不再被看漏。另有两个码 `INDETERMINATE` 与 `ERROR`，标记无法比较的执行。
+完成的批次只返回汇总，从不返回逐条结果：
+
+| 字段 | 含义 |
+| --- | --- |
+| `changed` | 两侧都可比且不相等 |
+| `newlyApproved` / `newlyRejected` | 目标变为 `ALLOW` / 基线为 `ALLOW` 而目标不是 |
+| `transitions` | 按 `BASE->TARGET` 计数，例如 `"REQUIRE_APPROVAL->ALLOW": 2` |
+| `byTargetOutcome` | 六个目标码各自的条数 |
+| `incomparable` | 任一侧为 `INDETERMINATE` 或 `ERROR`——不计入 changed |
+| `legacyBase` | 基线结论由旧记录的 decision 折算而来 |
+
+What-If 需要 Pro 及以上套餐（否则 `403 whatif_not_entitled`），每个租户同时只能运行一个批次
+（`409 whatif_batch_in_progress`）。批次**按所有者隔离**（ADR 0034）：只重放策略所有者本人的执行，
+所以要比较的执行请以所有者身份运行。在控制台里，这是策略页上的**比较版本**；同一端点也接受已登录的会话：
+
+```bash
+curl -X POST https://aster-lang.cloud/api/v1/policies/POLICY_ID/whatif-batches \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: https://aster-lang.cloud' \
+  -H 'Cookie: SESSION_COOKIE' \
+  -d '{ "baseVersionId": "BASE_VERSION_ID", "targetVersionId": "TARGET_VERSION_ID",
+        "windowKind": "LAST_MONTH", "includeToday": true }'
+```
+
+响应为 `202` 并带 `batchId`；轮询 `GET /api/v1/policies/POLICY_ID/whatif-batches/BATCH_ID`，直到 `status`
+为 `COMPLETED`，再读 `result`。窗口在批次创建时固化，所以同一批次永远重放同一批执行。窗口缺省截止到当天 00:00；
+`includeToday` 把它延伸到此刻。每条执行最近一次的重放结果，会作为 `whatIf` 出现在下一次证据导出中。
+
+## 自己核验哈希链
+
+aster-api 有两个只读端点，让你不必信任 Aster Cloud 也能核对证据：
+
+- `GET /api/v1/audit/receipts?correlationIds=a,b,…`（守卫决策及其审批事件用 `?decisionIds=…`）返回本租户的链收据；
+  把每条 `currentHash` 与证据包里的 `receipt.currentHash` 比对。每次至多 200 个 id；未知或不属于本租户的 id
+  出现在 `missing` 中。
+- `GET /api/v1/audit/verify-chain?start=…&end=…`（ISO-8601，跨度至多 30 天，需 `ADMIN` 角色）遍历本租户的链，
+  返回 `valid`、`brokenAt`、`reason`、`recordsVerified`，以及与链尾外部锚点比对得到的 `anchorChecked`、
+  `anchorIntact`、`anchorReason`——后者能发现单靠链本身发现不了的截尾。

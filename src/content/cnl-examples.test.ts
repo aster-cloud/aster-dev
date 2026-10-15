@@ -213,7 +213,7 @@ describe('文档 CNL 示例可编译', () => {
   // ★硬编码块数：新增/删除示例必须显式改这个数字，让"覆盖面变了"在 review 里可见。
   // 用 toBeGreaterThan(0) 挡不住"豁免掉 45/46 个块仍然全绿"这类静默塌缩
   // （对抗性审查实证：豁免机制会让用例数 94→93 而报告仍显示 all pass）。
-  const EXPECTED_BLOCK_COUNT = 53;
+  const EXPECTED_BLOCK_COUNT = 55;
 
   it(`content/ 下恰有 ${EXPECTED_BLOCK_COUNT} 个 aster 块（变动需显式更新此数）`, () => {
     expect(blocks.length).toBe(EXPECTED_BLOCK_COUNT);

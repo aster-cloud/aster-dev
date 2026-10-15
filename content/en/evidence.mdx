@@ -1,0 +1,205 @@
+# Evidence & replay
+
+A governance decision is only as good as what you can show about it afterwards.
+For every execution, an auditor wants to know which rule decided, which control
+that rule serves, which agent was acting, who reviewed the result, and whether
+the record has been altered since. Aster keeps that evidence in two places that
+point at each other:
+
+- **aster-api's audit hash chain** is the authority. Every evaluation and every
+  [Action Guard](/docs/action-guard) decision or approval is appended to a
+  per-tenant chain in which each record carries the hash of the previous one.
+- **Aster Cloud's execution records** are what you browse and export. Each record
+  carries a correlation id that finds its chain receipt again (ADR 0041).
+
+This page follows one rule from execution to exported evidence, then shows how to
+replay recorded executions against a new version before you ship it.
+
+## A rule worth evidencing
+
+The credit pilot (ADR 0044) uses one decision rule with a stable identity and two
+regulatory controls, in a module that declares the EU AI Act high-risk profile:
+
+```aster
+Module aster.pilot.credit.
+Profile "eu-ai-act-high-risk".
+
+Define Applicant has creditScore as Int, monthlyIncome as Decimal, monthlyDebt as Decimal, requestedAmount as Decimal, activeDefaults as Int.
+
+@id("CP-DECIDE")
+@control("EU_AI_ACT:ART14")
+@control("GDPR:ART22")
+Rule decide given applicant as Applicant, produce Verdict:
+  When applicant.activeDefaults at least 1, deny "active_default".
+  When applicant.monthlyDebt greater than applicant.monthlyIncome times 0.45m, deny "dti_exceeds_limit".
+  When applicant.requestedAmount at least 50000m, require approval by "Credit Officer" because "large_exposure".
+  When applicant.creditScore at least 620 and applicant.creditScore at most 679, escalate "borderline_credit_score".
+  Otherwise allow.
+```
+
+An application for 60 000, with no active defaults and a modest debt ratio, ends in
+`require approval by "Credit Officer"`. Here is what that one execution leaves
+behind.
+
+## The execution evidence chain
+
+**On the chain (aster-api).** The evaluation appends a `POLICY_EVALUATION` event
+whose metadata carries a `correlationId`, the `outcome` (`REQUIRE_APPROVAL`), the
+`ruleId` (`CP-DECIDE`), the `controls`, the Verdict's `role` and `reason`, the
+declared `profile`, and the agent identity as flat keys (`agentProvider`,
+`agentModel`, … with `agentSource: "declared"` — the caller's claim, not an
+authenticated fact). The response to the caller includes
+`evidence.correlationId`.
+
+**On the execution record (Aster Cloud).** The record stores the decision, the
+canonical input and output hashes and the trace hash computed by aster-api, the
+source and runtime toolchain ids (which engine compiled and which ran the rule),
+a replayability status, and the `outcome`, `ruleId`, `controls`, `agent`,
+`profile` and `evidenceCorrelationId` columns.
+
+**The approval.** Because the outcome needs approval, Cloud opens a guard
+decision from that chain event and stores its `guardDecisionId` in the
+execution's metadata. When the Credit Officer approves in the Approvals inbox, an
+`ACTION_GUARD_APPROVAL` event is appended to the chain, pointing back to the
+decision receipt's hash.
+
+## Evidence export bundles
+
+From **Reports** in Aster Cloud you export the executions of one policy (or of
+all policies) over a date range as a JSON or JSONL bundle: a manifest plus an
+ordered list of entries. Entries never contain plaintext inputs or outputs —
+only hashes, identities and references. `manifest.bundleHash` is a SHA-256 over
+the ordered entries, and `manifest.notes.verification` gives the recipe to
+recompute it.
+
+An entry from the run above (excerpt):
+
+```json
+{
+  "executionId": "…",
+  "policyId": "pol-credit-pilot",
+  "policyVersion": 3,
+  "decision": "require_approval",
+  "outcome": "REQUIRE_APPROVAL",
+  "ruleId": "CP-DECIDE",
+  "controls": ["EU_AI_ACT:ART14", "GDPR:ART22"],
+  "reasonCodes": ["large_exposure"],
+  "profile": "eu-ai-act-high-risk",
+  "canonicalInputHash": "…",
+  "canonicalizationVersion": "aster-canonical-json/v1",
+  "replayabilityStatus": "REPLAYABLE",
+  "agent": null,
+  "evidenceCorrelationId": "…",
+  "receipt": { "auditId": 88214, "currentHash": "…", "prevHash": "…", "hashVersion": 2 },
+  "reviewers": [
+    { "userId": "…", "role": "Credit Officer", "source": "guard-approval", "outcome": "APPROVED",
+      "decidedAt": "…", "ref": "88231", "roleVerified": true }
+  ],
+  "whatIf": { "batchId": "…", "baseOutcome": "REQUIRE_APPROVAL", "targetOutcome": "ALLOW", "baseLegacy": false }
+}
+```
+
+`receipt` holds the chain coordinates of the evaluation event — or, honestly,
+`{ "status": "legacy" }` (no correlation id, an old row), `"missing"` (aster-api
+has no such event) or `"unavailable"` (the lookup failed during export; the
+export still completes and the manifest counts it). `reviewers` merges three
+sources: `guard-approval` (the runtime approver, from the guard decision),
+`policy-proof` (design-time review of the version) and `version-approval` (who
+approved the version). `roleVerified` records whether the role was verified;
+guard roles are, since ADR 0042.
+
+The bundle format is versioned, and stored bundles are always downloaded as they
+were written:
+
+| `schemaVersion` | Added |
+| --- | --- |
+| `2` | chain `receipt`, `outcome` / `ruleId` / `controls` / `agent`, unified `reviewers`, `agentTally` and `reviewerTally` |
+| `3` | per-entry `whatIf`; a fixed Article 14 mapping in the manifest |
+| `4` | `regulatoryMapping` driven by the control registry, grouped by control, with `registryVersion` |
+| `5` | per-entry `profile`; `manifest.profilesUsed` lists every profile that appears, with localised titles |
+
+### The Article 14 mapping
+
+`manifest.regulatoryMapping` maps the bundle onto every registered control that
+has clauses and appears on the entries. For `EU_AI_ACT:ART14` — human oversight —
+the registry defines **nine clauses**: 14(1), 14(2), 14(3), 14(4)(a) to (e) and
+14(5). Each gets a status of `evidenced`, `partial` or `none`, judged only from
+fields on the entries, with `{ executionId, field }` references:
+
+| Clause | Evidenced by |
+| --- | --- |
+| 14(1) oversight by design | an entry whose `controls` contain `EU_AI_ACT:ART14` |
+| 14(2) risk configuration | an entry with outcome `REQUIRE_APPROVAL` or `ESCALATE` |
+| 14(3) measures built in | 14(1) **and** an entry with any reviewer (one of the two: partial) |
+| 14(4)(a) understanding | a completed What-If comparison — at most `partial` |
+| 14(4)(b) automation bias | no field can show it — always `none` |
+| 14(4)(c) interpreting output | `ruleId` and `reasonCodes` both present |
+| 14(4)(d) override / not use | a verified guard reviewer who `REJECTED` (only `APPROVED`: partial) |
+| 14(4)(e) intervene / stop | a verified guard reviewer (`REQUIRE_APPROVAL` without one: partial) |
+| 14(5) two-person verification | an entry with two verified guard reviewers |
+
+Only `guard-approval` reviewers with `roleVerified: true` count as human
+intervention on a particular output; version-level reviews do not. In the pilot
+run, seven clauses are evidenced or partial, and 14(4)(b) and 14(5) are `none`.
+The mapping describes the evidence present in the bundle. It is not a compliance
+conclusion, and it carries no score.
+
+## What-If: four-state replay
+
+Before activating a new version, replay recorded executions against it. A What-If
+batch takes a **base** version and a **target** version and a time window
+(`LAST_MONTH`, `LAST_QUARTER`, `LAST_HALF_YEAR`, `LAST_YEAR` or `CUSTOM`), takes
+the replayable executions in that window, and evaluates each one again on the
+target version.
+
+Since ADR 0043 both sides are compared as outcome codes —
+`ALLOW`, `DENY`, `REQUIRE_APPROVAL`, `ESCALATE` — instead of a yes/no flag, so a
+move from `REQUIRE_APPROVAL` to `DENY` is no longer invisible. Two more codes,
+`INDETERMINATE` and `ERROR`, mark executions that cannot be compared. The
+completed batch reports aggregates only, never per-item results:
+
+| Field | Meaning |
+| --- | --- |
+| `changed` | both sides comparable and different |
+| `newlyApproved` / `newlyRejected` | target became `ALLOW` / base was `ALLOW` and target is not |
+| `transitions` | counts per `BASE->TARGET` pair, e.g. `"REQUIRE_APPROVAL->ALLOW": 2` |
+| `byTargetOutcome` | counts for all six target codes |
+| `incomparable` | either side `INDETERMINATE` or `ERROR` — not counted as changed |
+| `legacyBase` | base outcome reconstructed from an older record's decision |
+
+What-If requires a Pro plan or above (`403 whatif_not_entitled` otherwise) and
+runs one batch at a time per tenant (`409 whatif_batch_in_progress`). Batches are
+**owner-scoped** (ADR 0034): only the policy owner's own executions are replayed,
+so run the executions you want to compare as the owner. In the dashboard this is
+**Compare versions** on the policy; the same endpoint takes a signed-in session:
+
+```bash
+curl -X POST https://aster-lang.cloud/api/v1/policies/POLICY_ID/whatif-batches \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: https://aster-lang.cloud' \
+  -H 'Cookie: SESSION_COOKIE' \
+  -d '{ "baseVersionId": "BASE_VERSION_ID", "targetVersionId": "TARGET_VERSION_ID",
+        "windowKind": "LAST_MONTH", "includeToday": true }'
+```
+
+The response is `202` with a `batchId`; poll
+`GET /api/v1/policies/POLICY_ID/whatif-batches/BATCH_ID` until `status` is
+`COMPLETED` and read `result`. The window is fixed when the batch is created, so a
+batch always replays the same executions. By default it ends at today's 00:00;
+`includeToday` extends it to now. The latest replay of each execution is what
+appears as `whatIf` in the next evidence export.
+
+## Verify the chain yourself
+
+Two read-only aster-api endpoints let you check evidence without trusting Aster
+Cloud:
+
+- `GET /api/v1/audit/receipts?correlationIds=a,b,…` (or `?decisionIds=…` for
+  guard decisions and their approval events) returns the chain receipts for your
+  tenant; compare each `currentHash` with the bundle's `receipt.currentHash`.
+  At most 200 ids per call; unknown or foreign ids come back in `missing`.
+- `GET /api/v1/audit/verify-chain?start=…&end=…` (ISO-8601, at most 30 days,
+  `ADMIN` role) walks the tenant's chain and returns `valid`, `brokenAt`,
+  `reason` and `recordsVerified`, plus `anchorChecked`, `anchorIntact` and
+  `anchorReason` from a comparison with an external anchor of the chain's tail —
+  which catches truncation that the chain alone cannot.
