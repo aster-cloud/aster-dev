@@ -45,8 +45,10 @@ Rule decide given req as GuardRequest, produce Verdict:
   Return Verdict.allow().
 ```
 
-分支自上而下求值，首个命中即返回，与其他规则完全相同。请显式写出 `produce Verdict` 并给每个参数标注类型——
-治理检查依据声明的返回类型识别决策规则。
+分支自上而下求值，首个命中即返回，与其他规则完全相同。请始终写出 `produce Verdict` 并给每个参数标注类型：
+不声明返回类型时，参考引擎会按规则名推断返回类型并报 `E003`；未标注类型的参数默认为 `Text`，
+`req.action` 这样的字段访问会报 `E011`。（治理检查识别决策规则的依据，是声明的返回类型，
+或直接调用 `Verdict.*` 的 `Return`。）
 
 运行时，Verdict 是一个小而稳定的 JSON 对象。键顺序固定，不存在的键直接省略而不写 `null`，
 因此两个引擎上的哈希完全一致：
@@ -87,11 +89,12 @@ Rule decide given req as GuardRequest, produce Verdict:
 
 ### 控制注册表
 
-`@control` 的键不是自由文本，而是来自版本化的**控制注册表**（ADR 0045）：以 `registry.json` 的形式随
-`@aster-cloud/controls` 包分发，并内置在两个编译器中。每个条目把 `EU_AI_ACT:ART14` 这样的键映射到框架、条款号、
+`@control` 的键不是自由文本，而是来自版本化的**控制注册表**（ADR 0045）：与语言词法表一同维护（aster-lang-locales 中的
+`controls/registry.json`），每个编译器各内置一份副本——aster-lang-ts 作为内置数据随包发布，aster-lang-core 放在 classpath 中。每个条目把 `EU_AI_ACT:ART14` 这样的键映射到框架、条款号、
 多语种标题；对欧盟人工智能法，还细化到各款条文以及哪类证据能满足它。
 
-键的形态为 `框架:条款`（大写字母、数字与 `_`，不超过 64 个字符）。aster-lang-ts 1.0.35 内置的注册表版本为 1.1.0，
+键的形态为 `框架:条款`：框架部分由大写字母、数字与 `_` 组成；条款部分还可包含 `(`、`)` 与 `.`；
+整个键不超过 64 个字符（`^[A-Z0-9_]+:[A-Z0-9_().]+$`）。aster-lang-ts 1.0.35 内置的注册表版本为 1.1.0，
 登记了 `EU_AI_ACT:ART14`、`GDPR:ART6`、`GDPR:ART17`、`GDPR:ART22` 与 `SOX:404`。
 未登记的键不会阻断编译，只给出一条注明注册表版本的警告：
 
@@ -132,7 +135,7 @@ Rule decide given req as GuardRequest, produce Verdict:
 
 ### When / Otherwise 简写
 
-上例还用到了决策表式的简写。每条语句都会降糖为长写法：
+上例还用到了决策表式的简写。每条语句都会展开为长写法：
 
 | 简写 | 等价写法 |
 | --- | --- |

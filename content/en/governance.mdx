@@ -56,8 +56,11 @@ Rule decide given req as GuardRequest, produce Verdict:
 ```
 
 Branches run top to bottom and the first match wins, exactly as in any other rule.
-Write `produce Verdict` explicitly and type every parameter — the governance checks
-recognise a decision rule by its declared return type.
+Always write `produce Verdict` and give every parameter a type. Without a declared
+return type the reference engine infers one from the rule name and reports `E003`;
+an untyped parameter defaults to `Text`, so field access such as `req.action` fails
+with `E011`. (The governance checks recognise a decision rule either by its declared
+return type or by a `Return` that calls `Verdict.*` directly.)
 
 At run time a verdict is a small, stable JSON object. Keys appear in a fixed order
 and absent keys are omitted rather than written as `null`, so the value hashes the
@@ -104,13 +107,15 @@ The governance checks report:
 ### The control registry
 
 `@control` keys are not free text. They come from a versioned **control registry**
-(ADR 0045) shipped as `registry.json` in the `@aster-cloud/controls` package and
-bundled into both compilers. Each entry maps a key such as `EU_AI_ACT:ART14` to a
+(ADR 0045), maintained alongside the language lexicons (`controls/registry.json` in
+aster-lang-locales). Each compiler bundles a copy: aster-lang-ts ships it as built-in
+data, aster-lang-core on its classpath. Each entry maps a key such as `EU_AI_ACT:ART14` to a
 framework, an article, localised titles and — for the EU AI Act — the individual
 clauses and which kinds of evidence satisfy them.
 
-Keys have the form `FRAMEWORK:ARTICLE` (upper-case letters, digits and `_`, at most
-64 characters). The registry bundled with aster-lang-ts 1.0.35 is version 1.1.0 and
+Keys have the form `FRAMEWORK:ARTICLE`. The framework part uses upper-case letters,
+digits and `_`; the article part may additionally contain `(`, `)` and `.`; the whole
+key is at most 64 characters (`^[A-Z0-9_]+:[A-Z0-9_().]+$`). The registry bundled with aster-lang-ts 1.0.35 is version 1.1.0 and
 registers `EU_AI_ACT:ART14`, `GDPR:ART6`, `GDPR:ART17`, `GDPR:ART22` and `SOX:404`.
 An unknown key does not stop compilation; it produces a warning that names the
 registry version:
