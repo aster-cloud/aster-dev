@@ -1,0 +1,180 @@
+# 策略即治理
+
+大多数 Aster 规则计算的是一个值：价格、等级、是否符合条件。另有一类规则越来越常见——它们决定一个动作**能不能发生**。
+AI Agent 想给客户退款、删除一条记录、发出一份合同，总得有人或系统回答：*允许*、*拒绝*、*先问人*，还是*升级处理*。
+这些回答就是治理结论。事后审计会对每一条结论追问三件事：决定了什么？是哪条规则决定的？这条规则是为了满足哪项义务？
+
+Aster 在语言层面回答这三个问题：
+
+- **`Verdict`**——内置结果类型，四种结论都是一等值，而不是让下游服务去猜的字符串。
+- **规则元数据**——`@id` 给规则一个稳定身份；`@control` 把规则挂到版本化注册表中的法规控制点。
+- **治理档案**——一行 `Profile` 声明，把上述约定从「建议」变成需要它的模块里的编译错误。
+
+这些都不改变规则的求值方式。返回 `Verdict` 的规则就是普通规则，与其他规则一样确定、有类型、可重放。
+
+## Verdict
+
+`Verdict` 是内置类型，有四个构造函数：
+
+| 构造函数 | 结论 | 含义 |
+| --- | --- | --- |
+| `Verdict.allow()` | `ALLOW` | 动作可以执行。 |
+| `Verdict.deny(reason)` | `DENY` | 拒绝该动作。 |
+| `Verdict.escalate(reason)` | `ESCALATE` | 交给更高一级决定。 |
+| `Verdict.require_approval(role, reason)` | `REQUIRE_APPROVAL` | 挂起动作，直到 `role` 角色的人批准。 |
+
+`reason` 与 `role` 都是 `Text`，且**必填**：没有理由的拒绝，在审计上等于没有决策。
+空串或仅含空白的值在运行时被拒绝；构造函数参数个数不对报诊断 `E703`。
+
+一条完整的守卫规则——先定义请求结构，再给出决策：
+
+```aster
+Module guard.refunds.
+
+Define GuardRequest has action as Text, amount as Int, suspended as Bool.
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  If req.suspended:
+    Return Verdict.deny("suspended principal").
+  If req.action equals to "delete_customer_record":
+    Return Verdict.require_approval("Data Protection Officer", "customer record deletion").
+  If req.action equals to "refund" and req.amount at least 10000:
+    Return Verdict.escalate("large refund").
+  Return Verdict.allow().
+```
+
+分支自上而下求值，首个命中即返回，与其他规则完全相同。请显式写出 `produce Verdict` 并给每个参数标注类型——
+治理检查依据声明的返回类型识别决策规则。
+
+运行时，Verdict 是一个小而稳定的 JSON 对象。键顺序固定，不存在的键直接省略而不写 `null`，
+因此两个引擎上的哈希完全一致：
+
+```json
+{"__type":"Verdict","outcome":"ALLOW"}
+{"__type":"Verdict","outcome":"DENY","reason":"suspended principal"}
+{"__type":"Verdict","outcome":"REQUIRE_APPROVAL","role":"Data Protection Officer","reason":"customer record deletion"}
+{"__type":"Verdict","outcome":"ESCALATE","reason":"large refund"}
+```
+
+`Verdict` **不是** `Bool`。把它用作 `If` 条件、`not` 的操作数或 `equals to` 的任一侧，都是类型错误；
+如果手工构造的 Core IR 绕过了检查器，引擎会以 `Verdict cannot be used as Bool; compare its outcome field instead`
+失败，而不是把 `DENY` 当成「非空对象即为真」放行。
+
+## 规则元数据
+
+注解写在规则正上方，每个注解恰好接受一个字符串字面量：
+
+| 注解 | 数量 | 用途 |
+| --- | --- | --- |
+| `@id("REFUND-001")` | 恰好一个，模块内唯一 | 规则的稳定身份，写入 trace 与执行记录 |
+| `@reason("…")` | 可选 | 规则级的人类可读理由（区别于每次决策的 `reason`） |
+| `@control("EU_AI_ACT:ART14")` | 可重复 | 把规则挂到法规控制点 |
+
+刻意没有 `@version`：规则的版本就是包含它的策略版本，由内容哈希标识。
+「策略版本 *v* 中的规则 `REFUND-001`」已经完整回答了「是哪条规则做的决定」。
+
+治理检查会报出：
+
+| 码 | 级别 | 触发条件 |
+| --- | --- | --- |
+| `W700` | 警告 | 返回 `Verdict` 的规则缺少 `@id` |
+| `E701` | 错误 | 同一模块内两条规则 `@id` 重复 |
+| `E702` | 错误 | 注解参数不是恰好一个字符串字面量、`@id` 为空白，或一条规则有多个 `@id` |
+| `E703` | 错误 | `Verdict.*` 构造函数参数个数不符 |
+| `W704` | 警告 | `@control` 键形态非法或不在控制注册表中 |
+
+### 控制注册表
+
+`@control` 的键不是自由文本，而是来自版本化的**控制注册表**（ADR 0045）：以 `registry.json` 的形式随
+`@aster-cloud/controls` 包分发，并内置在两个编译器中。每个条目把 `EU_AI_ACT:ART14` 这样的键映射到框架、条款号、
+多语种标题；对欧盟人工智能法，还细化到各款条文以及哪类证据能满足它。
+
+键的形态为 `框架:条款`（大写字母、数字与 `_`，不超过 64 个字符）。aster-lang-ts 1.0.35 内置的注册表版本为 1.1.0，
+登记了 `EU_AI_ACT:ART14`、`GDPR:ART6`、`GDPR:ART17`、`GDPR:ART22` 与 `SOX:404`。
+未登记的键不会阻断编译，只给出一条注明注册表版本的警告：
+
+```text
+W704  Control 'ACME:ART1' on rule 'decide' is not registered (controls registry 1.1.0)
+```
+
+编辑器在 `@control("` 之后会补全已登记的键。
+
+## 治理档案
+
+`W700` 和 `W704` 是警告——对通用策略库来说恰到好处，对**必须**可追溯的高风险系统则不够。
+**治理档案**（ADR 0046）补上了这一环。在 `Module` 行的下一行声明：
+
+```aster
+Module guard.refunds.
+Profile "eu-ai-act-high-risk".
+
+Define GuardRequest has action as Text, amount as Int, suspended as Bool.
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  When req.suspended, deny "suspended principal".
+  When req.action equals to "delete_customer_record", require approval by "Data Protection Officer" because "customer record deletion".
+  When req.action equals to "refund" and req.amount at least 10000, escalate "large refund".
+  Otherwise allow.
+```
+
+档案 id 用字符串字面量书写（id 中含连字符）。档案定义与控制点一起放在注册表中，目前内置两个：
+
+| 档案 | 每条 `Verdict` 规则必须 |
+| --- | --- |
+| `governed` | 带 `@id`，且只使用已登记的 `@control` 键 |
+| `eu-ai-act-high-risk` | 满足上一行，且至少有一个属于 `EU_AI_ACT` 的已登记控制点 |
+
+没有 `Profile` 行的模块，行为与之前完全一致。
+
+### When / Otherwise 简写
+
+上例还用到了决策表式的简写。每条语句都会降糖为长写法：
+
+| 简写 | 等价写法 |
+| --- | --- |
+| `When cond, allow.` | `If cond: Return Verdict.allow().` |
+| `When cond, deny "r".` | `If cond: Return Verdict.deny("r").` |
+| `When cond, escalate "r".` | `If cond: Return Verdict.escalate("r").` |
+| `When cond, require approval by "role" because "r".` | `If cond: Return Verdict.require_approval("role", "r").` |
+| `Otherwise <结论>.` | `Return Verdict.<结论>(…).` |
+
+简写与长写法生成的 Core IR 相同（源码位置除外），因此 trace 与证据也完全一致。
+`Otherwise` 必须是所在块的最后一条语句，其后再有语句即为解析错误。与其他关键字一样，简写也已本地化：
+中文词法表中写作 `档案` / `当` / `否则` / `允许` / `拒绝` / `升级` / `需审批人 … 因为 …`。
+
+### 档案诊断
+
+| 码 | 含义 |
+| --- | --- |
+| `E705` | 声明的档案不在注册表中。 |
+| `E706` | 某条 `Verdict` 规则违反档案要求——每条规则、每项要求各报一条。 |
+| `E707` | 声明了档案的模块，治理检查未能执行。 |
+
+把上例中的 `@id` 删掉、并把控制点改成 `ACME:ART1`，除常规警告外还会得到：
+
+```text
+E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': missing @id
+E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': unregistered control ACME:ART1
+E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': no registered control from framework EU_AI_ACT
+```
+
+`E705` 与 `E706` 在所有通道都是错误，包括 Aster Cloud 的编译端点（该端点会把其余治理码降为警告）。
+带有这些错误的档案化策略，Cloud 拒绝保存。
+
+`E707` 从不由检查器本身报出。当检查器在声明了档案的模块上内部失败时，由 Aster Cloud 合成，并按**失败即关闭**处理
+（与编译服务不可达时相同）：保存被拒绝，返回可重试的 `503 compile_unavailable`，而不是 `400`。
+基础设施故障绝不会被当作策略违规，声明了档案的策略也绝不会未经检查就被保存。
+
+## 在哪里看到这些
+
+- **Aster Cloud 策略详情页**以徽标显示已声明的档案，数据取自已保存的策略版本。
+- **决策结果**带有产出它的规则的 `ruleId` 与 `controls`；[Action Guard（行动守卫）](/docs/action-guard)
+  会把 `REQUIRE_APPROVAL` 与 `ESCALATE` 变成需要审阅人处理的待审批动作。
+- **证据包**记录每个条目的档案，并连同注册表版本列出 `profilesUsed`，便于审阅者把决策对照到条款——
+  见[证据与重放](/docs/evidence)。
+- **互操作**——用 `Verdict` 编写的守卫策略可以导出为 Cedar 策略文本与 Cedar schema，交给已有的 Cedar 执行端，
+  Aster 仍是唯一事实源；见[导出到 Cedar](/docs/cedar-export)。

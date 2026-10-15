@@ -49,6 +49,20 @@
       ]
     },
     {
+      "slug": "governance",
+      "title": "Policies as governance",
+      "description": "Most Aster rules compute a value: a price, a tier, a yes/no eligibility flag. A growing class of rules does something different — it decides whether an action may happen at all. An AI agent wants t...",
+      "headings": [
+        "Verdict",
+        "Rule metadata",
+        "The control registry",
+        "Governance profiles",
+        "When / Otherwise shorthand",
+        "Profile diagnostics",
+        "Where this shows up"
+      ]
+    },
+    {
       "slug": "language-guide",
       "title": "Language Guide",
       "description": "Aster is a controlled natural language (CNL) for rules. It reads like English (or 中文 / Deutsch / हिन्दी) but compiles to a precise, deterministic intermediate representation. This guide walks the c...",
