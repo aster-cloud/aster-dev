@@ -2,6 +2,20 @@
   "locale": "zh",
   "entries": [
     {
+      "slug": "action-guard",
+      "title": "Action Guard（行动守卫）",
+      "description": "Verdict 规则（见策略即治理）回答一个动作能不能发生。Action Guard （ADR 0040）让这个回答在运行期具有约束力：AI Agent 在执行有副作用的动作之前——删除客户记录、转账、发邮件—— 先把提议动作提交给 Aster，由租户已部署的策略裁决，只有得到 ALLOW 才执行。",
+      "headings": [
+        "守卫请求",
+        "决策 API",
+        "无收据则拒绝",
+        "四眼审批",
+        "业务角色（ADR 0042）",
+        "守护 MCP Agent：`aster-guard`",
+        "已知限制：宿主超时"
+      ]
+    },
+    {
       "slug": "browser-api",
       "title": "浏览器 API",
       "description": "@aster-cloud/aster-lang-ts 是 TypeScript 引擎。它在浏览器或 Node 中编译、类型检查、提取 schema 并对 Aster 策略求值——无需服务器往返。它与 演练场 运行的是同一套引擎。",

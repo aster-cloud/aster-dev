@@ -51,7 +51,10 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
     },
     {
       title: t('governance'),
-      items: [{ href: '/docs/governance', label: t('governanceOverview') }],
+      items: [
+        { href: '/docs/governance', label: t('governanceOverview') },
+        { href: '/docs/action-guard', label: t('actionGuard') },
+      ],
     },
   ];
 

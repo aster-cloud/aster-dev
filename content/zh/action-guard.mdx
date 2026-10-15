@@ -1,0 +1,198 @@
+# Action Guard（行动守卫）
+
+`Verdict` 规则（见[策略即治理](/docs/governance)）回答一个动作能不能发生。**Action Guard**
+（ADR 0040）让这个回答在运行期具有约束力：AI Agent 在执行有副作用的动作之前——删除客户记录、转账、发邮件——
+先把**提议动作**提交给 Aster，由租户已部署的策略裁决，只有得到 `ALLOW` 才执行。
+
+```text
+Agent 提议动作 ──► POST /api/v1/guard/decisions ──► 已部署的 Verdict 规则
+                                                        │
+        ALLOW ──► 收据入哈希链 ──► Agent 执行
+        DENY  ──► 收据入哈希链 ──► Agent 不执行
+        REQUIRE_APPROVAL / ESCALATE ──► 收据 + 待审批 ──► 有人批准、拒绝，或到期
+```
+
+每一次裁决——包括每一次拒绝——都会在租户防篡改的审计链上留下收据。
+
+## 守卫请求
+
+Agent 按模块名与函数名直接指定一条已部署的策略，并把动作描述为：*谁*（principal）对*什么*（resource）
+做*什么*（action），附带自由格式的业务上下文与 Agent 自报的身份：
+
+```json
+{
+  "policyModule": "guard.customer",
+  "policyFunction": "decide",
+  "action": {
+    "principal": { "id": "agent-42", "type": "agent", "roles": ["ops-bot"] },
+    "action": { "name": "delete_customer_record" },
+    "resource": { "type": "customer", "id": "C-1001" },
+    "context": { "reason": "GDPR erasure request", "ticket": "SUP-8812" },
+    "agent": { "provider": "acme-ai", "model": "acme-agent-2", "session": "s-9f3a" }
+  },
+  "waitSeconds": 0
+}
+```
+
+评估之前，守卫把动作扁平成**一条记录**，键固定，作为规则唯一的参数传入：
+
+| 键 | 来源 | 缺省 |
+| --- | --- | --- |
+| `principal_id` | `principal.id`（必填） | — |
+| `principal_type` | `principal.type` | `"agent"` |
+| `principal_roles` | `principal.roles`（至多 16 项） | 空列表 |
+| `action` | `action.name`（必填） | — |
+| `resource_type`、`resource_id` | `resource.type`、`resource.id` | `""` |
+| `context` | `context`（嵌套 ≤ 8 层、≤ 64 KB、不允许 `null` 值） | 空 Map |
+| `agent_model` | `agent.model` | `""` |
+
+文本字段不超过 255 字符且不含控制字符；违反任一限制的请求在评估之前即返回 `400 invalid_action`。
+结构化的 `agent` 身份（`provider`、`model` 必填，`version`、`session` 可选）以「调用方自报」的身份写进收据；
+进入规则的只有 `agent_model`。
+
+读取这条记录的规则：
+
+```aster
+Module guard.customer.
+
+Define GuardRequest has principal_id, principal_type, principal_roles, action, resource_type, resource_id, context, agent_model.
+
+@id("CUST-DEL-001")
+@control("GDPR:ART17")
+Rule decide given req as GuardRequest, produce Verdict:
+  If req.action equals to "delete_customer_record":
+    Return Verdict.require_approval("Data Protection Officer", "customer record deletion").
+  Otherwise:
+    Return Verdict.allow().
+```
+
+删除客户记录需要数据保护官（Data Protection Officer）批准，其余动作放行。守卫要求规则返回 `Verdict`：
+返回 `Bool`、记录或文本的规则一律按 `DENY` 处理，`reasonCode` 为 `"not_a_verdict"`。
+
+## 决策 API
+
+`POST /api/v1/guard/decisions` 接收上面的请求体。
+
+- **鉴权**——API key：`Authorization: Bearer ak_…`。key 决定租户、计量与配额；守卫调用与 `/evaluate`
+  共用同一套配额与每 key 限流。
+- **幂等**——发送 `Idempotency-Key` 头，每次动作尝试一个唯一键，只在该次尝试的网络重试之间复用。
+  同键重复请求不再评估，返回同一决策（同一 `decisionId`、同一收据），审批状态取**当前**值。
+  把一个键用在另一个动作上返回 `422 idempotency_mismatch`。
+- **`waitSeconds`**——0 到 30（缺省 0）。结果为待审批时，服务端每 500 ms 复查一次，直到有结论或到时。
+
+只要产生了决策，响应就是 `200`；字段按字母序，空值不输出：
+
+```json
+{
+  "approval": {
+    "expiresAt": "2026-10-17T05:12:00Z",
+    "id": "a91b0c6e-3f2d-4c55-9a51-0e7d2b8c4f10",
+    "requiredRole": "Data Protection Officer",
+    "status": "PENDING"
+  },
+  "controls": ["GDPR:ART17"],
+  "decisionId": "7c1e2a90-5b4f-4d0e-8f3a-6a2d9e1b7c55",
+  "effectiveOutcome": "PENDING",
+  "outcome": "REQUIRE_APPROVAL",
+  "policyVersion": { "id": 1730890123456, "sourceHash": "9f2c…", "version": 3 },
+  "reason": "customer record deletion",
+  "receipt": { "auditId": 88213, "hash": "4be1…", "prevHash": "a07d…" },
+  "role": "Data Protection Officer",
+  "ruleId": "CUST-DEL-001"
+}
+```
+
+`outcome` 是规则给出的结论。`effectiveOutcome`（`ALLOW`、`DENY` 或 `PENDING`）是 Agent 唯一需要看的字段：
+`ALLOW` 执行，`DENY` 停止，`PENDING` 则轮询 `GET /api/v1/guard/decisions/{decisionId}` 直到它变化。
+待审批默认 24 小时后过期，过期按 `DENY` 读取。
+
+### 无收据则拒绝
+
+守卫一律 fail-closed。决策收据先追加到审计链，再落库决策；收据写入失败时结论是 `DENY`，
+`reasonCode` 为 `"receipt_unavailable"`，也不会开待审批。评估异常或超时（10 秒）是 `DENY`，
+`reasonCode` 为 `"evaluation_failed"`。这类瞬时 `DENY` 同样绑定在幂等键上，重试须换新键。
+策略不存在或没有活跃版本返回 `404 policy_not_found`。
+
+## 四眼审批
+
+`REQUIRE_APPROVAL` 与 `ESCALATE` 会开一条待审批。审批人通过下列端点处理：
+
+```text
+GET  /api/v1/guard/approvals?status=PENDING&page=0&size=20
+POST /api/v1/guard/approvals/{approvalId}/approve   请求体 {"comment": "…"}（comment 可选）
+POST /api/v1/guard/approvals/{approvalId}/reject    请求体 {"comment": "…"}（comment 必填）
+```
+
+请求体须为 JSON（至少 `{}`），并带 `Content-Type: application/json`。成功后返回该决策及新的
+`effectiveOutcome`——批准后为 `ALLOW`，拒绝后为 `DENY`——并在审计链上追加一条审批事件，指回决策收据的哈希。
+
+职责分离按已解析的身份判定：审批人不得是提议该动作的主体，也不得是提交决策请求的用户，且不得使用同一把
+API key；任一相同即 `403 segregation_of_duties`。对 `REQUIRE_APPROVAL`，审批人还必须持有所需角色，
+否则 `403 role_mismatch`。`ESCALATE` 不带角色，任何其他成员都可以处理。
+
+### 业务角色（ADR 0042）
+
+角色不凭调用方自报。在 Aster Cloud 中，团队 owner 或 admin 给团队成员授予**业务角色**——自由文本，
+如 `Data Protection Officer`，每人至多 16 个（个人工作区设在用户本身）。角色随成员的 API key 与内部签名通道下发，
+守卫拿所需角色与这个已验证集合做大小写敏感的精确比对。
+
+审批人不必手工调 API：Aster Cloud 控制台的**审批**收件箱汇总你所在全部工作区的待审批。持有所需角色
+（或该项是升级）时可以处理；没有该角色的 owner 与 admin 只读。当 Cloud 中的控制台执行或 API 执行返回
+`REQUIRE_APPROVAL` 或 `ESCALATE` 时，Cloud 以该次执行的证据开出守卫决策、关联到执行记录，并站内通知角色持有者。
+
+## 守护 MCP Agent：`aster-guard`
+
+[`aster-guard`](https://github.com/aster-cloud/aster-guard)（Node ≥ 24，尚未发布到 npm，需从仓库构建）
+提供两样东西：
+
+- **`GuardClient`**——TypeScript SDK：`check`、`get`、`waitFor`、`listApprovals`、`approve`、`reject`。
+  每次调用生成新的幂等键，任何非 200 响应或网络错误都解析为 `DENY`。
+- **`aster-guard-mcp`**——stdio MCP 代理。放在 MCP 宿主与任意上游 MCP 服务器之间，原样转发 `tools/list`，
+  每一次 `tools/call` 先过守卫。
+
+```bash
+git clone https://github.com/aster-cloud/aster-guard
+cd aster-guard && pnpm install && pnpm build
+```
+
+之后让 MCP 宿主启动代理而不是上游服务器。Claude Desktop 的 `claude_desktop_config.json`
+（Cursor 的 `mcp.json` 使用相同的 `mcpServers` 结构）：
+
+```json
+{
+  "mcpServers": {
+    "guarded-filesystem": {
+      "command": "node",
+      "args": [
+        "/path/to/aster-guard/dist/mcp/cli.js",
+        "--upstream", "npx -y @modelcontextprotocol/server-filesystem /tmp",
+        "--base-url", "http://localhost:8080",
+        "--policy", "guard.customer/decide",
+        "--principal-id", "agent-claude",
+        "--resource-from", "path",
+        "--approval-timeout", "300"
+      ],
+      "env": { "ASTER_GUARD_API_KEY": "ak_xxxxxxxx" }
+    }
+  }
+}
+```
+
+API key 只从环境变量读取（`--api-key-env` 可改变量名），也不会传给上游子进程。
+
+对每一次工具调用，代理这样构造动作：工具名作 `action.name`；工具参数（剔除 `null` 值）作 `context`；
+`--resource-from <argName>` 取该**顶层**参数的值作 `resource: { type: "arg", id }`（超过 255 字符的值改为
+`sha256:<hex>`）。只有确认的 `ALLOW` 才转发；`DENY` 返回工具错误
+`Blocked by Aster Guard: <reason> (decision <id>)`；`PENDING` 最多等待 `--approval-timeout` 秒（缺省 300）。
+不指定 `--upstream` 时，代理改为提供五个治理工具：`guard_check`、`guard_status`、`guard_list_approvals`、
+`guard_approve`、`guard_reject`。
+
+仓库里的 `scripts/e2e-local.mjs` 用两把 key 对本地 aster-api 走完整个闭环：检查一个放行的动作、检查一次删除
+（`PENDING`）、用第二把 key 批准、读到最终的 `ALLOW`。
+
+### 已知限制：宿主超时
+
+MCP 宿主通常在 **60 秒**后让请求超时（MCP TypeScript SDK 的缺省值），而人工审批可能要几分钟甚至几小时
+（ADR 0040 §10）。请把宿主的请求或工具调用超时设为不小于 `--approval-timeout`，或把 `--approval-timeout`
+调低到宿主允许的范围；否则宿主会先取消调用，之后到达的批准也不会再转发。审批耗时较长时，更适合让 Agent
+直接使用 `GuardClient`，按自己的节奏轮询决策。

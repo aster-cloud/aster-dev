@@ -2,6 +2,20 @@
   "locale": "en",
   "entries": [
     {
+      "slug": "action-guard",
+      "title": "Action Guard",
+      "description": "A Verdict rule (see Policies as governance) says whether an action may happen. Action Guard (ADR 0040) makes that answer binding at run time: before an AI agent does something with side effects — d...",
+      "headings": [
+        "The guard request",
+        "The decision API",
+        "No receipt, no action",
+        "Four-eyes approval",
+        "Business roles (ADR 0042)",
+        "Guarding an MCP agent: `aster-guard`",
+        "Known limit: host timeouts"
+      ]
+    },
+    {
       "slug": "browser-api",
       "title": "Browser API",
       "description": "@aster-cloud/aster-lang-ts is the TypeScript engine. It compiles, type-checks, extracts schemas and evaluates Aster policies in the browser or Node — no server round-trip. It's the same engine the ...",

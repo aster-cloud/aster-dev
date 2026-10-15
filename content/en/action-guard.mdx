@@ -1,0 +1,238 @@
+# Action Guard
+
+A `Verdict` rule (see [Policies as governance](/docs/governance)) says whether an
+action may happen. **Action Guard** (ADR 0040) makes that answer binding at run
+time: before an AI agent does something with side effects — deletes a customer
+record, moves money, sends an email — it submits the *proposed action* to Aster,
+the tenant's deployed policy decides, and the agent acts only on `ALLOW`.
+
+```text
+agent proposes action ──► POST /api/v1/guard/decisions ──► deployed Verdict rule
+                                                              │
+        ALLOW ──► receipt on the hash chain ──► agent acts
+        DENY  ──► receipt on the hash chain ──► agent does not act
+        REQUIRE_APPROVAL / ESCALATE ──► receipt + pending approval ──► a person approves, rejects, or it expires
+```
+
+Every decision — including every refusal — leaves a receipt in the tenant's
+tamper-evident audit chain.
+
+## The guard request
+
+The agent addresses a deployed policy directly by module and function, and
+describes the action as *who* (principal) does *what* (action) to *which thing*
+(resource), with free-form business context and the agent's declared identity:
+
+```json
+{
+  "policyModule": "guard.customer",
+  "policyFunction": "decide",
+  "action": {
+    "principal": { "id": "agent-42", "type": "agent", "roles": ["ops-bot"] },
+    "action": { "name": "delete_customer_record" },
+    "resource": { "type": "customer", "id": "C-1001" },
+    "context": { "reason": "GDPR erasure request", "ticket": "SUP-8812" },
+    "agent": { "provider": "acme-ai", "model": "acme-agent-2", "session": "s-9f3a" }
+  },
+  "waitSeconds": 0
+}
+```
+
+Before evaluation the guard flattens the action into **one record** with fixed
+keys and passes it to the rule as its only argument:
+
+| Key | Source | Default |
+| --- | --- | --- |
+| `principal_id` | `principal.id` (required) | — |
+| `principal_type` | `principal.type` | `"agent"` |
+| `principal_roles` | `principal.roles` (at most 16) | empty list |
+| `action` | `action.name` (required) | — |
+| `resource_type`, `resource_id` | `resource.type`, `resource.id` | `""` |
+| `context` | `context` (depth ≤ 8, ≤ 64 KB, no `null` values) | empty map |
+| `agent_model` | `agent.model` | `""` |
+
+Text fields are limited to 255 characters without control characters; a request
+that breaks a limit is rejected with `400 invalid_action` before anything is
+evaluated. The structured `agent` identity (`provider` and `model` required,
+`version` and `session` optional) is recorded on the receipt as *declared* by the
+caller; only `agent_model` reaches the rule.
+
+The rule that reads this record:
+
+```aster
+Module guard.customer.
+
+Define GuardRequest has principal_id, principal_type, principal_roles, action, resource_type, resource_id, context, agent_model.
+
+@id("CUST-DEL-001")
+@control("GDPR:ART17")
+Rule decide given req as GuardRequest, produce Verdict:
+  If req.action equals to "delete_customer_record":
+    Return Verdict.require_approval("Data Protection Officer", "customer record deletion").
+  Otherwise:
+    Return Verdict.allow().
+```
+
+Deleting a customer record needs a Data Protection Officer; everything else is
+allowed. The guard requires a `Verdict`: a rule that returns a `Bool`, a record
+or text is treated as `DENY` with `reasonCode: "not_a_verdict"`.
+
+## The decision API
+
+`POST /api/v1/guard/decisions` takes the request above.
+
+- **Authentication** — an API key: `Authorization: Bearer ak_…`. The key fixes the
+  tenant, metering and quota; guard calls count against the same quota and
+  per-key rate limit as `/evaluate`.
+- **Idempotency** — send an `Idempotency-Key` header, unique per action attempt
+  and reused only for network retries of that attempt. A repeat with the same key
+  returns the same decision (same `decisionId` and receipt) with the *current*
+  approval status, without evaluating again. Reusing a key for a different action
+  returns `422 idempotency_mismatch`.
+- **`waitSeconds`** — 0 to 30 (default 0). If the result is pending, the server
+  re-checks every 500 ms until it is decided or the time is up.
+
+The response is always `200` once a decision exists; keys are alphabetical and
+empty values are omitted:
+
+```json
+{
+  "approval": {
+    "expiresAt": "2026-10-17T05:12:00Z",
+    "id": "a91b0c6e-3f2d-4c55-9a51-0e7d2b8c4f10",
+    "requiredRole": "Data Protection Officer",
+    "status": "PENDING"
+  },
+  "controls": ["GDPR:ART17"],
+  "decisionId": "7c1e2a90-5b4f-4d0e-8f3a-6a2d9e1b7c55",
+  "effectiveOutcome": "PENDING",
+  "outcome": "REQUIRE_APPROVAL",
+  "policyVersion": { "id": 1730890123456, "sourceHash": "9f2c…", "version": 3 },
+  "reason": "customer record deletion",
+  "receipt": { "auditId": 88213, "hash": "4be1…", "prevHash": "a07d…" },
+  "role": "Data Protection Officer",
+  "ruleId": "CUST-DEL-001"
+}
+```
+
+`outcome` is what the rule said. `effectiveOutcome` — `ALLOW`, `DENY` or
+`PENDING` — is the only field an agent should act on: execute on `ALLOW`, stop on
+`DENY`, and on `PENDING` poll `GET /api/v1/guard/decisions/{decisionId}` until it
+changes. A pending approval expires after 24 hours by default, and an expired
+approval reads as `DENY`.
+
+### No receipt, no action
+
+The guard fails closed. The decision receipt is appended to the audit chain
+*before* the decision is stored; if that write fails, the answer is `DENY` with
+`reasonCode: "receipt_unavailable"` and no approval is opened. An evaluation
+error or a timeout (10 seconds) is `DENY` with `reasonCode: "evaluation_failed"`.
+A transient `DENY` is stored under its idempotency key, so retry with a new key.
+An unknown policy or a policy without an active version is `404 policy_not_found`.
+
+## Four-eyes approval
+
+`REQUIRE_APPROVAL` and `ESCALATE` open a pending approval. Approvers act on it
+with:
+
+```text
+GET  /api/v1/guard/approvals?status=PENDING&page=0&size=20
+POST /api/v1/guard/approvals/{approvalId}/approve   body: {"comment": "…"}   (comment optional)
+POST /api/v1/guard/approvals/{approvalId}/reject    body: {"comment": "…"}   (comment required)
+```
+
+Send a JSON body (at least `{}`) with `Content-Type: application/json`. A
+successful call returns the decision with its new `effectiveOutcome` — `ALLOW`
+after approval, `DENY` after rejection — and appends an approval event to the
+audit chain that points back to the decision receipt's hash.
+
+Separation of duties is enforced on resolved identities. The approver must not be
+the principal that proposed the action, nor the user who submitted the decision
+request, and must not use the same API key; any match is
+`403 segregation_of_duties`. For `REQUIRE_APPROVAL` the approver must also hold
+the required role, otherwise `403 role_mismatch`. `ESCALATE` carries no role, so
+any other member may resolve it.
+
+### Business roles (ADR 0042)
+
+Roles are not taken from the caller's word. In Aster Cloud, a team owner or admin
+grants **business roles** — free text such as `Data Protection Officer`, at most
+16 per member — to team members (personal workspaces set them on the user). They
+travel with the member's API key and the internal signed channel, and the guard
+matches the required role exactly, case-sensitively, against that verified set.
+
+Approvers do not need to call the API by hand: the **Approvals** inbox in the Aster
+Cloud dashboard lists pending approvals across every workspace you belong to. You
+can act on an item when you hold its required role (or it is an escalation);
+owners and admins without the role see it read-only. When a dashboard or API
+execution in Cloud returns `REQUIRE_APPROVAL` or `ESCALATE`, Cloud opens the guard
+decision from the execution's evidence, links it to the execution record, and
+notifies the role holders in the app.
+
+## Guarding an MCP agent: `aster-guard`
+
+[`aster-guard`](https://github.com/aster-cloud/aster-guard) (Node ≥ 24, not yet
+published to npm; build it from the repository) provides two pieces:
+
+- **`GuardClient`** — a TypeScript SDK: `check`, `get`, `waitFor`,
+  `listApprovals`, `approve`, `reject`. It generates a fresh idempotency key per
+  call and turns any non-200 response or network error into `DENY`.
+- **`aster-guard-mcp`** — a stdio MCP proxy. Put it between the MCP host and any
+  upstream MCP server; it forwards `tools/list` and checks every `tools/call`
+  first.
+
+```bash
+git clone https://github.com/aster-cloud/aster-guard
+cd aster-guard && pnpm install && pnpm build
+```
+
+An MCP host then launches the proxy instead of the upstream server. In Claude
+Desktop's `claude_desktop_config.json` (Cursor's `mcp.json` uses the same
+`mcpServers` shape):
+
+```json
+{
+  "mcpServers": {
+    "guarded-filesystem": {
+      "command": "node",
+      "args": [
+        "/path/to/aster-guard/dist/mcp/cli.js",
+        "--upstream", "npx -y @modelcontextprotocol/server-filesystem /tmp",
+        "--base-url", "http://localhost:8080",
+        "--policy", "guard.customer/decide",
+        "--principal-id", "agent-claude",
+        "--resource-from", "path",
+        "--approval-timeout", "300"
+      ],
+      "env": { "ASTER_GUARD_API_KEY": "ak_xxxxxxxx" }
+    }
+  }
+}
+```
+
+The API key is read only from the environment variable (`--api-key-env` changes
+its name) and is not passed on to the upstream process.
+
+For each tool call the proxy builds the action: the tool name becomes
+`action.name`, the tool arguments (with `null` values removed) become `context`,
+and `--resource-from <argName>` takes that **top-level** argument as
+`resource: { type: "arg", id }` (values over 255 characters become
+`sha256:<hex>`). Only a confirmed `ALLOW` is forwarded; `DENY` returns a tool
+error `Blocked by Aster Guard: <reason> (decision <id>)`; `PENDING` is waited on
+for up to `--approval-timeout` seconds (default 300). Without `--upstream` the
+proxy exposes five governance tools instead: `guard_check`, `guard_status`,
+`guard_list_approvals`, `guard_approve`, `guard_reject`.
+
+The repository's `scripts/e2e-local.mjs` runs the whole loop against a local
+aster-api with two keys — check an allowed action, check a deletion (`PENDING`),
+approve it with the second key, read the final `ALLOW`.
+
+### Known limit: host timeouts
+
+MCP hosts commonly time a request out after **60 seconds** (the MCP TypeScript
+SDK's default), while a human approval can take minutes or hours (ADR 0040 §10).
+Set the host's request or tool-call timeout to at least `--approval-timeout`, or
+lower `--approval-timeout` to fit the host. Otherwise the host cancels the call
+first, and an approval that arrives later is not forwarded. For long approvals,
+prefer an agent that uses `GuardClient` and polls the decision on its own
+schedule.
