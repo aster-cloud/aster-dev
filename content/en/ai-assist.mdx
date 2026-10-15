@@ -2,8 +2,9 @@
 
 The policy editor in Aster Cloud can draft, complete and improve rules with a large
 language model. You can run that on the platform's AI quota, or **bring your own
-key** (BYOK) for OpenAI or Anthropic — optionally pinned to a specific model — so the
-calls are billed to your provider account and your organisation's model rules apply.
+key** (BYOK) for OpenAI or Anthropic — optionally pinned to a specific model
+(ADR 0048) — so the calls are billed to your provider account and your
+organisation's model rules apply.
 
 AI output is a suggestion. Nothing it writes is saved, approved or deployed until you
 do so, and the rule that finally runs is the same deterministic Aster you could have
@@ -44,12 +45,15 @@ Open **Settings → AI Keys** and fill in:
 | Provider | OpenAI or Anthropic. (Google Vertex AI can be stored but is not used for assistance.) |
 | Model (optional) | A model id your key may use. Leave blank for the platform default. |
 | API key | Stored encrypted; only the last four characters are shown afterwards. |
-| Provider URL (optional) | An `https` endpoint, e.g. an OpenAI-compatible gateway. It must be on the administrator's allowlist. |
+| Provider URL (optional) | An `https` endpoint, e.g. an OpenAI-compatible gateway. Calls only work if it is on the administrator's allowlist. |
 | Token quota (optional) | A positive number of tokens per month; when reached, the key is skipped. |
 | Expires (optional) | A future date; after it the key is skipped. |
 
-A custom Provider URL is checked again on every call by the policy API — against the
-allowlist and against private and internal addresses — not only when you save it.
+Saving only checks that a custom Provider URL is `https`. The policy API applies the
+administrator's allowlist and rejects private and internal addresses on **every**
+call to it, including the model-list check at save. A URL that is not allowlisted is
+therefore not rejected when you save — the model check simply cannot run, so you see
+the "could not be verified" notice below — but every call through that key fails.
 
 ### Choosing a model
 
@@ -66,8 +70,9 @@ key can use:
 
 The list is kept with the key (up to 200 ids) and refreshed periodically. It is only
 a hint: it never decides which key or model a call uses. If you leave the model
-blank, the **Model** column shows the platform default for that provider, for
-example *Platform default (claude-sonnet-5-5)* for Anthropic.
+blank, the **Model** column shows *Platform default*; once the model list has been
+checked it also names the model, for example *Platform default (claude-sonnet-5-5)*
+for Anthropic.
 
 ## Which key and model a call uses
 
@@ -86,8 +91,9 @@ model during a request: if no key qualifies, the request falls back to the
 platform quota.
 
 To prefer one model and keep another in reserve, add the same key twice with
-different models and order them; the second is used when the first is skipped
-(expired or over quota). The arrows in the list reorder keys within one provider;
+different models and order them; the second is used when the first is skipped —
+because it has expired, or because it is over quota and the second entry has a
+higher token quota or none (both are compared with the same monthly total, below). The arrows in the list reorder keys within one provider;
 between providers the order also depends on when each key was added.
 
 If the provider rejects the model you chose, the request fails with
@@ -105,10 +111,10 @@ quota become usable again; the usage records themselves are kept.
 The token quota is compared with your **total** BYOK usage for the month across all
 your keys, not with each key's own usage.
 
-Every AI request records its usage with the model that actually ran. Creating,
-editing, reordering and deleting keys and resetting the quota are written to the
-audit log with the provider, the last four characters of the key and the model —
-never the key itself.
+Every AI request records its usage with the model that actually ran. Changes are
+written to the audit log: for a key, its provider and last four characters (plus the
+model when it is set or changed) — never the key itself; a reorder records the new
+order of key ids, and a quota reset records when it happened.
 
 The settings page reads your keys from `GET /api/user/ai-keys` (signed-in session):
 

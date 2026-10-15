@@ -18,7 +18,7 @@
     {
       "slug": "ai-assist",
       "title": "AI 辅助与自带 Key",
-      "description": "Aster Cloud 的策略编辑器可以借助大语言模型起草、补全和改进规则。你可以使用平台的 AI 额度，也可以为 OpenAI 或 Anthropic 自带 Key（BYOK），并可选地绑定具体模型——调用费用记在你自己的 provider 账户上，组织对模型的规定也随之生效。",
+      "description": "Aster Cloud 的策略编辑器可以借助大语言模型起草、补全和改进规则。你可以使用平台的 AI 额度，也可以为 OpenAI 或 Anthropic 自带 Key（BYOK），并可选地绑定具体模型（ADR 0048）——调用费用记在你自己的 provider 账户上，组织对模型的规定也随之生效。",
       "headings": [
         "AI 能做什么",
         "平台额度还是自带 Key",
