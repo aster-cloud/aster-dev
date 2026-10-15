@@ -137,7 +137,7 @@ API key；任一相同即 `403 segregation_of_duties`。对 `REQUIRE_APPROVAL`�
 守卫拿所需角色与这个已验证集合做大小写敏感的精确比对。
 
 审批人不必手工调 API：Aster Cloud 控制台的**审批**收件箱汇总你所在全部工作区的待审批。持有所需角色
-（或该项是升级）时可以处理；没有该角色的 owner 与 admin 只读。当 Cloud 中的控制台执行或 API 执行返回
+（或该项是升级）时可以处理；没有该角色的成员（包括 owner 与 admin）只能只读查看。当 Cloud 中的控制台执行或 API 执行返回
 `REQUIRE_APPROVAL` 或 `ESCALATE` 时，Cloud 以该次执行的证据开出守卫决策、关联到执行记录，并站内通知角色持有者。
 
 ## 守护 MCP Agent：`aster-guard`

@@ -139,8 +139,8 @@ metadata。信贷主管（Credit Officer）在审批收件箱里批准后，链�
 | `incomparable` | 任一侧为 `INDETERMINATE` 或 `ERROR`——不计入 changed |
 | `legacyBase` | 基线结论由旧记录的 decision 折算而来 |
 
-What-If 需要 Pro 及以上套餐（否则 `403 whatif_not_entitled`），每个租户同时只能运行一个批次
-（`409 whatif_batch_in_progress`）。批次**按所有者隔离**（ADR 0034）：只重放策略所有者本人的执行，
+What-If 需要付费套餐或试用（否则 `403 whatif_not_entitled`），同时运行的批次数不超过套餐上限——Pro 为一个，
+Enterprise 不限（达到上限时 `409 whatif_batch_in_progress`）。批次**按所有者隔离**（ADR 0034）：只重放策略所有者本人的执行，
 所以要比较的执行请以所有者身份运行。在控制台里，这是策略页上的**比较版本**；同一端点也接受已登录的会话：
 
 ```bash

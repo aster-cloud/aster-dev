@@ -167,8 +167,9 @@ completed batch reports aggregates only, never per-item results:
 | `incomparable` | either side `INDETERMINATE` or `ERROR` — not counted as changed |
 | `legacyBase` | base outcome reconstructed from an older record's decision |
 
-What-If requires a Pro plan or above (`403 whatif_not_entitled` otherwise) and
-runs one batch at a time per tenant (`409 whatif_batch_in_progress`). Batches are
+What-If requires a paid plan or trial (`403 whatif_not_entitled` otherwise) and
+runs up to the plan's concurrent-batch limit — one on Pro, unlimited on Enterprise
+(`409 whatif_batch_in_progress` when the limit is reached). Batches are
 **owner-scoped** (ADR 0034): only the policy owner's own executions are replayed,
 so run the executions you want to compare as the owner. In the dashboard this is
 **Compare versions** on the policy; the same endpoint takes a signed-in session:

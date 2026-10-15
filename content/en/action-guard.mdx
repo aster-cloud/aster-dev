@@ -164,7 +164,7 @@ matches the required role exactly, case-sensitively, against that verified set.
 Approvers do not need to call the API by hand: the **Approvals** inbox in the Aster
 Cloud dashboard lists pending approvals across every workspace you belong to. You
 can act on an item when you hold its required role (or it is an escalation);
-owners and admins without the role see it read-only. When a dashboard or API
+members without the role — owners and admins included — see the item read-only. When a dashboard or API
 execution in Cloud returns `REQUIRE_APPROVAL` or `ESCALATE`, Cloud opens the guard
 decision from the execution's evidence, links it to the execution record, and
 notifies the role holders in the app.
