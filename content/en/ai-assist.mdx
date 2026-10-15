@@ -1,0 +1,150 @@
+# AI assistance & your own keys
+
+The policy editor in Aster Cloud can draft, complete and improve rules with a large
+language model. You can run that on the platform's AI quota, or **bring your own
+key** (BYOK) for OpenAI or Anthropic — optionally pinned to a specific model — so the
+calls are billed to your provider account and your organisation's model rules apply.
+
+AI output is a suggestion. Nothing it writes is saved, approved or deployed until you
+do so, and the rule that finally runs is the same deterministic Aster you could have
+typed yourself.
+
+## What the assistant does
+
+- **Inline completion** — after you pause typing for about half a second, the editor
+  sends the current line and up to ten lines before it, and shows a completion you
+  can accept. Each pause is one AI request. Turn it off in settings or from the
+  editor's status bar; the choice is kept per browser.
+- **The AI panel** — describe a rule in plain language to get a draft, or ask for
+  suggestions to improve the code you have. A draft is shown as a diff against your source
+  before you apply it.
+- **The site assistant** — answers questions from the documentation and the command
+  palette. Signed-in users also get a generated answer grounded in the retrieved
+  pages; otherwise it is search only.
+
+All of these go through Aster Cloud's server, which checks your session and quota
+and signs the call to the policy API's `/api/v1/ai/*` endpoints. The browser never
+talks to the model provider. Before a prompt reaches a model, a safety guard
+screens it for prompt-injection attempts and for topics outside policy authoring,
+and refuses those requests.
+
+## Platform quota or your own key
+
+Without a key of your own, AI requests use the platform's credentials and count
+against your plan's monthly AI quota. With an active key, requests go to your
+provider with your key and do not consume the platform quota; your provider bills
+you for the tokens.
+
+## Adding a key
+
+Open **Settings → AI Keys** and fill in:
+
+| Field | Notes |
+| --- | --- |
+| Provider | OpenAI or Anthropic. (Google Vertex AI can be stored but is not used for assistance.) |
+| Model (optional) | A model id your key may use. Leave blank for the platform default. |
+| API key | Stored encrypted; only the last four characters are shown afterwards. |
+| Provider URL (optional) | An `https` endpoint, e.g. an OpenAI-compatible gateway. It must be on the administrator's allowlist. |
+| Token quota (optional) | A positive number of tokens per month; when reached, the key is skipped. |
+| Expires (optional) | A future date; after it the key is skipped. |
+
+A custom Provider URL is checked again on every call by the policy API — against the
+allowlist and against private and internal addresses — not only when you save it.
+
+### Choosing a model
+
+Model ids may contain letters, digits and `. _ : / -`, up to 128 characters. When
+you save, Aster Cloud asks the provider (through the policy API) for the models your
+key can use:
+
+- If the provider returns a list and your model is not on it, the key is not saved
+  and the message lists what is available.
+- If the lookup fails — the provider is slow or briefly down — the key is saved
+  anyway with the notice *Saved, but the model list could not be verified right now;
+  the model will be used as entered.*
+- If a gateway does not offer a model list at all, the key is saved without the check.
+
+The list is kept with the key (up to 200 ids) and refreshed periodically. It is only
+a hint: it never decides which key or model a call uses. If you leave the model
+blank, the **Model** column shows the platform default for that provider, for
+example *Platform default (claude-sonnet-5-5)* for Anthropic.
+
+## Which key and model a call uses
+
+All your keys, across providers, form **one priority queue**, ordered by priority
+and then by when the key was added. For each AI request Aster Cloud walks the queue
+and takes the first key that is
+
+1. active and for a supported provider (OpenAI or Anthropic),
+2. not past its expiry date, and
+3. under its token quota.
+
+That key's provider is used, with that key's model — or, if it has none, the
+platform's default model for that provider. A model you specify is sent exactly as
+written; it is never swapped for another. There is no retry with a different key or
+model during a request: if no key qualifies, the request falls back to the
+platform quota.
+
+To prefer one model and keep another in reserve, add the same key twice with
+different models and order them; the second is used when the first is skipped
+(expired or over quota). The arrows in the list reorder keys within one provider;
+between providers the order also depends on when each key was added.
+
+If the provider rejects the model you chose, the request fails with
+`provider_rejected_model`. Aster does not quietly retry with the default model or
+another key, so a recorded call never claims a model it did not use. Fix the model
+on the key, or clear it to use the default.
+
+## Editing, quotas and records
+
+Each key can be edited in place — model, token quota, expiry — without entering
+the key again; a new model is checked against the provider the same way as on
+save. **Reset quota** clears this month's used-token counter so keys over their
+quota become usable again; the usage records themselves are kept.
+
+The token quota is compared with your **total** BYOK usage for the month across all
+your keys, not with each key's own usage.
+
+Every AI request records its usage with the model that actually ran. Creating,
+editing, reordering and deleting keys and resetting the quota are written to the
+audit log with the provider, the last four characters of the key and the model —
+never the key itself.
+
+The settings page reads your keys from `GET /api/user/ai-keys` (signed-in session):
+
+```json
+{
+  "bindings": [
+    {
+      "id": "b7d0c2e4-…",
+      "provider": "openai",
+      "keyHint": "x9Qz",
+      "active": true,
+      "providerUrl": null,
+      "tokenQuota": 500000,
+      "expiresAt": null,
+      "priority": 0,
+      "lastUsedAt": "2026-10-15T09:12:44.000Z",
+      "lastErrorAt": null,
+      "lastError": null,
+      "createdAt": "2026-10-01T08:00:00.000Z",
+      "model": "gpt-4o-mini",
+      "availableModels": { "models": ["gpt-4o", "gpt-4o-mini"], "defaultModel": "gpt-4o-mini" },
+      "modelsCheckedAt": "2026-10-15T03:00:00.000Z",
+      "usedTokensThisMonth": 12840
+    }
+  ]
+}
+```
+
+## How keys are protected
+
+- Keys are encrypted in the database with PostgreSQL `pgcrypto`, using a server-side
+  secret. Only the last four characters are stored in clear, for display.
+- Only Aster Cloud's server decrypts a key, and only the one selected for the
+  current request. It is added to the signed call to the policy API and never
+  written to logs. Any key material sent from the browser is discarded.
+- If decryption fails, the request fails instead of silently switching to the
+  platform's credentials.
+- Self-hosted Aster Cloud must set `AI_KEY_ENCRYPTION_SECRET` (at least 16
+  characters) on the Worker; without it, saving a key fails.

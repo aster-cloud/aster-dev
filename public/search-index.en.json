@@ -16,6 +16,20 @@
       ]
     },
     {
+      "slug": "ai-assist",
+      "title": "AI assistance & your own keys",
+      "description": "The policy editor in Aster Cloud can draft, complete and improve rules with a large language model. You can run that on the platform's AI quota, or bring your own key (BYOK) for OpenAI or Anthropic...",
+      "headings": [
+        "What the assistant does",
+        "Platform quota or your own key",
+        "Adding a key",
+        "Choosing a model",
+        "Which key and model a call uses",
+        "Editing, quotas and records",
+        "How keys are protected"
+      ]
+    },
+    {
       "slug": "browser-api",
       "title": "Browser API",
       "description": "@aster-cloud/aster-lang-ts is the TypeScript engine. It compiles, type-checks, extracts schemas and evaluates Aster policies in the browser or Node — no server round-trip. It's the same engine the ...",

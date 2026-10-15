@@ -16,6 +16,20 @@
       ]
     },
     {
+      "slug": "ai-assist",
+      "title": "AI 辅助与自带 Key",
+      "description": "Aster Cloud 的策略编辑器可以借助大语言模型起草、补全和改进规则。你可以使用平台的 AI 额度，也可以为 OpenAI 或 Anthropic 自带 Key（BYOK），并可选地绑定具体模型——调用费用记在你自己的 provider 账户上，组织对模型的规定也随之生效。",
+      "headings": [
+        "AI 能做什么",
+        "平台额度还是自带 Key",
+        "添加 Key",
+        "选择模型",
+        "一次调用用哪把 Key、哪个模型",
+        "编辑、额度与记录",
+        "Key 如何受保护"
+      ]
+    },
+    {
       "slug": "browser-api",
       "title": "浏览器 API",
       "description": "@aster-cloud/aster-lang-ts 是 TypeScript 引擎。它在浏览器或 Node 中编译、类型检查、提取 schema 并对 Aster 策略求值——无需服务器往返。它与 演练场 运行的是同一套引擎。",
