@@ -1,0 +1,193 @@
+# 导出到 Cedar
+
+有些团队已经用 [Cedar](https://www.cedarpolicy.com/) 执行授权——开源 Cedar 引擎、网关插件，或能导入 Cedar 文件的服务。
+对他们来说，再多一套规则引擎就是负担。**Cedar 导出**（ADR 0047）让你继续在 Aster 里编写和治理策略——多语种源码、
+`@id` 与 `@control`、治理档案、证据、重放——再把它的翻译结果交给已有的 Cedar 执行端：
+
+- **Cedar 策略文本**——规则的每个分支对应一条 `permit` 或 `forbid`。
+- **Cedar JSON schema**——规则用到的实体类型、动作与 context 键。
+
+Aster 仍是唯一事实源。导出是单向的，并且只有在 Cedar 结果通过校验、并在一组探针请求上与 Aster 引擎逐一比对一致之后才会产出。
+要么整条规则导出成功，要么拿到全部不能导出的原因。
+
+## 哪些规则可以导出
+
+规则同时满足以下条件才可导出：
+
+- 带 `@id`；
+- 只有一个参数，其类型具有 [Action Guard](/docs/action-guard) 请求的八个字段——`principal_id`、`principal_type`、
+  `principal_roles`、`action`、`resource_type`、`resource_id`、`context`、`agent_model`（按字段名匹配）；
+- 返回 `Verdict`（见[策略即治理](/docs/governance)）。
+
+守卫请求映射到 Cedar 的 principal / action / resource / context 模型，实体类型统一放在 `Aster` 命名空间：
+
+| Aster 字段 | Cedar |
+| --- | --- |
+| `principal_id` | `principal` = `Aster::Principal::"<id>"` |
+| `principal_type` | 属性 `principal.type`（String） |
+| `principal_roles` | 属性 `principal.roles`（String 集合） |
+| `action` | `action` = `Aster::Action::"<name>"` |
+| `resource_type` / `resource_id` | `resource` = `Aster::Resource::"<id>"`，属性 `type` |
+| `agent_model` | `context.agent_model` |
+| `context.<key>` | `context.<key>`，可选，类型按用法推断 |
+
+context 键的类型由规则中的用法推断：与整数比较或参与整数运算 → `Long`；与文本比较 → `String`；单独作条件或与布尔比较 → `Bool`。
+只支持一层键。
+
+规则体中可翻译的子集：
+
+- 整数上的相等、不等与大小比较（`equals to`、`at least` 等）；文本只支持相等与不等；
+- `and`、`or`、`not` 以及布尔字段；
+- `List.contains(req.principal_roles, "<文本字面量>")`——唯一允许的库调用，也是判断角色的写法；
+- `Let`（在使用处内联）；
+- 整数上的 `plus`、`minus`、`times`，操作数为 context 键或整数字面量；
+- 每个分支都以 `Return Verdict.*`（或语法糖）结束的 `If` / `When`，理由与审批角色为字面量。
+
+整数必须在 ±(2^53 − 1) 以内：Aster 按 double 比较数值，Cedar 比较的是精确的 `Long`。超出范围的字面量会被拒绝；
+生成的每个数值比较都带范围守卫，超界输入会让 Cedar 拒绝，而不是与 Aster 结论不一致。
+
+不可翻译：Decimal 与浮点数、调用其他函数或规则、其他 List / Map / Text 库调用、`Match`、workflow 与副作用、除法与取模、
+两个类型未知的 context 键互相比较，以及可能不返回结论就落空的分支。
+
+## 结论如何映射
+
+Cedar 只有 `permit` 与 `forbid`，四种结论被折叠成两种效果，Aster 的结论放在注解里：
+
+| Verdict | Cedar |
+| --- | --- |
+| `allow()` | `permit` |
+| `deny(reason)` | `forbid`，带 `@aster_outcome("deny")`、`@aster_reason` |
+| `escalate(reason)` | `forbid`，带 `@aster_outcome("escalate")`、`@aster_reason` |
+| `require_approval(role, reason)` | `forbid`，带 `@aster_outcome("require_approval")`、`@aster_approver`、`@aster_reason` |
+
+每条策略还带 `@id("<规则 id>#<分支序号>")`、`@aster_rule`、`@aster_module`、`@aster_source_hash`；规则有 `@control` 时带
+`@aster_controls`，模块声明了档案时带 `@aster_profile`。
+
+因此，纯 Cedar 执行端对所有非 `allow` 结论一律失败即拒绝。能读取决定性策略注解的网关，可以把 `require_approval` 与
+`escalate` 转到审批流程，例如 Action Guard。
+
+Aster 规则有顺序——首个命中的分支生效；Cedar 策略无序，且 `forbid` 优先于 `permit`。导出器把顺序显式编码：
+第 *k* 个分支只在自身条件成立且前面所有条件都不成立时适用，`Otherwise` 只在所有条件都不成立时适用。
+任一请求至多命中一条策略，forbid 优先规则不会改变结果。
+
+Aster 读取不存在的 context 键会使求值失败，守卫把它视为拒绝。Cedar 侧与之对应：每次键访问都先经 `has` 守卫，
+键缺失时没有策略适用，落到 Cedar 的默认拒绝。
+
+## 示例
+
+导出器自身的测试样本：
+
+```aster
+Module guard.cedar.sample.
+
+Define GuardRequest has principal_id, principal_type, principal_roles, action, resource_type, resource_id, context, agent_model.
+
+@id("GCS-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  Let large be req.context.amount at least 10000.
+  When req.action equals to "delete_customer_record", require approval by "Data Protection Officer" because "customer record deletion".
+  If List.contains(req.principal_roles, "suspended"):
+    Return Verdict.deny("suspended principal").
+  If large and req.action equals to "refund":
+    Return Verdict.escalate("large refund").
+  Otherwise allow.
+```
+
+它导出为四条策略 `GCS-001#1` 到 `GCS-001#4`：三条 `forbid` 与最后一条 `permit`。第三条（大额退款）的头部如下
+（条件从略——其中写出了上文所述的顺序守卫与范围守卫）：
+
+```cedar
+@id("GCS-001#3")
+@aster_rule("GCS-001")
+@aster_module("guard.cedar.sample")
+@aster_source_hash("…")
+@aster_outcome("escalate")
+@aster_reason("large refund")
+@aster_controls("EU_AI_ACT:ART14")
+forbid (principal, action, resource)
+when { … };
+```
+
+schema 声明 `Aster::Principal` 与 `Aster::Resource` 两个实体类型、规则提到的两个动作（`delete_customer_record` 与
+`refund`），以及一个可选的 `Long` 型 context 键 `amount`。这两个文件能通过 Cedar CLI 的校验：
+
+```bash
+cedar validate --schema guard.cedar.sample.cedarschema.json \
+  --policies guard.cedar.sample.cedar --schema-format json
+```
+
+## 等价性探针
+
+每次导出都执行同一套检查。导出器按规则内容生成探针请求：规则提到的每个动作、角色、principal 类型各取一次，
+外加一个未提到的值；每个数值字面量及其 ±1；每个 context 键取存在与缺失两态。至多 512 个探针同时交给 Aster 引擎与
+Cedar 授权器，二者必须一致：
+
+- Aster `ALLOW` ⇔ Cedar `Allow`；
+- 其他结论 ⇔ Cedar `Deny`，且决定性策略恰为一条 `forbid`，其 `@aster_outcome` 与 `@aster_reason` 与 Aster 一致；
+- Aster 求值出错 ⇔ Cedar `Deny` 且没有决定性策略。
+
+策略与 schema 还要通过 Cedar 校验器的严格模式。响应会报告实际运行的探针数。
+
+探针是抽样，不是证明。「Cedar 不会比 Aster 更宽松」的保证来自翻译本身的构造方式；探针用来捕获导出器的缺陷。
+
+schema 有意收窄：只声明规则提到的动作与 context 键。探针在 Cedar 侧不做请求校验，与不校验请求的网关一致。
+按 schema 校验请求的网关会拒绝 schema 之外的请求——未提到的动作、非整数的金额——因此只会比 Aster 更严，不会更松。
+
+## 诊断
+
+导出是全有或全无。只要有一项失败，就只返回诊断，不返回策略文本：
+
+| 码 | 含义 |
+| --- | --- |
+| `E720` | 规则不是可导出形状：缺 `@id`、参数不是单个守卫请求，或不是 `Verdict` 规则。 |
+| `E721` | 规则使用了没有 Cedar 翻译的构造（消息中给出构造名）。 |
+| `E722` | 同一 context 键被以冲突类型使用，例如既当数字又当文本。 |
+| `E723` | Cedar 与 Aster 在某个探针上结论不一致。这是导出器缺陷，消息中给出该探针。 |
+| `E724` | 生成的 Cedar 未通过严格 schema 校验。同样是导出器缺陷。 |
+
+违反所声明[治理档案](/docs/governance)（`E705` / `E706`）的模块同样不能导出。
+
+## 在 Aster Cloud 中导出
+
+在策略详情页点 **导出为 Cedar**，导出的是不指定版本时会执行的那个版本：默认的已批准版本，否则为最新的已批准版本。
+草稿永远不会被导出——把未经批准的草稿交给执行端等于绕过审批。策略没有已批准版本时，面板提示
+「导出到 Cedar 前请先批准一个版本」。
+
+导出成功时，按服务端返回的内容原样下载 `<模块名>.cedar` 与 `<模块名>.cedarschema.json`，并显示「已用 Cedar 比对 N 个探针」；
+否则面板列出诊断。
+
+## 通过 API 导出
+
+策略 API 的 `POST /api/v1/policies/export/cedar` 接受 `{"source", "locale", "aliasSet"}`（与编译端点一致），
+或 `{"versionId"}`（存放在策略 API 中的版本）。需要 API Key：
+
+```bash
+jq -n --rawfile src decide.aster '{source: $src, locale: "en-US"}' |
+  curl -sS -X POST https://policy.aster-lang.dev/api/v1/policies/export/cedar \
+    -H 'Authorization: Bearer YOUR_API_KEY' \
+    -H 'Content-Type: application/json' \
+    -d @- > export.json
+```
+
+| 字段 | 含义 |
+| --- | --- |
+| `exportable` | 所有检查都通过时才为 `true` |
+| `policies` | Cedar 策略文本，或 `null` |
+| `schemaText` | Cedar JSON schema 原文，或 `null`——请原样保存 |
+| `moduleName`、`ruleId`、`profile`、`controls` | 导出了什么 |
+| `probes` | `{count, agreed}` |
+| `diagnostics` | `E720`–`E724` 及编译诊断 |
+| `sourceHash` | 源码的 SHA-256 |
+
+不能导出的规则同样返回 `200`，`exportable: false`。`401` 表示没有已验证的身份；`503 cedar_export_busy` 加
+`Retry-After: 1` 表示同时进行的导出过多，稍后重试即可。
+
+每次成功导出都会在租户的审计哈希链上追加一条 `POLICY_EXPORTED` 事件，记录源码哈希、`policies` 与 `schemaText`
+各自的 SHA-256、规则 id 与探针数。两个文件原样保存后哈希与之相同，部署出去的 Cedar 文件可以据此对上它的审计记录。
+
+## 不包含
+
+- 推送到 AWS Verified Permissions 或其他服务——产物就是普通文件。
+- 把 Cedar 导入 Aster，或在 Action Guard 内做 Cedar 预检。
+- Decimal 值、内联对其他规则的调用，以及编辑器内的实时 Cedar 预览。

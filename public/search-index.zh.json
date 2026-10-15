@@ -37,6 +37,21 @@
       ]
     },
     {
+      "slug": "cedar-export",
+      "title": "导出到 Cedar",
+      "description": "有些团队已经用 Cedar 执行授权——开源 Cedar 引擎、网关插件，或能导入 Cedar 文件的服务。 对他们来说，再多一套规则引擎就是负担。Cedar 导出（ADR 0047）让你继续在 Aster 里编写和治理策略——多语种源码、 @id 与 @control、治理档案、证据、重放——再把它的翻译结果交给已有的 Cedar 执行端：",
+      "headings": [
+        "哪些规则可以导出",
+        "结论如何映射",
+        "示例",
+        "等价性探针",
+        "诊断",
+        "在 Aster Cloud 中导出",
+        "通过 API 导出",
+        "不包含"
+      ]
+    },
+    {
       "slug": "deployment",
       "title": "部署",
       "description": "把一条策略从源码送到生产环境、跑在 Aster 引擎（aster-api）上，并带版本管理与审计地大规模调用。",

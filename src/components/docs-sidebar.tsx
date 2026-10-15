@@ -55,6 +55,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
         { href: '/docs/governance', label: t('governanceOverview') },
         { href: '/docs/action-guard', label: t('actionGuard') },
         { href: '/docs/evidence', label: t('evidence') },
+        { href: '/docs/cedar-export', label: t('cedarExport') },
       ],
     },
   ];

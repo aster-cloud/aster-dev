@@ -1,0 +1,236 @@
+# Export to Cedar
+
+Some teams already enforce authorization with [Cedar](https://www.cedarpolicy.com/)
+— the open-source Cedar engine, a gateway plugin, or a service that imports Cedar
+files. For them, a second rule engine is one engine too many. **Cedar export**
+(ADR 0047) lets you keep writing and governing the policy in Aster — localised
+source, `@id` and `@control`, profiles, evidence, replay — and hand an existing
+Cedar enforcement point a translation of it:
+
+- **Cedar policy text** — one `permit` or `forbid` per branch of the rule.
+- **A Cedar JSON schema** — the entity types, actions and context keys the rule uses.
+
+Aster stays the source of truth. The export is one-way, and it is only produced
+after the Cedar result has been validated and compared with the Aster engine on a
+set of probe requests. Either the whole rule exports, or you get every reason why
+it does not.
+
+## What can be exported
+
+A rule is exportable when it
+
+- has an `@id`;
+- takes exactly one parameter whose type has the eight
+  [Action Guard](/docs/action-guard) request fields — `principal_id`,
+  `principal_type`, `principal_roles`, `action`, `resource_type`, `resource_id`,
+  `context`, `agent_model` (matched by field name);
+- returns `Verdict` (see [Policies as governance](/docs/governance)).
+
+The guard request maps onto Cedar's principal / action / resource / context model.
+All entity types live in the `Aster` namespace:
+
+| Aster field | Cedar |
+| --- | --- |
+| `principal_id` | `principal` = `Aster::Principal::"<id>"` |
+| `principal_type` | attribute `principal.type` (String) |
+| `principal_roles` | attribute `principal.roles` (Set of String) |
+| `action` | `action` = `Aster::Action::"<name>"` |
+| `resource_type` / `resource_id` | `resource` = `Aster::Resource::"<id>"`, attribute `type` |
+| `agent_model` | `context.agent_model` |
+| `context.<key>` | `context.<key>`, optional, typed by use |
+
+A context key's type is inferred from how the rule uses it: compared with or
+computed on integers → `Long`; compared with text → `String`; used on its own as a
+condition or compared with a boolean → `Bool`. Only one level of keys is supported.
+
+Inside the rule body the translatable subset is:
+
+- equality, inequality and ordering comparisons (`equals to`, `at least`, …) on
+  integers; text supports only equality and inequality;
+- `and`, `or`, `not`, and boolean fields;
+- `List.contains(req.principal_roles, "<text literal>")` — the only library call
+  allowed, and the way to test a role;
+- `Let` (inlined where it is used);
+- `plus`, `minus` and `times` on integers whose operands are context keys or
+  integer literals;
+- `If` / `When` branches that each end in `Return Verdict.*` (or the shorthand),
+  with literal reasons and approver roles.
+
+Integers must stay within ±(2^53 − 1), because Aster compares numbers as doubles
+and Cedar compares exact `Long`s. Larger literals are rejected; every generated
+numeric comparison carries a range guard, so an out-of-range input makes Cedar deny
+rather than disagree.
+
+Not translatable: decimals and floats, calls to other functions or rules, other
+List / Map / Text library calls, `Match`, workflows and side effects, division and
+modulo, a comparison between two context keys of unknown type, and branches that
+can fall through without returning a verdict.
+
+## How outcomes map
+
+Cedar has only `permit` and `forbid`, so the four verdicts are folded onto two
+effects and the Aster outcome travels in annotations:
+
+| Verdict | Cedar |
+| --- | --- |
+| `allow()` | `permit` |
+| `deny(reason)` | `forbid` with `@aster_outcome("deny")`, `@aster_reason` |
+| `escalate(reason)` | `forbid` with `@aster_outcome("escalate")`, `@aster_reason` |
+| `require_approval(role, reason)` | `forbid` with `@aster_outcome("require_approval")`, `@aster_approver`, `@aster_reason` |
+
+Every policy also carries `@id("<rule-id>#<branch>")`, `@aster_rule`,
+`@aster_module` and `@aster_source_hash`; `@aster_controls` when the rule has
+`@control`, and `@aster_profile` when the module declares a profile.
+
+A plain Cedar engine therefore fails closed on anything that is not `allow`. A
+gateway that reads the annotations of the determining policy can route
+`require_approval` and `escalate` to an approval flow such as Action Guard.
+
+Aster rules are ordered — the first matching branch wins — while Cedar policies
+are unordered and `forbid` overrides `permit`. The exporter encodes the order
+explicitly: branch *k* applies only when its own condition holds and none of the
+earlier ones does, and `Otherwise` applies only when none of them does. Any request
+matches at most one policy, so forbid-overrides never changes a result.
+
+Reading a context key that is missing makes Aster fail the evaluation, which a
+guard treats as a refusal. The Cedar side mirrors this: every key access is guarded
+by `has`, and a missing key leaves no policy applicable, so Cedar's default deny
+applies.
+
+## An example
+
+The exporter's own test sample:
+
+```aster
+Module guard.cedar.sample.
+
+Define GuardRequest has principal_id, principal_type, principal_roles, action, resource_type, resource_id, context, agent_model.
+
+@id("GCS-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  Let large be req.context.amount at least 10000.
+  When req.action equals to "delete_customer_record", require approval by "Data Protection Officer" because "customer record deletion".
+  If List.contains(req.principal_roles, "suspended"):
+    Return Verdict.deny("suspended principal").
+  If large and req.action equals to "refund":
+    Return Verdict.escalate("large refund").
+  Otherwise allow.
+```
+
+It exports as four policies, `GCS-001#1` to `GCS-001#4`: three `forbid`s and a
+final `permit`. The third, for the large refund, has this header (condition
+omitted — it spells out the ordering and range guards described above):
+
+```cedar
+@id("GCS-001#3")
+@aster_rule("GCS-001")
+@aster_module("guard.cedar.sample")
+@aster_source_hash("…")
+@aster_outcome("escalate")
+@aster_reason("large refund")
+@aster_controls("EU_AI_ACT:ART14")
+forbid (principal, action, resource)
+when { … };
+```
+
+The schema declares the `Aster::Principal` and `Aster::Resource` entity types, the
+two actions the rule mentions (`delete_customer_record` and `refund`), and an
+optional `Long` context key `amount`. The files pass the Cedar CLI's validator:
+
+```bash
+cedar validate --schema guard.cedar.sample.cedarschema.json \
+  --policies guard.cedar.sample.cedar --schema-format json
+```
+
+## Equivalence probes
+
+Every export runs the same check. The exporter builds probe requests from the rule:
+each mentioned action, role and principal type plus one value it does not mention;
+each numeric literal and its neighbours ±1; each context key present and absent.
+Up to 512 probes go to both the Aster engine and the Cedar authorizer, and they must
+agree:
+
+- Aster `ALLOW` ⇔ Cedar `Allow`;
+- any other verdict ⇔ Cedar `Deny`, decided by exactly one `forbid` whose
+  `@aster_outcome` and `@aster_reason` match;
+- an Aster evaluation error ⇔ Cedar `Deny` with no determining policy.
+
+The policies and schema are also checked with Cedar's strict validator. The response
+reports how many probes ran.
+
+Probes are a sample, not a proof. The guarantee that Cedar is never looser than Aster
+comes from how the translation is built; the probes are there to catch exporter
+defects.
+
+The schema is deliberately narrow: it declares only the actions and context keys
+the rule mentions. Probes are evaluated without request validation, as a gateway
+that does not validate requests would. A gateway that does validate requests against
+the schema rejects anything outside it — an unmentioned action, a non-integer
+amount — so it is stricter than Aster, never looser.
+
+## Diagnostics
+
+Export is all-or-nothing. If anything fails, you get diagnostics and no policy text:
+
+| Code | Meaning |
+| --- | --- |
+| `E720` | The rule is not an exportable shape: no `@id`, not a single guard-request parameter, or not a `Verdict` rule. |
+| `E721` | The rule uses a construct with no Cedar translation (the message names it). |
+| `E722` | One context key is used with conflicting types, e.g. as a number and as text. |
+| `E723` | Cedar and Aster disagreed on a probe. This is an exporter defect; the message names the probe. |
+| `E724` | The generated Cedar failed strict schema validation. Also an exporter defect. |
+
+A module that violates its declared [profile](/docs/governance) (`E705` / `E706`)
+cannot be exported either.
+
+## Export from Aster Cloud
+
+On a policy's detail page, **Export to Cedar** exports the version that runs when
+no version is specified: the default approved version, otherwise the latest approved
+one. Drafts are never exported — handing an unapproved draft to an enforcement point
+would bypass approval. If the policy has no approved version the panel says
+*Approve a version before exporting to Cedar*.
+
+A successful export downloads `<module>.cedar` and `<module>.cedarschema.json`
+exactly as the server returned them and shows *Verified against Cedar on N probes*.
+Otherwise the panel lists the diagnostics.
+
+## Export through the API
+
+`POST /api/v1/policies/export/cedar` on the policy API takes either
+`{"source", "locale", "aliasSet"}` (like the compile endpoint) or
+`{"versionId"}` for a version stored in the policy API. It needs an API key:
+
+```bash
+jq -n --rawfile src decide.aster '{source: $src, locale: "en-US"}' |
+  curl -sS -X POST https://policy.aster-lang.dev/api/v1/policies/export/cedar \
+    -H 'Authorization: Bearer YOUR_API_KEY' \
+    -H 'Content-Type: application/json' \
+    -d @- > export.json
+```
+
+| Field | Meaning |
+| --- | --- |
+| `exportable` | `true` only if every check passed |
+| `policies` | Cedar policy text, or `null` |
+| `schemaText` | Cedar JSON schema as text, or `null` — save it verbatim |
+| `moduleName`, `ruleId`, `profile`, `controls` | What was exported |
+| `probes` | `{count, agreed}` |
+| `diagnostics` | `E720`–`E724` and compile diagnostics |
+| `sourceHash` | SHA-256 of the source |
+
+A rule that cannot be exported is still `200`, with `exportable: false`. `401`
+means no verified identity, and `503 cedar_export_busy` with `Retry-After: 1` means
+too many exports are running at once — retry shortly.
+
+Each successful export appends a `POLICY_EXPORTED` event to the tenant's audit hash
+chain with the source hash, the SHA-256 of `policies` and of `schemaText`, the rule
+id and the probe count. Saved verbatim, the two files hash to the same values, so
+you can match a deployed Cedar file to its audit record.
+
+## Not included
+
+- Pushing to AWS Verified Permissions or another service — the output is plain files.
+- Importing Cedar into Aster, or Cedar pre-checks inside Action Guard.
+- Decimal values, inlining calls to other rules, and a live Cedar preview in the editor.

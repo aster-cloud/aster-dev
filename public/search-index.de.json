@@ -37,6 +37,21 @@
       ]
     },
     {
+      "slug": "cedar-export",
+      "title": "Export to Cedar",
+      "description": "Some teams already enforce authorization with Cedar — the open-source Cedar engine, a gateway plugin, or a service that imports Cedar files. For them, a second rule engine is one engine too many. C...",
+      "headings": [
+        "What can be exported",
+        "How outcomes map",
+        "An example",
+        "Equivalence probes",
+        "Diagnostics",
+        "Export from Aster Cloud",
+        "Export through the API",
+        "Not included"
+      ]
+    },
+    {
       "slug": "deployment",
       "title": "Deployment",
       "description": "Take a policy from source to production on the Aster engine (aster-api) and call it at scale, with versioning and audit.",
