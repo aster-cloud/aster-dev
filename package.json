@@ -1,6 +1,7 @@
 {
   "name": "aster-dev",
   "version": "0.0.1",
+  "type": "module",
   "private": true,
   "description": "aster-lang.dev 文档站（Next.js 重写，ADR 0018 Phase 3）。统一技术栈：与 aster-cloud 同 Next.js + next-intl + 运行时 ui-messages 加载。",
   "scripts": {
@@ -23,6 +24,7 @@
     "@mdx-js/react": "^3.1.0",
     "@next/mdx": "16.2.9",
     "@opennextjs/cloudflare": "^1.19.11",
+    "@shikijs/rehype": "4.2.0",
     "class-variance-authority": "^0.7.1",
     "lucide-react": "^1.18.0",
     "next": "16.2.9",
@@ -37,6 +39,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@mdx-js/mdx": "^3.1.1",
     "@tailwindcss/postcss": "^4.3.1",
     "@tailwindcss/typography": "^0.5.20",
     "@types/mdx": "^2.0.13",
