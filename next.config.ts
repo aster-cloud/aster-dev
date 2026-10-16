@@ -13,7 +13,7 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const withMDX = createMDX({
   options: {
     remarkPlugins: [['remark-gfm']],
-    rehypePlugins: [['rehype-slug']],
+    rehypePlugins: [['rehype-slug'], [fileURLToPath(new URL('./scripts/rehype-shiki-docs.mjs', import.meta.url))]],
   },
 });
 

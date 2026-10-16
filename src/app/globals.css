@@ -481,3 +481,14 @@ body {
   /* 无动画时奖杯仍需可见 */
   .poker-trophy.is-show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
+
+/* MDX 代码块（shiki 双主题 CSS 变量，随 [data-theme] 翻转）。
+   只接管前景色：背景沿用 prose 的 --tw-prose-pre-bg（品牌 bg-muted），与 playground 及无语言标注的代码块一致 */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+}
+[data-theme="dark"] .shiki,
+[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark);
+}
