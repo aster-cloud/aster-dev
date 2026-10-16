@@ -71,6 +71,12 @@
     "browserApi": "ब्राउज़र API",
     "deployment": "डिप्लॉयमेंट",
     "editions": "संस्करण",
+    "governance": "अभिशासन",
+    "governanceOverview": "नीतियाँ शासन के रूप में",
+    "actionGuard": "एक्शन गार्ड",
+    "evidence": "साक्ष्य और रीप्ले",
+    "cedarExport": "सीडर में निर्यात",
+    "aiAssist": "AI सहायता और अपनी कुंजियाँ",
     "examples": "उदाहरण",
     "onThisPage": "इस पृष्ठ पर",
     "sectionsLabel": "अनुभाग"

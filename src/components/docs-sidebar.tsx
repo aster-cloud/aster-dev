@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 /**
  * 文档左侧分组导航（语言规范标准 IA）：
- *   Getting Started → Language Guide → Reference → Tooling
+ *   Getting Started → Language Guide → Reference → Tooling → Governance
  *
  * onNavigate：点任意链接后的回调（移动端抽屉传 close，覆盖 hash-only 链接不变
  * pathname 时也能关抽屉）。桌面固定 aside 不传，保持原行为。
@@ -47,6 +47,16 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
         { href: '/docs/browser-api', label: t('browserApi') },
         { href: '/docs/deployment', label: t('deployment') },
         { href: '/docs/editions', label: t('editions') },
+      ],
+    },
+    {
+      title: t('governance'),
+      items: [
+        { href: '/docs/governance', label: t('governanceOverview') },
+        { href: '/docs/action-guard', label: t('actionGuard') },
+        { href: '/docs/evidence', label: t('evidence') },
+        { href: '/docs/cedar-export', label: t('cedarExport') },
+        { href: '/docs/ai-assist', label: t('aiAssist') },
       ],
     },
   ];

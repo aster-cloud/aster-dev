@@ -2,6 +2,34 @@
   "locale": "en",
   "entries": [
     {
+      "slug": "action-guard",
+      "title": "Action Guard",
+      "description": "A Verdict rule (see Policies as governance) says whether an action may happen. Action Guard (ADR 0040) makes that answer binding at run time: before an AI agent does something with side effects — d...",
+      "headings": [
+        "The guard request",
+        "The decision API",
+        "No receipt, no action",
+        "Four-eyes approval",
+        "Business roles (ADR 0042)",
+        "Guarding an MCP agent: `aster-guard`",
+        "Known limit: host timeouts"
+      ]
+    },
+    {
+      "slug": "ai-assist",
+      "title": "AI assistance & your own keys",
+      "description": "The policy editor in Aster Cloud can draft, complete and improve rules with a large language model. You can run that on the platform's AI quota, or bring your own key (BYOK) for OpenAI or Anthropic...",
+      "headings": [
+        "What the assistant does",
+        "Platform quota or your own key",
+        "Adding a key",
+        "Choosing a model",
+        "Which key and model a call uses",
+        "Editing, quotas and records",
+        "How keys are protected"
+      ]
+    },
+    {
       "slug": "browser-api",
       "title": "Browser API",
       "description": "@aster-cloud/aster-lang-ts is the TypeScript engine. It compiles, type-checks, extracts schemas and evaluates Aster policies in the browser or Node — no server round-trip. It's the same engine the ...",
@@ -20,6 +48,21 @@
         "`evaluate(core, functionName, context, options?)`",
         "Browser API vs REST vs GraphQL",
         "Typical workflow"
+      ]
+    },
+    {
+      "slug": "cedar-export",
+      "title": "Export to Cedar",
+      "description": "Some teams already enforce authorization with Cedar — the open-source Cedar engine, a gateway plugin, or a service that imports Cedar files. For them, a second rule engine is one engine too many. C...",
+      "headings": [
+        "What can be exported",
+        "How outcomes map",
+        "An example",
+        "Equivalence probes",
+        "Diagnostics",
+        "Export from Aster Cloud",
+        "Export through the API",
+        "Not included"
       ]
     },
     {
@@ -46,6 +89,33 @@
         "At a glance",
         "Language & engine",
         "Policy execution & governance"
+      ]
+    },
+    {
+      "slug": "evidence",
+      "title": "Evidence & replay",
+      "description": "A governance decision is only as good as what you can show about it afterwards. For every execution, an auditor wants to know which rule decided, which control that rule serves, which agent was act...",
+      "headings": [
+        "A rule worth evidencing",
+        "The execution evidence chain",
+        "Evidence export bundles",
+        "The Article 14 mapping",
+        "What-If: four-state replay",
+        "Verify the chain yourself"
+      ]
+    },
+    {
+      "slug": "governance",
+      "title": "Policies as governance",
+      "description": "Most Aster rules compute a value: a price, a tier, a yes/no eligibility flag. A growing class of rules does something different — it decides whether an action may happen at all. An AI agent wants t...",
+      "headings": [
+        "Verdict",
+        "Rule metadata",
+        "The control registry",
+        "Governance profiles",
+        "When / Otherwise shorthand",
+        "Profile diagnostics",
+        "Where this shows up"
       ]
     },
     {

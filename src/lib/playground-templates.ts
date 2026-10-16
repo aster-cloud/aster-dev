@@ -64,6 +64,24 @@ Rule calculateQuote given vehicle as Vehicle, produce Quote:
     Return Quote with premium set to vehicle.value times 5 divided by 100, deductible set to 1000.
   Return Quote with premium set to vehicle.value times 3 divided by 100, deductible set to 500.`,
   },
+  {
+    id: 'governance-verdict',
+    name: 'Governance Verdict',
+    entry: 'decide',
+    context: '{\n  "req": { "action": "refund", "amount": 12000, "suspended": false }\n}',
+    source: `Module guard.refunds.
+Profile "eu-ai-act-high-risk".
+
+Define GuardRequest has action as Text, amount as Int, suspended as Bool.
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  When req.suspended, deny "suspended principal".
+  When req.action equals to "delete_customer_record", require approval by "Data Protection Officer" because "customer record deletion".
+  When req.action equals to "refund" and req.amount at least 10000, escalate "large refund".
+  Otherwise allow.`,
+  },
 ];
 
 const ZH: Template[] = [
@@ -90,12 +108,30 @@ const ZH: Template[] = [
 
 规则 审查资格 给定 申请人 作为 申请人类型，产出 布尔：
   如果 申请人.信用评分 小于 600
-    返回 假。
+    返回 假值。
   如果 申请人.收入 小于 30000
-    返回 假。
+    返回 假值。
   如果 申请人.年龄 小于 18
-    返回 假。
-  返回 真。`,
+    返回 假值。
+  返回 真值。`,
+  },
+  {
+    id: 'governance-verdict',
+    name: '治理结论',
+    entry: '决定',
+    context: '{\n  "请求": { "动作": "refund", "金额": 12000, "已停用": false }\n}',
+    source: `模块 退款守卫。
+档案 "eu-ai-act-high-risk"。
+
+定义 守卫请求 包含 动作 作为 文本，金额 作为 整数，已停用 作为 布尔。
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+规则 决定 给定 请求 作为 守卫请求，产出 Verdict：
+  当 请求.已停用，拒绝 "主体已停用"。
+  当 请求.动作 等于 "delete_customer_record"，需审批人 "数据保护官" 因为 "删除客户记录"。
+  当 请求.动作 等于 "refund" 并且 请求.金额 至少 10000，升级 "大额退款"。
+  否则 允许。`,
   },
 ];
 
@@ -111,6 +147,24 @@ Regel berechnePreis gegeben betrag als Ganzzahl, liefert Ganzzahl:
   Wenn betrag größer als 100
     Gib zurück betrag mal 90 geteilt durch 100.
   Gib zurück betrag.`,
+  },
+  {
+    id: 'governance-verdict',
+    name: 'Governance-Entscheidung',
+    entry: 'entscheide',
+    context: '{\n  "anfrage": { "aktion": "refund", "betrag": 12000, "gesperrt": false }\n}',
+    source: `Modul rueckerstattung.
+Profil "eu-ai-act-high-risk".
+
+Definiere Anfrage hat aktion als Text, betrag als Ganzzahl, gesperrt als Wahrheitswert.
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+Regel entscheide gegeben anfrage als Anfrage, liefert Verdict:
+  bei anfrage.gesperrt, ablehnen "Konto gesperrt".
+  bei anfrage.aktion entspricht "delete_customer_record", Genehmigung durch "Datenschutzbeauftragter" weil "Löschung eines Kundendatensatzes".
+  bei anfrage.aktion entspricht "refund" und anfrage.betrag mindestens 10000, eskalieren "große Erstattung".
+  sonst erlauben.`,
   },
 ];
 
@@ -144,6 +198,24 @@ const HI: Template[] = [
   यदि applicant.age से कम 18
     लौटाएं असत्य।
   लौटाएं सत्य।`,
+  },
+  {
+    id: 'governance-verdict',
+    name: 'शासन निर्णय',
+    entry: 'decide',
+    context: '{\n  "req": { "action": "refund", "amount": 12000, "suspended": false }\n}',
+    source: `मॉड्यूल refunds।
+प्रोफ़ाइल "eu-ai-act-high-risk"।
+
+परिभाषित GuardRequest रखता है action रूप में पाठ, amount रूप में पूर्णांक, suspended रूप में बूलियन।
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+नियम decide दिया गया req रूप में GuardRequest, उत्पन्न Verdict:
+  जब req.suspended, अस्वीकार "निलंबित उपयोगकर्ता"।
+  जब req.action बराबर "delete_customer_record", अनुमोदक "डेटा संरक्षण अधिकारी" क्योंकि "ग्राहक रिकॉर्ड हटाना"।
+  जब req.action बराबर "refund" और req.amount कम से कम 10000, आगे बढ़ाएँ "बड़ा रिफंड"।
+  अन्यथा अनुमति।`,
   },
 ];
 

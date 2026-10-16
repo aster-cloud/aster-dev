@@ -1,0 +1,218 @@
+# Policies as governance
+
+Most Aster rules compute a value: a price, a tier, a yes/no eligibility flag. A
+growing class of rules does something different — it decides whether an action may
+happen at all. An AI agent wants to refund a customer, delete a record or send a
+contract; a person or a system has to answer *allow*, *deny*, *ask a human first*,
+or *escalate*. Those answers are governance outcomes, and an auditor will later ask
+three questions about each one: what was decided, which rule decided it, and which
+obligation that rule exists to satisfy.
+
+Aster answers all three in the language itself:
+
+- **`Verdict`** — a built-in result type whose four outcomes are first-class values,
+  not strings that a downstream service has to guess at.
+- **Rule metadata** — `@id` gives a rule a stable identity; `@control` ties it to a
+  regulatory control from a versioned registry.
+- **Governance profiles** — one `Profile` line turns those conventions from
+  recommendations into compile errors for the modules that need them.
+
+None of this changes how rules are evaluated. A `Verdict` rule is an ordinary rule
+that is deterministic, typed and replayable like every other rule.
+
+## Verdict
+
+`Verdict` is a built-in type with four constructors:
+
+| Constructor | Outcome | Meaning |
+| --- | --- | --- |
+| `Verdict.allow()` | `ALLOW` | The action may proceed. |
+| `Verdict.deny(reason)` | `DENY` | The action is refused. |
+| `Verdict.escalate(reason)` | `ESCALATE` | Hand the decision to a higher authority. |
+| `Verdict.require_approval(role, reason)` | `REQUIRE_APPROVAL` | Hold the action until someone in `role` approves it. |
+
+`reason` and `role` are `Text` and are **required**: a refusal without a reason is,
+for audit purposes, no decision at all. Empty or whitespace-only values are rejected
+at run time, and calling a constructor with the wrong number of arguments is
+diagnostic `E703`.
+
+A complete guard rule — the request shape first, then the decision:
+
+```aster
+Module guard.refunds.
+
+Define GuardRequest has action as Text, amount as Int, suspended as Bool.
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  If req.suspended:
+    Return Verdict.deny("suspended principal").
+  If req.action equals to "delete_customer_record":
+    Return Verdict.require_approval("Data Protection Officer", "customer record deletion").
+  If req.action equals to "refund" and req.amount at least 10000:
+    Return Verdict.escalate("large refund").
+  Return Verdict.allow().
+```
+
+Branches run top to bottom and the first match wins, exactly as in any other rule.
+Always write `produce Verdict` and give every parameter a type. Without a declared
+return type the reference engine infers one from the rule name and reports `E003`;
+an untyped parameter defaults to `Text`, so field access such as `req.action` fails
+with `E011`. (The governance checks recognise a decision rule either by its declared
+return type or by a `Return` that calls `Verdict.*` directly.)
+
+At run time a verdict is a small, stable JSON object. Keys appear in a fixed order
+and absent keys are omitted rather than written as `null`, so the value hashes the
+same way on both engines:
+
+```json
+{"__type":"Verdict","outcome":"ALLOW"}
+{"__type":"Verdict","outcome":"DENY","reason":"suspended principal"}
+{"__type":"Verdict","outcome":"REQUIRE_APPROVAL","role":"Data Protection Officer","reason":"customer record deletion"}
+{"__type":"Verdict","outcome":"ESCALATE","reason":"large refund"}
+```
+
+A `Verdict` is **not** a `Bool`. Using one as an `If` condition, an operand of
+`not`, or either side of `equals to` is a type error; if a hand-built Core IR slips
+past the checker, the engine fails with
+`Verdict cannot be used as Bool; compare its outcome field instead` instead of
+treating `DENY` as a truthy object and letting the action through.
+
+## Rule metadata
+
+Annotations sit on the lines directly above a rule. Each takes exactly one string
+literal:
+
+| Annotation | Cardinality | Purpose |
+| --- | --- | --- |
+| `@id("REFUND-001")` | exactly one, unique in the module | Stable rule identity, recorded in the trace and the execution record |
+| `@reason("…")` | optional | Rule-level, human-readable rationale (distinct from the per-decision `reason`) |
+| `@control("EU_AI_ACT:ART14")` | repeatable | Links the rule to a regulatory control |
+
+There is deliberately no `@version`: the version of a rule is the policy version
+that contains it, identified by its content hash. "Rule `REFUND-001` in policy
+version *v*" is a complete answer to "which rule decided this?"
+
+The governance checks report:
+
+| Code | Severity | Trigger |
+| --- | --- | --- |
+| `W700` | warning | A rule returning `Verdict` has no `@id` |
+| `E701` | error | Two rules in one module share an `@id` |
+| `E702` | error | An annotation argument is not exactly one string literal, an `@id` is blank, or a rule has several `@id`s |
+| `E703` | error | A `Verdict.*` constructor is called with the wrong number of arguments |
+| `W704` | warning | A `@control` key is malformed or not in the control registry |
+
+### The control registry
+
+`@control` keys are not free text. They come from a versioned **control registry**
+(ADR 0045), maintained alongside the language lexicons (`controls/registry.json` in
+aster-lang-locales). Each compiler bundles a copy: aster-lang-ts ships it as built-in
+data, aster-lang-core on its classpath. Each entry maps a key such as `EU_AI_ACT:ART14` to a
+framework, an article, localised titles and — for the EU AI Act — the individual
+clauses and which kinds of evidence satisfy them.
+
+Keys have the form `FRAMEWORK:ARTICLE`. The framework part uses upper-case letters,
+digits and `_`; the article part may additionally contain `(`, `)` and `.`; the whole
+key is at most 64 characters (`^[A-Z0-9_]+:[A-Z0-9_().]+$`). The registry bundled with aster-lang-ts 1.0.35 is version 1.1.0 and
+registers `EU_AI_ACT:ART14`, `GDPR:ART6`, `GDPR:ART17`, `GDPR:ART22` and `SOX:404`.
+An unknown key does not stop compilation; it produces a warning that names the
+registry version:
+
+```text
+W704  Control 'ACME:ART1' on rule 'decide' is not registered (controls registry 1.1.0)
+```
+
+The editor completes registered keys after `@control("`.
+
+## Governance profiles
+
+`W700` and `W704` are warnings, which is right for a general-purpose policy library
+and wrong for a high-risk system that *must* be traceable. A **governance profile**
+(ADR 0046) closes that gap. Declare it on the line right after `Module`:
+
+```aster
+Module guard.refunds.
+Profile "eu-ai-act-high-risk".
+
+Define GuardRequest has action as Text, amount as Int, suspended as Bool.
+
+@id("REFUND-001")
+@control("EU_AI_ACT:ART14")
+Rule decide given req as GuardRequest, produce Verdict:
+  When req.suspended, deny "suspended principal".
+  When req.action equals to "delete_customer_record", require approval by "Data Protection Officer" because "customer record deletion".
+  When req.action equals to "refund" and req.amount at least 10000, escalate "large refund".
+  Otherwise allow.
+```
+
+The profile id is a string literal (ids contain hyphens). Profile definitions live
+next to the controls in the registry; two ship today:
+
+| Profile | Every `Verdict` rule must have |
+| --- | --- |
+| `governed` | an `@id`, and only registered `@control` keys |
+| `eu-ai-act-high-risk` | the above, plus at least one registered control from `EU_AI_ACT` |
+
+Modules without a `Profile` line behave exactly as before.
+
+### When / Otherwise shorthand
+
+The example above also uses the decision-table shorthand. Each statement lowers to
+the long form:
+
+| Shorthand | Equivalent |
+| --- | --- |
+| `When cond, allow.` | `If cond: Return Verdict.allow().` |
+| `When cond, deny "r".` | `If cond: Return Verdict.deny("r").` |
+| `When cond, escalate "r".` | `If cond: Return Verdict.escalate("r").` |
+| `When cond, require approval by "role" because "r".` | `If cond: Return Verdict.require_approval("role", "r").` |
+| `Otherwise <outcome>.` | `Return Verdict.<outcome>(…).` |
+
+The shorthand produces the same Core IR as the long form (apart from source
+positions), so traces and evidence are identical. `Otherwise` must be the last
+statement of its block — anything after it is a parse error. Like every keyword,
+the shorthand is localised: in the Chinese lexicon it reads `档案` / `当` / `否则` /
+`允许` / `拒绝` / `升级` / `需审批人 … 因为 …`.
+
+### Profile diagnostics
+
+| Code | Meaning |
+| --- | --- |
+| `E705` | The declared profile is not in the registry. |
+| `E706` | A `Verdict` rule violates a requirement of the profile — one diagnostic per rule and requirement. |
+| `E707` | The governance check could not run for a module that declares a profile. |
+
+Removing the `@id` and changing the control to `ACME:ART1` in the example above
+yields, alongside the usual warnings:
+
+```text
+E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': missing @id
+E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': unregistered control ACME:ART1
+E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': no registered control from framework EU_AI_ACT
+```
+
+`E705` and `E706` are errors in every channel, including the Aster Cloud compile
+endpoint, where other governance codes are downgraded to warnings. Cloud refuses to
+save a profiled policy that has them.
+
+`E707` is never produced by the checker itself. Aster Cloud emits it when the checker
+fails internally on a profiled module, and treats it — like an unreachable compile
+service — as *fail closed*: the save is rejected with a retryable
+`503 compile_unavailable`, not a `400`. An infrastructure fault is never read as a
+policy violation, and a profiled policy is never saved unchecked.
+
+## Where this shows up
+
+- **Policy detail in Aster Cloud** shows the declared profile as a badge, read from
+  the saved policy version.
+- **Decisions** carry the `ruleId` and `controls` of the rule that produced them,
+  and [Action Guard](/docs/action-guard) turns `REQUIRE_APPROVAL` and `ESCALATE`
+  into pending actions a reviewer must resolve.
+- **Evidence bundles** record each entry's profile and list `profilesUsed` together
+  with the registry version, so a reviewer can map decisions to clauses — see
+  [Evidence & replay](/docs/evidence).
+- **Interoperability** — a guard policy written with `Verdict` can be exported as
+  Cedar policy text plus a Cedar schema for an existing Cedar enforcement point,
+  while Aster stays the source of truth; see [Export to Cedar](/docs/cedar-export).

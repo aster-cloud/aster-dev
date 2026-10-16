@@ -71,6 +71,12 @@
     "browserApi": "Browser-API",
     "deployment": "Bereitstellung",
     "editions": "Editionen",
+    "governance": "Governance",
+    "governanceOverview": "Richtlinien als Governance",
+    "actionGuard": "Action Guard",
+    "evidence": "Nachweise & Wiedergabe",
+    "cedarExport": "Export nach Cedar",
+    "aiAssist": "KI-Unterstützung & eigene Schlüssel",
     "examples": "Beispiele",
     "onThisPage": "Auf dieser Seite",
     "sectionsLabel": "Abschnitte"
