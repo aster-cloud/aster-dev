@@ -88,7 +88,7 @@
     },
     "eyebrow": "Demos",
     "title": "See Aster in action",
-    "subtitle": "Four live demos — each runs the real engine in your browser, no signup.",
+    "subtitle": "Five live demos — each runs the real engine in your browser, no signup.",
     "enter": "Open demo",
     "cards": {
       "kitten": {
@@ -106,7 +106,129 @@
       "sherlock": {
         "title": "The Speckled Band",
         "description": "Sherlock’s deduction as a decision rule — feed clues, get the culprit."
+      },
+      "guardian": {
+        "title": "AI Guardian 🛡️",
+        "description": "An AI support agent's tool calls are checked by an Aster rule — allowed, escalated, sent for four-eyes approval or denied, with a hash-linked evidence trail and a Cedar export."
       }
+    }
+  },
+  "guardianDemo": {
+    "seo": {
+      "title": "AI Guardian demo — Aster Lang",
+      "description": "Watch an AI support agent's tool calls get checked by a plain-language Aster rule: allowed, escalated, sent for four-eyes approval or denied — with a hash-linked evidence trail and the same rule exported to Cedar."
+    },
+    "eyebrow": "AI governance",
+    "title": "AI Guardian",
+    "subtitle": "Every tool call an AI agent makes is checked by an Aster rule before it runs. Risky ones wait for a person; every decision leaves evidence.",
+    "views": {
+      "stage": "Sandbox",
+      "agent": "MCP agent",
+      "label": "View"
+    },
+    "verdict": {
+      "ALLOW": "Allowed",
+      "DENY": "Denied",
+      "REQUIRE_APPROVAL": "Needs approval",
+      "ESCALATE": "Escalated"
+    },
+    "status": {
+      "executed": "Executed",
+      "blocked": "Blocked",
+      "pending": "Waiting for approval",
+      "approved": "Approved — executed",
+      "rejected": "Rejected — blocked",
+      "expired": "Expired — denied"
+    },
+    "reasonCode": {
+      "evaluation_failed": "Rule evaluation failed — fail closed",
+      "not_a_verdict": "Rule did not return a verdict — fail closed"
+    },
+    "tools": {
+      "issue_refund": "Issue refund",
+      "delete_customer_record": "Delete customer record",
+      "lookup_order": "Look up order"
+    },
+    "sandbox": {
+      "requester": "Support agent",
+      "amount": "Refund amount (€)",
+      "suspended": "Agent account suspended",
+      "reset": "Reset"
+    },
+    "approver": {
+      "title": "Approvals — {name}",
+      "role": "Data Protection Officer",
+      "anyApprover": "any approver",
+      "empty": "Nothing waiting for approval.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "expire": "Let it expire",
+      "commentPlaceholder": "Reason for rejecting (required)",
+      "commentRequired": "A rejection needs a comment.",
+      "selfApproval": "The requester cannot approve their own request.",
+      "expiresIn": "Expires in {seconds} s",
+      "ttlNote": "Demo: 60 s · production: 24 h"
+    },
+    "rule": {
+      "title": "Rule",
+      "matched": "Matched line",
+      "diagnostics": "Line {line}: {message}",
+      "keepsLast": "The demo keeps running on the last rule that compiled.",
+      "previewLabel": "With the current rule"
+    },
+    "evidence": {
+      "title": "Evidence chain",
+      "empty": "No decisions yet.",
+      "decision": "Decision",
+      "approval": "Approval"
+    },
+    "cedar": {
+      "title": "Cedar",
+      "builtInNote": "This is the Cedar export of the built-in rule; your edits are not reflected here.",
+      "probes": "{agreed}/{count} probes agree with the Aster engine"
+    },
+    "agent": {
+      "assistant": "Assistant",
+      "checking": "aster-guard: checking {policy}…",
+      "held": "Held by aster-guard (approval-timeout 300 s)",
+      "blocked": "Blocked by Aster Guard: {reason} (decision {decisionId})",
+      "reviewerComment": "Reviewer: {comment}",
+      "result": "Tool result: done",
+      "howItWorks": "Sits between the MCP host and the upstream server in aster-guard-mcp; tool name → action, arguments → context."
+    },
+    "story": {
+      "play": "Play",
+      "pause": "Pause",
+      "step": "Next step",
+      "replay": "Replay",
+      "tryIt": "Try it yourself →",
+      "beat1": {
+        "customer": "My €40 order arrived broken.",
+        "agent": "Sorry about that — refund issued."
+      },
+      "beat2": {
+        "customer": "Also refund invoice INV-77, €12,000.",
+        "agent": "A reviewer declined this refund — they'll be in touch.",
+        "rejectComment": "Invoice not delivered yet"
+      },
+      "beat3": {
+        "customer": "Delete my account and all my data.",
+        "agent": "Done — your record has been deleted."
+      },
+      "beat4": {
+        "customer": "Refund €10 please.",
+        "agent": "I can't do that right now — this account is suspended."
+      },
+      "cedar": "The same rule, exported to Cedar.",
+      "outcome": "Outcome",
+      "controls": "Story controls",
+      "approval": "Approval",
+      "beat": "Beat {n}",
+      "progress": "Story progress",
+      "upcoming": "Upcoming"
+    },
+    "guard": {
+      "title": "Aster guard"
     }
   },
   "pokerPage": {

@@ -88,7 +88,7 @@
     },
     "eyebrow": "Demo 演示",
     "title": "看 Aster 跑起来",
-    "subtitle": "四个在线演示 —— 每个都在你的浏览器里跑真实引擎，无需注册。",
+    "subtitle": "五个在线演示 —— 每个都在你的浏览器里跑真实引擎，无需注册。",
     "enter": "打开演示",
     "cards": {
       "kitten": {
@@ -106,7 +106,129 @@
       "sherlock": {
         "title": "斑点带子案",
         "description": "福尔摩斯推理即决策规则——喂线索，得真凶。"
+      },
+      "guardian": {
+        "title": "AI 守卫 🛡️",
+        "description": "AI 客服代理的每次工具调用都由一条 Aster 规则检查——放行、升级、交由双人审批或拒绝，并留下哈希链证据与 Cedar 导出。"
       }
+    }
+  },
+  "guardianDemo": {
+    "seo": {
+      "title": "AI 守卫演示 — Aster Lang",
+      "description": "看一条用日常语言写成的 Aster 规则如何检查 AI 客服代理的工具调用：放行、升级、交由双人审批或拒绝——附带哈希链证据，同一条规则还能导出为 Cedar。"
+    },
+    "eyebrow": "AI 治理",
+    "title": "AI 守卫",
+    "subtitle": "AI 代理发出的每次工具调用，在执行前都会经过 Aster 规则检查。高风险调用等待真人处理，每个决定都留下证据。",
+    "views": {
+      "stage": "沙盒",
+      "agent": "MCP 代理",
+      "label": "视图"
+    },
+    "verdict": {
+      "ALLOW": "已放行",
+      "DENY": "已拒绝",
+      "REQUIRE_APPROVAL": "需要审批",
+      "ESCALATE": "已升级"
+    },
+    "status": {
+      "executed": "已执行",
+      "blocked": "已拦截",
+      "pending": "等待审批",
+      "approved": "已批准——已执行",
+      "rejected": "已驳回——已拦截",
+      "expired": "已过期——已拒绝"
+    },
+    "reasonCode": {
+      "evaluation_failed": "规则求值失败——默认拒绝",
+      "not_a_verdict": "规则没有返回裁决——默认拒绝"
+    },
+    "tools": {
+      "issue_refund": "发起退款",
+      "delete_customer_record": "删除客户记录",
+      "lookup_order": "查询订单"
+    },
+    "sandbox": {
+      "requester": "客服代理",
+      "amount": "退款金额（€）",
+      "suspended": "代理账号已停用",
+      "reset": "重置"
+    },
+    "approver": {
+      "title": "审批 — {name}",
+      "role": "数据保护官",
+      "anyApprover": "任一审批人",
+      "empty": "没有等待审批的事项。",
+      "approve": "批准",
+      "reject": "驳回",
+      "expire": "任其过期",
+      "commentPlaceholder": "驳回原因（必填）",
+      "commentRequired": "驳回必须填写说明。",
+      "selfApproval": "请求方不能审批自己的请求。",
+      "expiresIn": "{seconds} 秒后过期",
+      "ttlNote": "演示：60 秒 · 生产环境：24 小时"
+    },
+    "rule": {
+      "title": "规则",
+      "matched": "命中的行",
+      "diagnostics": "第 {line} 行：{message}",
+      "keepsLast": "演示会继续按最近一次编译通过的规则运行。",
+      "previewLabel": "按当前规则"
+    },
+    "evidence": {
+      "title": "证据链",
+      "empty": "还没有决定。",
+      "decision": "决定",
+      "approval": "审批"
+    },
+    "cedar": {
+      "title": "Cedar",
+      "builtInNote": "这是内置规则的 Cedar 导出；你的修改不会反映在这里。",
+      "probes": "{agreed}/{count} 个探测用例与 Aster 引擎一致"
+    },
+    "agent": {
+      "assistant": "助手",
+      "checking": "aster-guard：正在检查 {policy}…",
+      "held": "已被 aster-guard 挂起（审批超时 300 秒）",
+      "blocked": "已被 Aster Guard 拦截：{reason}（决定 {decisionId}）",
+      "reviewerComment": "审批人说明：{comment}",
+      "result": "工具结果：完成",
+      "howItWorks": "aster-guard-mcp 位于 MCP 主机与上游服务器之间；工具名 → action，参数 → context。"
+    },
+    "story": {
+      "play": "播放",
+      "pause": "暂停",
+      "step": "下一步",
+      "replay": "重播",
+      "tryIt": "自己试试 →",
+      "beat1": {
+        "customer": "我 40 欧元的订单到货时是坏的。",
+        "agent": "很抱歉——已为您退款。"
+      },
+      "beat2": {
+        "customer": "还要退发票 INV-77，12,000 欧元。",
+        "agent": "审核人拒绝了这笔退款——对方会与您联系。",
+        "rejectComment": "发票尚未送达"
+      },
+      "beat3": {
+        "customer": "请删除我的账号和所有数据。",
+        "agent": "好了——您的记录已被删除。"
+      },
+      "beat4": {
+        "customer": "请退款 10 欧元。",
+        "agent": "我现在无法办理——该账号已被停用。"
+      },
+      "cedar": "同一条规则，导出为 Cedar。",
+      "outcome": "结果",
+      "controls": "剧情控制",
+      "approval": "审批",
+      "beat": "第 {n} 拍",
+      "progress": "剧情进度",
+      "upcoming": "未开始"
+    },
+    "guard": {
+      "title": "Aster 守卫"
     }
   },
   "pokerPage": {

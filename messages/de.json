@@ -88,7 +88,7 @@
     },
     "eyebrow": "Demos",
     "title": "Aster in Aktion erleben",
-    "subtitle": "Vier Live-Demos — jede führt die echte Engine in Ihrem Browser aus, ohne Anmeldung.",
+    "subtitle": "Fünf Live-Demos — jede führt die echte Engine in Ihrem Browser aus, ohne Anmeldung.",
     "enter": "Demo öffnen",
     "cards": {
       "kitten": {
@@ -106,7 +106,129 @@
       "sherlock": {
         "title": "Das gefleckte Band",
         "description": "Sherlocks Deduktion als Entscheidungsregel — Hinweise rein, Täter raus."
+      },
+      "guardian": {
+        "title": "AI Guardian 🛡️",
+        "description": "Die Tool-Aufrufe eines KI-Support-Agenten werden von einer Aster-Regel geprüft — erlaubt, eskaliert, zur Vier-Augen-Freigabe geschickt oder abgelehnt, mit verketteter Hash-Beweiskette und Cedar-Export."
       }
+    }
+  },
+  "guardianDemo": {
+    "seo": {
+      "title": "AI-Guardian-Demo — Aster Lang",
+      "description": "Sehen Sie, wie eine in Alltagssprache geschriebene Aster-Regel die Tool-Aufrufe eines KI-Support-Agenten prüft: erlaubt, eskaliert, zur Vier-Augen-Freigabe geschickt oder abgelehnt — mit Hash-verketteter Beweiskette und derselben Regel als Cedar-Export."
+    },
+    "eyebrow": "KI-Governance",
+    "title": "AI Guardian",
+    "subtitle": "Jeder Tool-Aufruf eines KI-Agenten wird vor der Ausführung von einer Aster-Regel geprüft. Riskante Aufrufe warten auf einen Menschen; jede Entscheidung hinterlässt einen Nachweis.",
+    "views": {
+      "stage": "Sandbox",
+      "agent": "MCP-Agent",
+      "label": "Ansicht"
+    },
+    "verdict": {
+      "ALLOW": "Erlaubt",
+      "DENY": "Abgelehnt",
+      "REQUIRE_APPROVAL": "Freigabe nötig",
+      "ESCALATE": "Eskaliert"
+    },
+    "status": {
+      "executed": "Ausgeführt",
+      "blocked": "Blockiert",
+      "pending": "Wartet auf Freigabe",
+      "approved": "Freigegeben — ausgeführt",
+      "rejected": "Abgelehnt — blockiert",
+      "expired": "Abgelaufen — verweigert"
+    },
+    "reasonCode": {
+      "evaluation_failed": "Regelauswertung fehlgeschlagen — im Zweifel abgelehnt",
+      "not_a_verdict": "Regel lieferte kein Urteil — im Zweifel abgelehnt"
+    },
+    "tools": {
+      "issue_refund": "Erstattung veranlassen",
+      "delete_customer_record": "Kundendatensatz löschen",
+      "lookup_order": "Bestellung nachschlagen"
+    },
+    "sandbox": {
+      "requester": "Support-Agent",
+      "amount": "Erstattungsbetrag (€)",
+      "suspended": "Agent-Konto gesperrt",
+      "reset": "Zurücksetzen"
+    },
+    "approver": {
+      "title": "Freigaben — {name}",
+      "role": "Datenschutzbeauftragte",
+      "anyApprover": "beliebige Freigebende",
+      "empty": "Nichts wartet auf Freigabe.",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "expire": "Ablaufen lassen",
+      "commentPlaceholder": "Grund der Ablehnung (Pflichtfeld)",
+      "commentRequired": "Eine Ablehnung braucht einen Kommentar.",
+      "selfApproval": "Die anfragende Seite kann die eigene Anfrage nicht freigeben.",
+      "expiresIn": "Läuft in {seconds} s ab",
+      "ttlNote": "Demo: 60 s · Produktion: 24 h"
+    },
+    "rule": {
+      "title": "Regel",
+      "matched": "Zutreffende Zeile",
+      "diagnostics": "Zeile {line}: {message}",
+      "keepsLast": "Die Demo läuft mit der zuletzt kompilierten Regel weiter.",
+      "previewLabel": "Mit der aktuellen Regel"
+    },
+    "evidence": {
+      "title": "Beweiskette",
+      "empty": "Noch keine Entscheidungen.",
+      "decision": "Entscheidung",
+      "approval": "Freigabe"
+    },
+    "cedar": {
+      "title": "Cedar",
+      "builtInNote": "Dies ist der Cedar-Export der eingebauten Regel; Ihre Änderungen sind hier nicht enthalten.",
+      "probes": "{agreed}/{count} Proben stimmen mit der Aster-Engine überein"
+    },
+    "agent": {
+      "assistant": "Assistent",
+      "checking": "aster-guard: prüft {policy}…",
+      "held": "Von aster-guard zurückgehalten (Freigabe-Timeout 300 s)",
+      "blocked": "Von Aster Guard blockiert: {reason} (Entscheidung {decisionId})",
+      "reviewerComment": "Prüfer: {comment}",
+      "result": "Tool-Ergebnis: erledigt",
+      "howItWorks": "aster-guard-mcp sitzt zwischen MCP-Host und Upstream-Server; Tool-Name → action, Argumente → context."
+    },
+    "story": {
+      "play": "Abspielen",
+      "pause": "Pause",
+      "step": "Nächster Schritt",
+      "replay": "Erneut abspielen",
+      "tryIt": "Selbst ausprobieren →",
+      "beat1": {
+        "customer": "Meine Bestellung über 40 € kam kaputt an.",
+        "agent": "Das tut mir leid — die Erstattung ist veranlasst."
+      },
+      "beat2": {
+        "customer": "Bitte auch Rechnung INV-77 über 12.000 € erstatten.",
+        "agent": "Eine Prüferin hat diese Erstattung abgelehnt — sie meldet sich bei Ihnen.",
+        "rejectComment": "Rechnung noch nicht zugestellt"
+      },
+      "beat3": {
+        "customer": "Löschen Sie mein Konto und alle meine Daten.",
+        "agent": "Erledigt — Ihr Datensatz wurde gelöscht."
+      },
+      "beat4": {
+        "customer": "Bitte 10 € erstatten.",
+        "agent": "Das kann ich gerade nicht tun — dieses Konto ist gesperrt."
+      },
+      "cedar": "Dieselbe Regel, als Cedar exportiert.",
+      "outcome": "Ergebnis",
+      "controls": "Steuerung der Geschichte",
+      "approval": "Freigabe",
+      "beat": "Szene {n}",
+      "progress": "Story-Fortschritt",
+      "upcoming": "Folgt"
+    },
+    "guard": {
+      "title": "Aster-Wächter"
     }
   },
   "pokerPage": {
