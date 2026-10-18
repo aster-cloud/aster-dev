@@ -124,7 +124,8 @@
     "views": {
       "stage": "Sandbox",
       "agent": "MCP-Agent",
-      "story": "Story"
+      "story": "Story",
+      "label": "Ansicht"
     },
     "verdict": {
       "ALLOW": "Erlaubt",
@@ -174,7 +175,8 @@
       "title": "Regel",
       "matched": "Zutreffende Zeile",
       "diagnostics": "Zeile {line}: {message}",
-      "keepsLast": "Die Demo läuft mit der zuletzt kompilierten Regel weiter."
+      "keepsLast": "Die Demo läuft mit der zuletzt kompilierten Regel weiter.",
+      "previewLabel": "Mit der aktuellen Regel"
     },
     "evidence": {
       "title": "Beweiskette",
@@ -218,6 +220,9 @@
         "agent": "Das kann ich gerade nicht tun — dieses Konto ist gesperrt."
       },
       "cedar": "Dieselbe Regel, als Cedar exportiert."
+    },
+    "guard": {
+      "title": "Aster-Wächter"
     }
   },
   "pokerPage": {

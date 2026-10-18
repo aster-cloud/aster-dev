@@ -124,7 +124,8 @@
     "views": {
       "stage": "沙盒",
       "agent": "MCP 代理",
-      "story": "故事"
+      "story": "故事",
+      "label": "视图"
     },
     "verdict": {
       "ALLOW": "已放行",
@@ -174,7 +175,8 @@
       "title": "规则",
       "matched": "命中的行",
       "diagnostics": "第 {line} 行：{message}",
-      "keepsLast": "演示会继续按最近一次编译通过的规则运行。"
+      "keepsLast": "演示会继续按最近一次编译通过的规则运行。",
+      "previewLabel": "按当前规则"
     },
     "evidence": {
       "title": "证据链",
@@ -218,6 +220,9 @@
         "agent": "我现在无法办理——该账号已被停用。"
       },
       "cedar": "同一条规则，导出为 Cedar。"
+    },
+    "guard": {
+      "title": "Aster 守卫"
     }
   },
   "pokerPage": {

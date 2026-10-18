@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/components/ui';
 import { useGuardian } from '../use-guardian';
 import { SUPPORT_BOT, SUSPENDED_BOT, type ToolCall, type ToolName } from '../scenario';
-import type { Step } from '../machine';
+import { previewDecision, type DecisionPreview } from '../preview';
 import { ApproverPanel } from '../components/approver-panel';
 import { CedarPanel } from '../components/cedar-panel';
 import { EvidenceChain } from '../components/evidence-chain';
@@ -22,16 +22,6 @@ type TabKey = (typeof TABS)[number];
 const BTN = 'rounded-md border border-border px-3 py-1.5 text-sm font-semibold hover:bg-muted';
 
 type Guardian = ReturnType<typeof useGuardian>;
-
-/** 每秒刷新的当前时间，供审批倒计时使用。 */
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
 
 /** 按工具名构造调用参数；退款单号随序号递增以免重复。 */
 function buildCall(tool: ToolName, amount: number, seq: number): ToolCall {
@@ -87,21 +77,32 @@ function RequesterColumn({ g }: { g: Guardian }) {
   );
 }
 
-/** 中栏：最近一次裁决与独立的审批人面板。 */
-function GuardColumn({ g, last }: { g: Guardian; last: Step | undefined }) {
-  const t = useTranslations('guardianDemo');
-  const now = useNow();
+/** 最近一次请求按当前规则的裁决；live 时标注「按当前规则」。播报区让读屏软件宣读变化。 */
+function VerdictBlock({ preview }: { preview: DecisionPreview | null }) {
+  const t = useTranslations('guardianDemo.rule');
+  const d = preview?.decision;
   return (
-    <section aria-label="Aster guard" className="flex min-w-0 flex-col gap-4 lg:w-72">
-      <h2 className="text-lg font-semibold">Aster guard</h2>
-      {last && (
-        <div className="flex flex-col gap-1">
-          <VerdictBadge outcome={last.decision.outcome} reasonCode={last.decision.reasonCode} />
-          {last.decision.reason && <p className="text-sm text-fg-muted">{last.decision.reason}</p>}
-        </div>
+    <div role="status" aria-live="polite" className="flex min-h-6 flex-col gap-1">
+      {preview && d && (
+        <>
+          {preview.live && <span className="text-xs text-fg-muted">{t('previewLabel')}</span>}
+          <VerdictBadge outcome={d.outcome} reasonCode={d.reasonCode} />
+          {d.reason && <p className="text-sm text-fg-muted">{d.reason}</p>}
+        </>
       )}
+    </div>
+  );
+}
+
+/** 中栏：最近一次裁决与独立的审批人面板。 */
+function GuardColumn({ g, preview }: { g: Guardian; preview: DecisionPreview | null }) {
+  const t = useTranslations('guardianDemo');
+  return (
+    <section aria-label={t('guard.title')} className="flex min-w-0 flex-col gap-4 lg:w-72">
+      <h2 className="text-lg font-semibold">{t('guard.title')}</h2>
+      <VerdictBlock preview={preview} />
       <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
-        <ApproverPanel steps={g.state.steps} now={now} onApprove={g.approve} onReject={g.reject} onExpire={g.expire} />
+        <ApproverPanel steps={g.state.steps} now={g.now} onApprove={g.approve} onReject={g.reject} onExpire={g.expire} />
         {g.state.error === 'self_approval' && (
           <p role="alert" className="text-xs text-danger">
             {t('approver.selfApproval')}
@@ -113,14 +114,14 @@ function GuardColumn({ g, last }: { g: Guardian; last: Step | undefined }) {
 }
 
 /** 标签页内容：规则、证据链、Cedar 三选一。 */
-function TabBody({ tab, g, last }: { tab: TabKey; g: Guardian; last: Step | undefined }) {
+function TabBody({ tab, g, preview }: { tab: TabKey; g: Guardian; preview: DecisionPreview | null }) {
   if (tab === 'evidence') return <EvidenceChain chain={g.chain} layout="column" />;
   if (tab === 'cedar') return <CedarPanel source={g.engine.source} />;
   return (
     <RulePanel
       source={g.engine.source}
       editable
-      highlightLine={last?.decision.ruleLine ?? null}
+      highlightLine={preview?.decision.ruleLine ?? null}
       diagnostics={g.engine.diagnostics}
       onChange={g.setSource}
     />
@@ -141,7 +142,7 @@ function useTabKeys(active: TabKey, select: (k: TabKey) => void, refs: React.Ref
 }
 
 /** 右栏：标签页容器。 */
-function InspectorColumn({ g, last }: { g: Guardian; last: Step | undefined }) {
+function InspectorColumn({ g, preview }: { g: Guardian; preview: DecisionPreview | null }) {
   const t = useTranslations('guardianDemo');
   const [tab, setTab] = useState<TabKey>('rule');
   const base = useId();
@@ -150,7 +151,7 @@ function InspectorColumn({ g, last }: { g: Guardian; last: Step | undefined }) {
   const label: Record<TabKey, string> = { rule: t('rule.title'), evidence: t('evidence.title'), cedar: t('cedar.title') };
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <div role="tablist" aria-label="Aster guard" className="flex gap-1 border-b border-border" onKeyDown={onKeyDown}>
+      <div role="tablist" aria-label={t('guard.title')} className="flex gap-1 border-b border-border" onKeyDown={onKeyDown}>
         {TABS.map((k) => (
           <button
             key={k}
@@ -171,7 +172,7 @@ function InspectorColumn({ g, last }: { g: Guardian; last: Step | undefined }) {
         ))}
       </div>
       <div role="tabpanel" id={`${base}-panel-${tab}`} aria-labelledby={`${base}-tab-${tab}`} tabIndex={0}>
-        <TabBody tab={tab} g={g} last={last} />
+        <TabBody tab={tab} g={g} preview={preview} />
       </div>
     </section>
   );
@@ -181,7 +182,7 @@ function InspectorColumn({ g, last }: { g: Guardian; last: Step | undefined }) {
 export function StageView() {
   const t = useTranslations('guardianDemo');
   const g = useGuardian();
-  const last = g.state.steps.at(-1);
+  const preview = previewDecision(g.engine, g.state.steps.at(-1));
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
@@ -191,8 +192,8 @@ export function StageView() {
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_auto_1.3fr]">
         <RequesterColumn g={g} />
-        <GuardColumn g={g} last={last} />
-        <InspectorColumn g={g} last={last} />
+        <GuardColumn g={g} preview={preview} />
+        <InspectorColumn g={g} preview={preview} />
       </div>
     </div>
   );

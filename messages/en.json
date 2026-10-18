@@ -124,7 +124,8 @@
     "views": {
       "stage": "Sandbox",
       "agent": "MCP agent",
-      "story": "Story"
+      "story": "Story",
+      "label": "View"
     },
     "verdict": {
       "ALLOW": "Allowed",
@@ -174,7 +175,8 @@
       "title": "Rule",
       "matched": "Matched line",
       "diagnostics": "Line {line}: {message}",
-      "keepsLast": "The demo keeps running on the last rule that compiled."
+      "keepsLast": "The demo keeps running on the last rule that compiled.",
+      "previewLabel": "With the current rule"
     },
     "evidence": {
       "title": "Evidence chain",
@@ -218,6 +220,9 @@
         "agent": "I can't do that right now — this account is suspended."
       },
       "cedar": "The same rule, exported to Cedar."
+    },
+    "guard": {
+      "title": "Aster guard"
     }
   },
   "pokerPage": {

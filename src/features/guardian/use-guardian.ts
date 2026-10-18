@@ -8,16 +8,22 @@ import { APPROVER, GUARD_SOURCE, toGuardRequest, type Principal, type ToolCall }
 
 /**
  * 演示的 React 外壳：持有引擎与状态机，按秒推进过期，异步计算证据哈希链。
+ * `now` 是与状态机共用的时钟：每秒滴答，且每次派发动作时同步刷新，倒计时据此显示。
  * 审批动作恒以 APPROVER（Dana）身份发出——请求方一侧没有审批入口。
  */
 export function useGuardian(opts: { now?: () => number } = {}) {
   const now = opts.now ?? Date.now;
   const [state, dispatch] = useReducer(guardianReducer, initialState);
   const [engine, setEngine] = useState<GuardEngine>(() => createEngine(GUARD_SOURCE));
+  const [clock, setClock] = useState(() => now());
   const [chain, setChain] = useState<EvidenceBlock[]>([]);
 
   useEffect(() => {
-    const id = setInterval(() => dispatch({ type: 'tick', at: now() }), 1000);
+    const id = setInterval(() => {
+      const at = now();
+      setClock(at);
+      dispatch({ type: 'tick', at });
+    }, 1000);
     return () => clearInterval(id);
   }, [now]);
 
@@ -35,25 +41,41 @@ export function useGuardian(opts: { now?: () => number } = {}) {
   const request = useCallback(
     (principal: Principal, call: ToolCall): Decision => {
       const decision = engine.decide(toGuardRequest(principal, call));
-      dispatch({ type: 'request', principal, call, decision, at: now() });
+      const at = now();
+      setClock(at);
+      dispatch({ type: 'request', principal, call, decision, at });
       return decision;
     },
     [engine, now],
   );
   const approve = useCallback(
-    (approvalId: string) => dispatch({ type: 'approve', approvalId, approver: APPROVER.id, at: now() }),
+    (approvalId: string) => {
+      const at = now();
+      setClock(at);
+      dispatch({ type: 'approve', approvalId, approver: APPROVER.id, at });
+    },
     [now],
   );
   const reject = useCallback(
-    (approvalId: string, comment: string) =>
-      dispatch({ type: 'reject', approvalId, approver: APPROVER.id, comment, at: now() }),
+    (approvalId: string, comment: string) => {
+      const at = now();
+      setClock(at);
+      dispatch({ type: 'reject', approvalId, approver: APPROVER.id, comment, at });
+    },
     [now],
   );
-  const expire = useCallback((approvalId: string) => dispatch({ type: 'expire', approvalId, at: now() }), [now]);
+  const expire = useCallback(
+    (approvalId: string) => {
+      const at = now();
+      setClock(at);
+      dispatch({ type: 'expire', approvalId, at });
+    },
+    [now],
+  );
   const reset = useCallback(() => dispatch({ type: 'reset' }), []);
 
   return useMemo(
-    () => ({ state, chain, engine, setSource, request, approve, reject, expire, reset }),
-    [state, chain, engine, setSource, request, approve, reject, expire, reset],
+    () => ({ state, now: clock, chain, engine, setSource, request, approve, reject, expire, reset }),
+    [state, clock, chain, engine, setSource, request, approve, reject, expire, reset],
   );
 }

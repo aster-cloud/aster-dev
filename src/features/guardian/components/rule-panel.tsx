@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type UIEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/components/ui';
 import type { EngineDiagnostic } from '../engine';
@@ -16,23 +16,38 @@ interface RulePanelProps {
   onChange?: (source: string) => void;
 }
 
+const CODE_BOX = 'font-mono text-xs leading-relaxed p-3 border';
+
+/** 逐行渲染源码，命中的规则行加高亮。 */
+function HighlightedLines({ source, highlightLine }: { source: string; highlightLine?: number | null }) {
+  return source.split('\n').map((line, i) => (
+    <div key={i} className={cn('whitespace-pre', highlightLine === i + 1 && HIGHLIGHT)}>
+      {line || ' '}
+    </div>
+  ));
+}
+
 /** 只读视图：逐行渲染，命中的规则行高亮。 */
 function ReadOnlyRule({ source, highlightLine }: { source: string; highlightLine?: number | null }) {
   return (
-    <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-xs leading-relaxed">
-      {source.split('\n').map((line, i) => (
-        <div key={i} className={cn('whitespace-pre', highlightLine === i + 1 && HIGHLIGHT)}>
-          {line || ' '}
-        </div>
-      ))}
+    <pre className={cn(CODE_BOX, 'overflow-x-auto rounded-md border-border bg-muted')}>
+      <HighlightedLines source={source} highlightLine={highlightLine} />
     </pre>
   );
 }
 
 /** 可编辑视图：本地文本 + 300 ms 防抖，外部 source 变化（如重置）时同步回编辑器。 */
-function EditableRule({ source, label, onChange }: { source: string; label: string; onChange?: (s: string) => void }) {
+interface EditableRuleProps {
+  source: string;
+  label: string;
+  highlightLine?: number | null;
+  onChange?: (s: string) => void;
+}
+
+function EditableRule({ source, label, highlightLine, onChange }: EditableRuleProps) {
   const [text, setText] = useState(source);
   const onChangeRef = useRef(onChange);
+  const backdropRef = useRef<HTMLPreElement>(null);
   useEffect(() => {
     onChangeRef.current = onChange;
   });
@@ -47,15 +62,32 @@ function EditableRule({ source, label, onChange }: { source: string; label: stri
     const id = setTimeout(() => onChangeRef.current?.(text), DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [text, source]);
+  // 镜像背板与文本域共用同一盒模型与字体，滚动位置随文本域同步，高亮行才会对齐。
+  const syncScroll = (e: UIEvent<HTMLTextAreaElement>) => {
+    if (!backdropRef.current) return;
+    backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+    backdropRef.current.scrollLeft = e.currentTarget.scrollLeft;
+  };
   return (
-    <textarea
-      aria-label={label}
-      value={text}
-      spellCheck={false}
-      rows={Math.max(8, text.split('\n').length + 1)}
-      onChange={(e) => setText(e.target.value)}
-      className="w-full resize-y rounded-md border border-border bg-muted p-3 font-mono text-xs leading-relaxed"
-    />
+    <div className="relative rounded-md bg-muted">
+      <pre
+        ref={backdropRef}
+        aria-hidden
+        className={cn(CODE_BOX, 'pointer-events-none absolute inset-0 overflow-hidden rounded-md border-transparent text-transparent')}
+      >
+        <HighlightedLines source={text} highlightLine={highlightLine} />
+      </pre>
+      <textarea
+        aria-label={label}
+        value={text}
+        spellCheck={false}
+        wrap="off"
+        rows={Math.max(8, text.split('\n').length + 1)}
+        onChange={(e) => setText(e.target.value)}
+        onScroll={syncScroll}
+        className={cn(CODE_BOX, 'relative block w-full resize-y overflow-auto whitespace-pre rounded-md border-border bg-transparent')}
+      />
+    </div>
   );
 }
 
@@ -81,9 +113,14 @@ export function RulePanel({ source, editable, highlightLine, diagnostics, onChan
     <section aria-label={t('title')} className="flex flex-col gap-2">
       <h3 className="text-sm font-semibold">{t('title')}</h3>
       {editable ? (
-        <EditableRule source={source} label={t('title')} onChange={onChange} />
+        <EditableRule source={source} label={t('title')} highlightLine={highlightLine} onChange={onChange} />
       ) : (
         <ReadOnlyRule source={source} highlightLine={highlightLine} />
+      )}
+      {editable && highlightLine != null && (
+        <p className="text-xs text-fg-muted">
+          {t('matched')}: {highlightLine}
+        </p>
       )}
       <Diagnostics items={diagnostics} />
     </section>

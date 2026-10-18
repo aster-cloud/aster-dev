@@ -14,7 +14,7 @@ type ViewKey = (typeof VIEWS)[number];
 function ViewSwitch({ current }: { current: ViewKey }) {
   const t = useTranslations('guardianDemo.views');
   return (
-    <nav aria-label="View" className="flex gap-2">
+    <nav aria-label={t('label')} className="flex gap-2">
       {VIEWS.map((v) => (
         <Link
           key={v}
