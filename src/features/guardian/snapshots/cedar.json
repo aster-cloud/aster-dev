@@ -1,0 +1,16 @@
+{
+  "sourceHash": "ee8d1f7e02d2371b2dfc55a31a43365ccfa9ff34ae6e8c2492ce556a344155b2",
+  "ruleId": "SUPPORT-001",
+  "moduleName": "guard.support",
+  "exportable": true,
+  "probes": {
+    "count": 30,
+    "agreed": 30
+  },
+  "controls": [
+    "EU_AI_ACT:ART14"
+  ],
+  "policies": "@id(\"SUPPORT-001#1\")\n@aster_rule(\"SUPPORT-001\")\n@aster_module(\"guard.support\")\n@aster_source_hash(\"ee8d1f7e02d2371b2dfc55a31a43365ccfa9ff34ae6e8c2492ce556a344155b2\")\n@aster_outcome(\"deny\")\n@aster_reason(\"suspended principal\")\n@aster_controls(\"EU_AI_ACT:ART14\")\nforbid (principal, action, resource)\nwhen { (principal.roles.contains(\"suspended\")) };\n\n@id(\"SUPPORT-001#2\")\n@aster_rule(\"SUPPORT-001\")\n@aster_module(\"guard.support\")\n@aster_source_hash(\"ee8d1f7e02d2371b2dfc55a31a43365ccfa9ff34ae6e8c2492ce556a344155b2\")\n@aster_outcome(\"require_approval\")\n@aster_approver(\"Data Protection Officer\")\n@aster_reason(\"customer record deletion\")\n@aster_controls(\"EU_AI_ACT:ART14\")\nforbid (principal, action, resource)\nwhen { !(principal.roles.contains(\"suspended\")) && (action == Aster::Action::\"delete_customer_record\") };\n\n@id(\"SUPPORT-001#3\")\n@aster_rule(\"SUPPORT-001\")\n@aster_module(\"guard.support\")\n@aster_source_hash(\"ee8d1f7e02d2371b2dfc55a31a43365ccfa9ff34ae6e8c2492ce556a344155b2\")\n@aster_outcome(\"escalate\")\n@aster_reason(\"large refund\")\n@aster_controls(\"EU_AI_ACT:ART14\")\nforbid (principal, action, resource)\nwhen { !(principal.roles.contains(\"suspended\")) && !(action == Aster::Action::\"delete_customer_record\") && ((action == Aster::Action::\"issue_refund\") && (context has amount && (-9007199254740991 <= context.amount && context.amount <= 9007199254740991) && (context.amount >= 10000))) };\n\n@id(\"SUPPORT-001#4\")\n@aster_rule(\"SUPPORT-001\")\n@aster_module(\"guard.support\")\n@aster_source_hash(\"ee8d1f7e02d2371b2dfc55a31a43365ccfa9ff34ae6e8c2492ce556a344155b2\")\n@aster_outcome(\"allow\")\n@aster_controls(\"EU_AI_ACT:ART14\")\npermit (principal, action, resource)\nwhen { !(principal.roles.contains(\"suspended\")) && !(action == Aster::Action::\"delete_customer_record\") && (!(action == Aster::Action::\"issue_refund\") || ((action == Aster::Action::\"issue_refund\") && (context has amount && (-9007199254740991 <= context.amount && context.amount <= 9007199254740991) && !(context.amount >= 10000)))) };\n",
+  "schemaText": "{\"Aster\":{\"entityTypes\":{\"Principal\":{\"shape\":{\"type\":\"Record\",\"attributes\":{\"type\":{\"type\":\"String\"},\"roles\":{\"type\":\"Set\",\"element\":{\"type\":\"String\"}}}}},\"Resource\":{\"shape\":{\"type\":\"Record\",\"attributes\":{\"type\":{\"type\":\"String\"}}}}},\"actions\":{\"delete_customer_record\":{\"appliesTo\":{\"principalTypes\":[\"Principal\"],\"resourceTypes\":[\"Resource\"],\"context\":{\"type\":\"Record\",\"attributes\":{\"amount\":{\"type\":\"Long\",\"required\":false}}}}},\"issue_refund\":{\"appliesTo\":{\"principalTypes\":[\"Principal\"],\"resourceTypes\":[\"Resource\"],\"context\":{\"type\":\"Record\",\"attributes\":{\"amount\":{\"type\":\"Long\",\"required\":false}}}}}}}}",
+  "generatedAt": "2026-10-18T11:10:01.850Z"
+}
