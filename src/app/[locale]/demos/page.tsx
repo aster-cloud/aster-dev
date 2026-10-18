@@ -2,7 +2,7 @@
  * Demos 索引落地页（公开）。迁移自 aster-cloud。
  *
  * 聚合 aster-lang.dev 上与 cloud 无关的可交互 demo（纯客户端 compile/evaluate）：
- * 猫咪心情引擎 / 德州扑克 / 源码即诗（静夜思·福尔摩斯）。各卡片进入对应 demo 子路由。
+ * AI Guardian / 猫咪心情引擎 / 德州扑克 / 源码即诗（静夜思·福尔摩斯）。各卡片进入对应 demo 子路由。
  * 注：credit/vocab 是 cloud 专属（DB-backed），不迁到 dev，故 DEMO_CARDS 已裁剪。
  */
 import type { Metadata } from 'next';
@@ -29,6 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * 只列 aster-lang.dev 实际存在的 demo——credit/vocab 是 cloud 专属，已裁剪；
  * 「源码即诗/推理」拆成独立的 jingyesi（静夜思）+ sherlock（斑点带子案）两个 demo。 */
 const DEMO_CARDS = [
+  { key: 'guardian', href: '/demos/guardian', emoji: '🛡️' },
   { key: 'kitten', href: '/demos/kitten', emoji: '🐱' },
   { key: 'poker', href: '/demos/poker', emoji: '🃏' },
   { key: 'jingyesi', href: '/demos/jingyesi', emoji: '🌕' },
