@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/components/ui';
 import { useGuardian } from '../use-guardian';
 import { useDirector } from '../use-director';
-import { buildTimeline, type Cue, type CueKind } from '../director';
+import { buildTimeline, storyTime, type Cue, type CueKind } from '../director';
 import { APPROVER, STORY_BEATS, type ApproverScript, type StoryBeat } from '../scenario';
 import { pendingScriptedAnswers } from '../scripted-approvals';
 import type { Step } from '../machine';
@@ -161,7 +161,10 @@ function Controls({ playing, finished, onPlay, onPause, onStep, onReplay }: Cont
 /** 视图 B：约 50 秒自动播放的四拍剧情；审批由剧本以 Dana 身份发出。 */
 export function PipelineView({ tryItHref }: { tryItHref: string }) {
   const t = useTranslations('guardianDemo');
-  const g = useGuardian();
+  // 守卫用剧情时钟：只随播放 / 单步前进，暂停或标签页隐藏时审批不会过期。
+  const storyElapsed = useRef(0);
+  const storyNow = useCallback(() => storyTime(storyElapsed.current), []);
+  const g = useGuardian({ now: storyNow });
   const timeline = useMemo(() => buildTimeline(STORY_BEATS), []);
   // 提示回调需要读取最新状态：call 提示派发的请求在下一次渲染才进入 state。
   const latest = useRef(g);
@@ -186,7 +189,7 @@ export function PipelineView({ tryItHref }: { tryItHref: string }) {
     if (cue.kind === 'approver' && beat.approver) answers.current[beatIndex] = beat.approver;
   };
 
-  const director = useDirector(timeline, onCue);
+  const director = useDirector(timeline, onCue, storyElapsed);
   // 绑定步骤出现且仍待审批时，才以 Dana 身份落实该拍的剧本作答。
   const { approve, reject } = g;
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { cuesBetween, type Cue } from './director';
 
 /** 单帧最多累计的毫秒数。 */
@@ -12,12 +12,12 @@ const MAX_FRAME_MS = 250;
  * - 派发进度保存在 ref 中，副作用不放进 state updater（StrictMode 会双调 updater，导致重复派发）。
  * - 挂载后才决定是否自动播放：服务端无法得知 prefers-reduced-motion，首屏一律暂停以免 hydration 不一致；
  *   用户偏好减少动态效果时保持暂停，只能单步。
+ * - 已播放时长存放在调用方提供的 elapsedRef 中：调用方据此构造剧情时钟（见 storyTime），只在播放或单步时前进。
  */
-export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void) {
+export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void, elapsedRef: RefObject<number>) {
   const [playing, setPlaying] = useState(false);
   const [cueIndex, setCueIndex] = useState(0);
   const indexRef = useRef(0);
-  const elapsed = useRef(0);
   const last = useRef<number | null>(null);
   const onCueRef = useRef(onCue);
 
@@ -46,9 +46,9 @@ export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void) {
     let raf = 0;
     const loop = (t: number) => {
       // 单帧增量设上限：标签页被挂起后回来，从暂停处继续而不是一次性补派大量提示。
-      if (last.current !== null) elapsed.current += Math.min(t - last.current, MAX_FRAME_MS);
+      if (last.current !== null) elapsedRef.current += Math.min(t - last.current, MAX_FRAME_MS);
       last.current = t;
-      fire(cuesBetween(timeline, indexRef.current, elapsed.current));
+      fire(cuesBetween(timeline, indexRef.current, elapsedRef.current));
       if (indexRef.current >= timeline.length) {
         setPlaying(false);
         return;
@@ -57,23 +57,23 @@ export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void) {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [playing, timeline, fire]);
+  }, [playing, timeline, fire, elapsedRef]);
 
   const step = useCallback(() => {
     setPlaying(false);
     const cue = timeline[indexRef.current];
     if (!cue) return;
-    elapsed.current = cue.atMs;
+    elapsedRef.current = cue.atMs;
     fire([cue]);
-  }, [timeline, fire]);
+  }, [timeline, fire, elapsedRef]);
 
   const replay = useCallback(() => {
     indexRef.current = 0;
-    elapsed.current = 0;
+    elapsedRef.current = 0;
     last.current = null;
     setCueIndex(0);
     setPlaying(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }, []);
+  }, [elapsedRef]);
 
   const play = useCallback(() => setPlaying(true), []);
   const pause = useCallback(() => setPlaying(false), []);

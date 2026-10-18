@@ -39,6 +39,16 @@ const STORY_TIMELINE = buildTimeline(STORY_BEATS);
 const LAST = STORY_TIMELINE[STORY_TIMELINE.length - 1];
 export const STORY_DURATION_MS = LAST.atMs + GAP[LAST.kind];
 
+/**
+ * 剧情时钟的固定纪元：剧情视图里守卫的「现在」= 纪元 + 已播放时长。
+ * 暂停、单步或标签页隐藏时已播放时长不增长，审批不会因墙钟流逝而过期；证据时间戳也因此可复现。
+ */
+export const STORY_EPOCH_MS = Date.UTC(2026, 9, 18, 9, 0, 0);
+
+export function storyTime(elapsedMs: number): number {
+  return STORY_EPOCH_MS + elapsedMs;
+}
+
 /** 从 fromIndex 起连续取出所有已到期的提示；遇到第一个未到期的即停。 */
 export function cuesBetween(timeline: Cue[], fromIndex: number, elapsedMs: number): Cue[] {
   const due: Cue[] = [];
