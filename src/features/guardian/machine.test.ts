@@ -52,7 +52,7 @@ describe('guardianReducer', () => {
 
   it('过期 → expired（按 DENY 处理），审批证据由 SYSTEM 发起', () => {
     const s1 = run([{ type: 'request', principal: SUPPORT_BOT, call: del, decision: needsDpo, at: T0 }]);
-    const s2 = guardianReducer(s1, { type: 'tick', at: T0 + DEMO_APPROVAL_TTL_MS });
+    const s2 = guardianReducer(s1, { type: 'tick', at: T0 + DEMO_APPROVAL_TTL_MS + 1000 });
     expect(s2.steps[0].status).toBe('expired');
     expect(s2.events[1]).toMatchObject({ eventType: 'ACTION_GUARD_APPROVAL', performedBy: 'SYSTEM', success: false });
   });
@@ -67,6 +67,30 @@ describe('guardianReducer', () => {
     const expired = guardianReducer(guardianReducer(s1, { type: 'expire', approvalId: id, at: T0 + 3000 }), { type: 'approve', approvalId: id, approver: 'dana', at: T0 + 4000 });
     expect(expired.steps[0].status).toBe('expired');
     expect(expired.events).toHaveLength(2);
+  });
+
+  it('恰好在截止时刻审批（未 tick）仍然有效', () => {
+    const s1 = run([{ type: 'request', principal: SUPPORT_BOT, call: del, decision: needsDpo, at: T0 }]);
+    const s2 = guardianReducer(s1, { type: 'approve', approvalId: s1.steps[0].approvalId!, approver: 'dana', at: T0 + DEMO_APPROVAL_TTL_MS });
+    expect(s2.steps[0].status).toBe('approved');
+  });
+
+  it('截止后审批（未 tick）惰性过期：SYSTEM 记证据、not_pending', () => {
+    const s1 = run([{ type: 'request', principal: SUPPORT_BOT, call: del, decision: needsDpo, at: T0 }]);
+    const s2 = guardianReducer(s1, { type: 'approve', approvalId: s1.steps[0].approvalId!, approver: 'dana', at: T0 + DEMO_APPROVAL_TTL_MS + 1 });
+    expect(s2.steps[0].status).toBe('expired');
+    expect(s2.events).toHaveLength(2);
+    expect(s2.events[1]).toMatchObject({ eventType: 'ACTION_GUARD_APPROVAL', performedBy: 'SYSTEM', success: false });
+    expect(s2.error).toBe('not_pending');
+  });
+
+  it('截止后拒绝（附说明，未 tick）同样惰性过期', () => {
+    const s1 = run([{ type: 'request', principal: SUPPORT_BOT, call: del, decision: needsDpo, at: T0 }]);
+    const s2 = guardianReducer(s1, { type: 'reject', approvalId: s1.steps[0].approvalId!, approver: 'dana', comment: 'too late', at: T0 + DEMO_APPROVAL_TTL_MS + 1 });
+    expect(s2.steps[0].status).toBe('expired');
+    expect(s2.events).toHaveLength(2);
+    expect(s2.events[1]).toMatchObject({ performedBy: 'SYSTEM', success: false });
+    expect(s2.error).toBe('not_pending');
   });
 
   it('DENY / evaluation_failed → blocked，决策证据 reason 记录 reasonCode', () => {

@@ -109,6 +109,20 @@ function settle(state: GuardianState, approvalId: string, at: number, patch: Pic
   };
 }
 
+/** 与生产一致：严格晚于 expiresAt 才算过期（恰好等于截止时刻仍可决定）。 */
+function isExpired(step: Step, at: number): boolean {
+  return step.status === 'pending' && step.expiresAt !== null && at > step.expiresAt;
+}
+
+const EXPIRE_PATCH = { status: 'expired', decidedBy: null, comment: null } as const;
+
+/** 决定动作到达时若待审批项已过期，则惰性结算为过期并拒绝本次决定。 */
+function expireIfLate(state: GuardianState, approvalId: string, at: number): GuardianState | null {
+  const target = state.steps.find((s) => s.approvalId === approvalId);
+  if (!target || !isExpired(target, at)) return null;
+  return settle(state, approvalId, at, EXPIRE_PATCH);
+}
+
 function guardApprover(state: GuardianState, approvalId: string, approver: string): MachineError {
   const target = state.steps.find((s) => s.approvalId === approvalId);
   return target && target.principal.id === approver ? 'self_approval' : null;
@@ -121,20 +135,24 @@ export function guardianReducer(state: GuardianState, action: GuardianAction): G
     case 'approve': {
       const error = guardApprover(state, action.approvalId, action.approver);
       if (error) return { ...state, error };
+      const late = expireIfLate(state, action.approvalId, action.at);
+      if (late) return { ...late, error: 'not_pending' };
       return settle(state, action.approvalId, action.at, { status: 'approved', decidedBy: action.approver, comment: null });
     }
     case 'reject': {
       const error = guardApprover(state, action.approvalId, action.approver);
       if (error) return { ...state, error };
+      const late = expireIfLate(state, action.approvalId, action.at);
+      if (late) return { ...late, error: 'not_pending' };
       if (action.comment.trim() === '') return { ...state, error: 'comment_required' };
       return settle(state, action.approvalId, action.at, { status: 'rejected', decidedBy: action.approver, comment: action.comment.trim() });
     }
     case 'expire':
-      return settle(state, action.approvalId, action.at, { status: 'expired', decidedBy: null, comment: null });
+      return settle(state, action.approvalId, action.at, EXPIRE_PATCH);
     case 'tick':
       return state.steps
-        .filter((s) => s.status === 'pending' && s.expiresAt !== null && action.at >= s.expiresAt)
-        .reduce((acc, s) => settle(acc, s.approvalId!, action.at, { status: 'expired', decidedBy: null, comment: null }), state);
+        .filter((s) => isExpired(s, action.at))
+        .reduce((acc, s) => settle(acc, s.approvalId!, action.at, EXPIRE_PATCH), state);
     case 'reset':
       return initialState;
   }
