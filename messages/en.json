@@ -194,6 +194,7 @@
       "checking": "aster-guard: checking {policy}…",
       "held": "Held by aster-guard (approval-timeout 300 s)",
       "blocked": "Blocked by Aster Guard: {reason} (decision {decisionId})",
+      "reviewerComment": "Reviewer: {comment}",
       "result": "Tool result: done",
       "howItWorks": "Sits between the MCP host and the upstream server in aster-guard-mcp; tool name → action, arguments → context."
     },

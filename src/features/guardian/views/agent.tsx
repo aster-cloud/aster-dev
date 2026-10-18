@@ -11,7 +11,8 @@ import { ApproverPanel } from '../components/approver-panel';
 import { CedarPanel } from '../components/cedar-panel';
 import { EvidenceChain } from '../components/evidence-chain';
 import { RulePanel } from '../components/rule-panel';
-import { ToolCallCard, blockedReason } from '../components/tool-call-card';
+import { ToolCallCard } from '../components/tool-call-card';
+import { blockedMessage } from '../blocked';
 
 /** 工具调用发出前的「检查中」停顿，模拟代理拦截一次 MCP 调用的耗时。 */
 const CHECK_DELAY_MS = 300;
@@ -53,7 +54,7 @@ function CheckingCard({ beat }: { beat: StoryBeat }) {
   );
 }
 
-/** 步骤结束后的助手回复：放行/批准给出成功句与工具结果，其余原因已在卡片内说明。 */
+/** 步骤结束后的助手回复：放行/批准给出成功句与工具结果；被拦截时模型收到的就是代理的工具错误。 */
 function Reply({ beat, step }: { beat: StoryBeat; step: Step }) {
   const t = useTranslations('guardianDemo');
   if (step.status === 'pending') return null;
@@ -66,7 +67,7 @@ function Reply({ beat, step }: { beat: StoryBeat; step: Step }) {
           <span className="text-xs text-fg-muted">{t('agent.result')}</span>
         </>
       ) : (
-        <span className="text-danger">{t('agent.blocked', { reason: blockedReason(step, t), decisionId: step.decisionId })}</span>
+        <span className="text-danger">{blockedMessage(step, t)}</span>
       )}
     </AssistantBubble>
   );

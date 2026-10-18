@@ -3,16 +3,24 @@
 import { useTranslations } from 'next-intl';
 import { cn } from '@/components/ui';
 import type { Step } from '../machine';
+import { BLOCKED_STATUSES, blockedMessage } from '../blocked';
 import { VerdictBadge } from './verdict-badge';
 
-const BLOCKED_STATUSES = new Set(['blocked', 'rejected', 'expired']);
-
-/** 拦截原因：拒绝取审批人说明，过期取状态文案，其余取裁决理由或 reasonCode 文案；绝不为空。 */
-export function blockedReason(step: Step, t: ReturnType<typeof useTranslations>): string {
-  if (step.status === 'rejected') return step.comment ?? t('status.rejected');
-  if (step.status === 'expired') return t('status.expired');
-  const { reason, reasonCode } = step.decision;
-  return reason ?? (reasonCode ? t(`reasonCode.${reasonCode}`) : t('status.blocked'));
+/**
+ * 被拦截步骤的说明：先是代理收到的工具错误（与 aster-guard 一致，原因恒为裁决理由），
+ * 驳回时另起一行给出审批人说明，过期时另起一行给出「已过期 — 拒绝」状态。
+ */
+export function BlockedNote({ step }: { step: Step }) {
+  const t = useTranslations('guardianDemo');
+  return (
+    <>
+      <span className="text-danger">{blockedMessage(step, t)}</span>
+      {step.status === 'rejected' && step.comment && (
+        <span className="text-fg-muted">{t('agent.reviewerComment', { comment: step.comment })}</span>
+      )}
+      {step.status === 'expired' && <span className="text-fg-muted">{t('status.expired')}</span>}
+    </>
+  );
 }
 
 /** 智能体变体的状态行：挂起或被拦截时说明原因，其余不显示。 */
@@ -20,7 +28,11 @@ function AgentNote({ step }: { step: Step }) {
   const t = useTranslations('guardianDemo');
   if (step.status === 'pending') return <p className="text-xs text-warning">{t('agent.held')}</p>;
   if (!BLOCKED_STATUSES.has(step.status)) return null;
-  return <p className="text-xs text-danger">{t('agent.blocked', { reason: blockedReason(step, t), decisionId: step.decisionId })}</p>;
+  return (
+    <p className="flex flex-col gap-0.5 text-xs">
+      <BlockedNote step={step} />
+    </p>
+  );
 }
 
 /** 工具调用卡片：工具名、参数 JSON、裁决徽章；pipeline 变体另显示执行状态。 */

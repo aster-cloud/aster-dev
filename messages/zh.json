@@ -194,6 +194,7 @@
       "checking": "aster-guard：正在检查 {policy}…",
       "held": "已被 aster-guard 挂起（审批超时 300 秒）",
       "blocked": "已被 Aster Guard 拦截：{reason}（决定 {decisionId}）",
+      "reviewerComment": "审批人说明：{comment}",
       "result": "工具结果：完成",
       "howItWorks": "aster-guard-mcp 位于 MCP 主机与上游服务器之间；工具名 → action，参数 → context。"
     },

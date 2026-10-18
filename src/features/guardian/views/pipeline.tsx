@@ -12,7 +12,8 @@ import type { Step } from '../machine';
 import { CedarPanel } from '../components/cedar-panel';
 import { EvidenceChain } from '../components/evidence-chain';
 import { VerdictBadge } from '../components/verdict-badge';
-import { blockedReason } from '../components/tool-call-card';
+import { BlockedNote } from '../components/tool-call-card';
+import { BLOCKED_STATUSES } from '../blocked';
 
 const BTN = 'rounded-md border border-border px-3 py-1.5 text-sm font-semibold hover:bg-muted disabled:opacity-50';
 const CELL = 'flex min-w-0 flex-1 flex-col gap-1 rounded-md border border-border bg-muted p-2 text-xs';
@@ -66,22 +67,21 @@ function ApprovalCell({ step, show }: { step: Step | undefined; show: boolean })
   );
 }
 
-/** 结果格文案：仅在步骤真的执行/批准/驳回时给出剧情台词，否则如实显示状态；被拦截时先给出代理返回的工具错误，再给出代理回复。 */
+/**
+ * 结果格文案：被拦截（拒绝 / 驳回 / 过期）时先给出代理收到的工具错误及审批人说明或过期状态；
+ * 只有真正执行、批准或驳回、拒绝后代理作答时才给出剧情台词；仍待审批时如实显示状态。
+ */
 function OutcomeText({ beat, step }: { beat: StoryBeat; step: Step | undefined }) {
   const t = useTranslations('guardianDemo');
   if (!step) return null;
-  if (step.status === 'executed' || step.status === 'approved' || step.status === 'rejected') {
-    return <span>{t(`story.${beat.id}.agent`)}</span>;
-  }
-  if (step.status === 'blocked') {
-    return (
-      <>
-        <span className="text-danger">{t('agent.blocked', { reason: blockedReason(step, t), decisionId: step.decisionId })}</span>
-        <span>{t(`story.${beat.id}.agent`)}</span>
-      </>
-    );
-  }
-  return <span>{t(`status.${step.status}`)}</span>;
+  if (step.status === 'pending') return <span>{t('status.pending')}</span>;
+  const replied = step.status !== 'expired';
+  return (
+    <>
+      {BLOCKED_STATUSES.has(step.status) && <BlockedNote step={step} />}
+      {replied && <span>{t(`story.${beat.id}.agent`)}</span>}
+    </>
+  );
 }
 
 function Lane({ beat, beatIndex, step, fired }: { beat: StoryBeat; beatIndex: number; step: Step | undefined; fired: Fired }) {
