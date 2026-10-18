@@ -45,6 +45,10 @@ export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void) {
       if (last.current !== null) elapsed.current += t - last.current;
       last.current = t;
       fire(cuesBetween(timeline, indexRef.current, elapsed.current));
+      if (indexRef.current >= timeline.length) {
+        setPlaying(false);
+        return;
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -67,5 +71,8 @@ export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void) {
     setPlaying(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
-  return { playing, cueIndex, play: () => setPlaying(true), pause: () => setPlaying(false), step, replay };
+  const play = useCallback(() => setPlaying(true), []);
+  const pause = useCallback(() => setPlaying(false), []);
+
+  return { playing, cueIndex, play, pause, step, replay };
 }
