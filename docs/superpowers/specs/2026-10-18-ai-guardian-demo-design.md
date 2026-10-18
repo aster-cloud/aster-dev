@@ -6,6 +6,34 @@
 - 关联：ADR 0039–0048（CNL 可执行治理语言、Action Guard、四眼审批、证据链、Cedar 导出、BYOK）；
   文档页 `content/<locale>/{governance,action-guard,evidence,cedar-export,ai-assist}.mdx`
 
+## 0. 实测修订（2026-10-18，编写实施计划时核实）
+
+以下三点经实测推翻了初稿中的假设，**以本节为准**，后文已同步修改：
+
+1. **规则形状**：`guard.refunds`（playground 模板）无法导出 Cedar——本地 aster-api 返回
+   `E720: parameter type GuardRequest is not the guard request shape`。Cedar 导出（ADR 0047）只接受
+   标准守卫请求形状（`principal_id, principal_type, principal_roles, action, resource_type, resource_id,
+   context, agent_model`），这也正是 `aster-guard` 真实发送的形状。演示改用新规则 **`guard.support`
+   （`@id("SUPPORT-001")`）**：语义同前（暂停主体 → DENY；删除客户记录 → 数据保护官审批；
+   `issue_refund` 且 `context.amount ≥ 10000` → ESCALATE；其余 ALLOW）。实测：aster-lang-ts 1.0.35
+   浏览器端编译通过、四种裁决正确、缺少 `amount` 的删除调用仍正确（`and` 短路）；aster-api 导出
+   `exportable=true`、probes 30/30 一致。
+2. **规则源不本地化**：Cedar 导出按英文字段名匹配，本地化字段名（如 `守卫请求`、`anfrage`）不可导出；
+   文档 `cedar-export` 页在所有语言下也展示同一英文规则。故规则源为**单一英文版本**，只有 UI 文案本地化；
+   Cedar 快照只有一份。初稿「复用 4 语言 governance-verdict 模板」「4 语言 Cedar 逐字节相同」作废。
+3. **新鲜度依据**：aster-api 返回的 `sourceHash` 等于 `sha256(规则源)`（实测一致），新鲜度检查直接比对该字段。
+
+补充的生产语义（来自 aster-api 源码与 Action Guard 文档，演示须一致）：
+
+- 评估出错 → `DENY`，`reasonCode: "evaluation_failed"`；返回值不是 Verdict → `DENY`，`reasonCode: "not_a_verdict"`。
+- `aster-guard` MCP 代理：工具名 → `action`，工具参数（去掉 null）→ `context`；DENY 返回工具错误
+  `Blocked by Aster Guard: <reason> (decision <id>)`；PENDING 最长等待 `--approval-timeout`（默认 300 秒）。
+- ESCALATE 没有指定审批角色（任一非请求方审批人可处理）；REQUIRE_APPROVAL 指定角色。
+- 证据事件类型：`ACTION_GUARD_DECISION`（`success` 仅 ALLOW 为 true）、`ACTION_GUARD_APPROVAL`
+  （无审批人时如过期由 `SYSTEM` 发起；`success` 仅 APPROVED 为 true）。
+- 嵌入路由放在 `[locale]` 段之外（`src/app/embed/guardian/[locale]/`），自带最小 layout，
+  中间件 matcher 排除 `embed`——`[locale]/layout.tsx` 会给所有页面加站点头尾。
+
 ## 1. 目标与受众
 
 为已上线的 AI 治理能力（Action Guard 拦截 AI 代理动作 → ALLOW / DENY / REQUIRE_APPROVAL /
@@ -54,10 +82,10 @@ ESCALATE → 四眼审批 → 证据链 → 同一规则导出 Cedar）提供可
 
 | 单元 | 职责 | 依赖 |
 |---|---|---|
-| `scenario.ts` | 规则源（直接引用 `playground-templates.ts` 中 4 种语言的 `governance-verdict` 模板，不复制）+ 剧情节拍定义 | playground-templates |
+| `scenario.ts` | 单一英文规则源 `guard.support`（见 §0）+ 工具调用 → 守卫请求映射 + 剧情节拍定义 | — |
 | `engine.ts` | 规则只编译一次；`decide(action) → { verdict, reason, ruleLine }`；编辑导致编译失败时保留上一个可用规则并返回诊断 | aster-lang-ts/browser |
 | `evidence.ts` | `AuditHashPayload.canonicalV2` 的 TS 移植 + WebCrypto SHA-256；`append(entry) → { prevHash, hash }` | — |
-| `snapshots/cedar.json` | 真实 aster-api 生成的 Cedar 输出，含 `ruleSha256`、`locale`、`generatedAt`、`apiVersion` | 生成脚本 |
+| `snapshots/cedar.json` | 真实 aster-api 生成的 Cedar 输出，含 `sourceHash`、`ruleId`、`probes`、`policies`、`schemaText`、`generatedAt` | 生成脚本 |
 | `use-guardian.ts` | 状态机：idle → 守卫检查 → 裁决 → 待审批（倒计时）→ 批准 / 拒绝 / 过期 → 执行 / 阻断 | engine、evidence |
 | `views/stage.tsx`（A） | 三栏：代理对话 · 守卫闸门 · 规则/证据/Cedar 标签页 + 独立审批人面板 | use-guardian |
 | `views/pipeline.tsx`（B） | 每个动作作为卡片沿 代理 → 守卫 → 审批 → 结果 流动；下方证据链逐块增长；独立审批人泳道 | use-guardian |
@@ -67,7 +95,7 @@ ESCALATE → 四眼审批 → 证据链 → 同一规则导出 Cedar）提供可
 路由（aster-dev）：
 
 - `/[locale]/demos/guardian`：默认视图 A；`?view=agent` 切换为视图 C；规则可编辑。加入 demos 索引卡片。
-- `/[locale]/embed/guardian?mode=story&theme=light|dark`：视图 B + director，无站点头尾，`noindex`。
+- `/embed/guardian/[locale]?theme=light|dark`：视图 B + director，无站点头尾，`noindex`（路由位于 `[locale]` 段之外，见 §0）。
 
 aster-cloud 仅新增：
 
@@ -77,8 +105,8 @@ aster-cloud 仅新增：
 
 ## 5. 剧情与审批流
 
-规则（现有 `guard.refunds`）：账户被暂停 → DENY；`delete_customer_record` → REQUIRE_APPROVAL（数据保护官）；
-退款 ≥ 10000 → ESCALATE；其余 → ALLOW。工具名与规则里的 `req.action` 字面量一一对应，各语言一致。
+规则（`guard.support`，见 §0）：主体角色含 `suspended` → DENY；`delete_customer_record` → REQUIRE_APPROVAL（数据保护官）；
+`issue_refund` 且 `context.amount ≥ 10000` → ESCALATE；其余 → ALLOW。工具名即 `req.action`，工具参数即 `req.context`。
 
 ### 5.1 cloud 剧情（视图 B，约 50 秒，循环）
 
@@ -106,9 +134,9 @@ aster-cloud 仅新增：
 ### 6.1 Cedar 快照
 
 - 生成脚本 `scripts/guardian-snapshots.mjs`（aster-dev 没有 Cedar 引擎，必须新增；手动运行，不进构建）：
-  对 4 种语言的规则源分别调用本地 aster-api `POST /api/v1/policies/export/cedar`（`CedarExportResource`），
-  经本地栈现有 HMAC 辅助脚本签名。
-- 断言 4 种语言产出**逐字节相同**的 Cedar（同一策略的四种写法），否则生成失败——这本身就是有价值的回归信号。
+  对单一英文规则源调用本地 aster-api `POST /api/v1/policies/export/cedar`（`CedarExportResource`），
+  以 `Authorization: Bearer <本地 API key>` 认证（`ASTER_API_URL` / `ASTER_API_KEY` 环境变量）。
+- 断言 `exportable=true`、`probes.agreed === probes.count`、`sourceHash === sha256(规则源)`，否则生成失败。
 - `package.json` 增加 `guardian:snapshots` 脚本条目。
 
 ### 6.2 证据哈希
@@ -122,7 +150,7 @@ aster-cloud 仅新增：
 
 ### 6.3 新鲜度检查（aster-dev CI，无网络）
 
-`guardian-snapshots.test.ts` 由 `scenario.ts` 重算 `sha256(规则源)`，与 `snapshots/cedar.json` 比对；
+`guardian-snapshots.test.ts` 由 `scenario.ts` 重算 `sha256(规则源)`，与 `snapshots/cedar.json` 的 `sourceHash` 比对；
 不一致时失败并提示「规则已变更——请对本地 aster-api 运行 `pnpm guardian:snapshots`」。
 
 ### 6.4 i18n
@@ -135,12 +163,12 @@ aster-cloud 仅新增：
 
 单元测试（vitest，aster-dev）：
 
-- `engine`：4 种裁决 × 4 种语言；裁决 → 命中行映射；编译失败时保留上一个可用规则。
+- `engine`：4 种裁决 + 金额边界（9999 / 10000）+ 缺少 context 键 → `evaluation_failed` DENY；裁决 → 命中行映射；编译失败时保留上一个可用规则。
 - `evidence`：共享黄金向量；6 个块的链接正确性。
 - `use-guardian`：批准 → 执行；无说明拒绝被拒绝；有说明拒绝 → 阻断；过期 → DENY；请求方无审批动作；
   每次决策与每次审批事件各一个证据块。
 - `director`：假定时器下节拍时间线确定；暂停 / 重放 / 单步；减少动态效果时为单步模式。
-- 新鲜度：`ruleSha256` 一致；各语言 Cedar 相同。
+- 新鲜度：`sourceHash` 与 `sha256(规则源)` 一致；快照 `exportable` 且 probes 全部一致。
 
 渲染矩阵（本地，真实浏览器）：3 个视图 × 4 种语言 × 明暗主题 + 375 px 移动宽度；截图留证，
 无控制台错误、无 hydration 警告。aster-dev 不新增 E2E 框架。
