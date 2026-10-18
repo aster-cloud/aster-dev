@@ -22,14 +22,6 @@ const FADE = 'transition-[opacity,transform] duration-300 motion-reduce:transiti
 /** 某一拍中哪些提示已经派发：泳道的每一格都由它决定是否出现。 */
 type Fired = (kind: CueKind, beatIndex: number) => boolean;
 
-function Arrow() {
-  return (
-    <span aria-hidden="true" className="self-center text-fg-muted">
-      →
-    </span>
-  );
-}
-
 function Cell({ title, show, children }: { title: string; show: boolean; children?: React.ReactNode }) {
   return (
     <div className={cn(CELL, FADE, show ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-30')}>
@@ -84,49 +76,80 @@ function OutcomeText({ beat, step }: { beat: StoryBeat; step: Step | undefined }
   );
 }
 
+/**
+ * 当前一拍的泳道：客户台词 + 助手调用 / 守卫裁决 / 审批（Dana 内联）/ 结果四格。
+ * 窄屏两列、≥ sm 四列，结果格在窄屏占满一行，保证 16:10 嵌入框内不需要滚动。
+ */
 function Lane({ beat, beatIndex, step, fired }: { beat: StoryBeat; beatIndex: number; step: Step | undefined; fired: Fired }) {
   const t = useTranslations('guardianDemo');
   const called = fired('call', beatIndex) && step !== undefined;
   return (
-    <li className={cn('flex flex-col gap-2 rounded-lg border border-border p-3', FADE)}>
+    <article aria-label={t('story.beat', { n: beatIndex + 1 })} className={cn('flex flex-col gap-2', FADE)}>
       <p className="ml-auto max-w-[85%] rounded-lg bg-primary/15 px-3 py-2 text-sm">{t(beat.customerKey)}</p>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Cell title={t('agent.assistant')} show={called}>
           {step && <code className="break-words font-mono">{t(`tools.${step.call.tool}`)}</code>}
         </Cell>
-        <Arrow />
         <Cell title={t('guard.title')} show={called}>
           {step && <VerdictBadge outcome={step.decision.outcome} reasonCode={step.decision.reasonCode} />}
         </Cell>
-        <Arrow />
         <ApprovalCell step={step} show={called} />
-        <Arrow />
-        <Cell title={t('story.outcome')} show={fired('outcome', beatIndex)}>
-          <OutcomeText beat={beat} step={step} />
-        </Cell>
+        <div className="col-span-2 flex sm:col-span-1">
+          <Cell title={t('story.outcome')} show={fired('outcome', beatIndex)}>
+            <OutcomeText beat={beat} step={step} />
+          </Cell>
+        </div>
       </div>
-    </li>
+    </article>
   );
 }
 
-/** 审批人（Dana）独立一列：只读展示审批进展，请求方一侧没有任何批准入口。 */
-function ApproverLane({ steps }: { steps: Step[] }) {
+const TONE: Record<Step['decision']['outcome'], string> = {
+  ALLOW: 'border-success/40 bg-success/15 text-success',
+  DENY: 'border-danger/40 bg-danger/15 text-danger',
+  REQUIRE_APPROVAL: 'border-warning/40 bg-warning/15 text-warning',
+  ESCALATE: 'border-primary/40 bg-primary/15 text-primary',
+};
+
+/** 四拍进度条：已发生的拍按裁决着色并写出裁决文字，未发生的写「未开始」；当前拍以 aria-current 与描边标出。 */
+function BeatProgress({ steps, active }: { steps: Step[]; active: number }) {
   const t = useTranslations('guardianDemo');
-  const items = steps.filter((s) => s.approvalId !== null);
   return (
-    <section aria-label={t('approver.title', { name: APPROVER.name })} className="flex flex-col gap-2 rounded-lg border border-border p-3">
-      <h3 className="text-sm font-semibold">{t('approver.title', { name: APPROVER.name })}</h3>
-      {items.length === 0 && <p className="text-sm text-fg-muted">{t('approver.empty')}</p>}
-      <ul className="flex flex-col gap-2">
-        {items.map((s) => (
-          <li key={s.id} className="flex flex-col gap-1 rounded-md border border-border bg-muted p-2 text-xs">
-            <span className="font-semibold">{t(`tools.${s.call.tool}`)}</span>
-            <span className="text-fg-muted">{approvalRole(s, t)}</span>
-            <span>{t(`status.${s.status}`)}</span>
-            {s.comment && <q className="text-fg-muted">{s.comment}</q>}
+    <ol aria-label={t('story.progress')} className="grid min-w-64 flex-1 grid-cols-4 gap-1.5 sm:max-w-lg">
+      {STORY_BEATS.map((beat, i) => {
+        const outcome = steps[i]?.decision.outcome;
+        return (
+          <li
+            key={beat.id}
+            aria-current={i === active ? 'step' : undefined}
+            className={cn(
+              // 窄屏序号与文字上下排，给裁决文字留出整格宽度，避免单词被拆开。
+              'flex min-w-0 flex-col gap-x-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight sm:flex-row sm:items-baseline sm:py-1',
+              outcome ? TONE[outcome] : 'border-border text-fg-muted',
+              i === active && 'font-semibold ring-2 ring-primary',
+            )}
+          >
+            <span className="font-mono">{i + 1}</span>
+            <span className="min-w-0 hyphens-auto break-words">{outcome ? t(`verdict.${outcome}`) : t('story.upcoming')}</span>
           </li>
-        ))}
-      </ul>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** 剧情结尾：同一规则的 Cedar 导出占满泳道区，代码框内部滚动；「亲手试试」放在标题行，始终可见。 */
+function CedarFinale({ source, tryItHref }: { source: string; tryItHref: string }) {
+  const t = useTranslations('guardianDemo.story');
+  return (
+    <section className="flex h-full min-h-0 flex-col gap-2 rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-semibold">{t('cedar')}</p>
+        <a href={tryItHref} target="_top" className="text-sm font-semibold text-primary underline">
+          {t('tryIt')}
+        </a>
+      </div>
+      <CedarPanel source={source} fill />
     </section>
   );
 }
@@ -165,7 +188,12 @@ function Controls({ playing, finished, onPlay, onPause, onStep, onReplay }: Cont
   );
 }
 
-/** 视图 B：约 50 秒自动播放的四拍剧情；审批由剧本以 Dana 身份发出。 */
+/**
+ * 视图 B：约 50 秒自动播放的四拍剧情；审批由剧本以 Dana 身份发出。
+ * 紧凑布局为 16:10 嵌入框（约 896×560）设计并填满父容器高度：控制行与进度条在上，
+ * 一次只显示最新一拍的泳道（结尾由 Cedar 取代），证据链为底部一行标签；
+ * 泳道区是唯一可伸缩的部分，内容超出时在区内滚动，嵌入文档本身不滚动。
+ */
 export function PipelineView({ tryItHref }: { tryItHref: string }) {
   const t = useTranslations('guardianDemo');
   // 守卫用剧情时钟：只随播放 / 单步前进，暂停或标签页隐藏时审批不会过期。
@@ -209,9 +237,11 @@ export function PipelineView({ tryItHref }: { tryItHref: string }) {
   }, [g.state.steps, director.cueIndex, approve, reject, t]);
 
   const finished = director.cueIndex >= timeline.length;
-  const fired: Fired = (kind, beatIndex) =>
-    timeline.slice(0, director.cueIndex).some((c) => c.kind === kind && c.beatIndex === beatIndex);
-  const cedarShown = timeline.slice(0, director.cueIndex).some((c) => c.kind === 'cedar');
+  const firedCues = timeline.slice(0, director.cueIndex);
+  const fired: Fired = (kind, beatIndex) => firedCues.some((c) => c.kind === kind && c.beatIndex === beatIndex);
+  const cedarShown = firedCues.some((c) => c.kind === 'cedar');
+  // 当前一拍 = 最近一个已出场客户台词所属的拍；尚未开始为 -1。
+  const activeBeat = firedCues.findLast((c) => c.kind === 'customer')?.beatIndex ?? -1;
   const latestStep = g.state.steps.at(-1);
 
   const replay = () => {
@@ -224,38 +254,39 @@ export function PipelineView({ tryItHref }: { tryItHref: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Controls
-        playing={director.playing}
-        finished={finished}
-        onPlay={director.play}
-        onPause={director.pause}
-        onStep={director.step}
-        onReplay={replay}
-      />
+    <div className="flex h-full min-h-0 flex-col gap-2 sm:gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Controls
+          playing={director.playing}
+          finished={finished}
+          onPlay={director.play}
+          onPause={director.pause}
+          onStep={director.step}
+          onReplay={replay}
+        />
+        <BeatProgress steps={g.state.steps} active={cedarShown ? -1 : activeBeat} />
+      </div>
       <p aria-live="polite" className="sr-only">
         {latestStep &&
           `${t(`tools.${latestStep.call.tool}`)}: ${t(`verdict.${latestStep.decision.outcome}`)} — ${t(`status.${latestStep.status}`)}`}
       </p>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <ol className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-          {STORY_BEATS.map((beat, i) =>
-            fired('customer', i) ? <Lane key={beat.id} beat={beat} beatIndex={i} step={g.state.steps[i]} fired={fired} /> : null,
-          )}
-        </ol>
-        <ApproverLane steps={g.state.steps} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {cedarShown ? (
+          <CedarFinale source={g.engine.source} tryItHref={tryItHref} />
+        ) : (
+          activeBeat >= 0 && (
+            <Lane
+              key={STORY_BEATS[activeBeat].id}
+              beat={STORY_BEATS[activeBeat]}
+              beatIndex={activeBeat}
+              step={g.state.steps[activeBeat]}
+              fired={fired}
+            />
+          )
+        )}
       </div>
       {/* 视图 B 只保留上方一个播报区，证据链不再自带 aria-live。 */}
-      <EvidenceChain chain={g.chain} layout="row" announce={false} />
-      {cedarShown && (
-        <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
-          <p className="text-sm font-semibold">{t('story.cedar')}</p>
-          <CedarPanel source={g.engine.source} />
-          <a href={tryItHref} target="_top" className="self-start text-sm font-semibold text-primary underline">
-            {t('story.tryIt')}
-          </a>
-        </section>
-      )}
+      <EvidenceChain chain={g.chain} layout="chips" announce={false} />
     </div>
   );
 }

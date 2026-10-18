@@ -20,7 +20,8 @@ function ThemedStory({ locale }: { locale: string }) {
   const theme = param === 'dark' || param === 'light' ? param : undefined;
   return (
     <ThemeProvider forcedTheme={theme}>
-      <div className="min-h-screen p-4">
+      {/* 嵌入框固定为视口高度，剧情在框内伸缩；文档本身不出现纵向滚动。 */}
+      <div className="flex h-dvh flex-col overflow-hidden p-3">
         <PipelineView tryItHref={tryItHref(locale)} />
       </div>
     </ThemeProvider>

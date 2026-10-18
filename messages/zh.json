@@ -222,7 +222,10 @@
       "cedar": "同一条规则，导出为 Cedar。",
       "outcome": "结果",
       "controls": "剧情控制",
-      "approval": "审批"
+      "approval": "审批",
+      "beat": "第 {n} 拍",
+      "progress": "剧情进度",
+      "upcoming": "未开始"
     },
     "guard": {
       "title": "Aster 守卫"

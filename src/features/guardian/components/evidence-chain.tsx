@@ -30,9 +30,24 @@ function Block({ block, label }: { block: EvidenceBlock; label: string }) {
   );
 }
 
+/** 紧凑标签：一行内的「#N 类型 哈希」，用于剧情视图底部。 */
+function Chip({ block, label }: { block: EvidenceBlock; label: string }) {
+  return (
+    <li className="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap rounded-md border border-border bg-muted px-2 py-1 text-xs">
+      <span className="font-semibold">
+        #{block.index} {label}
+      </span>
+      <span aria-hidden="true" className="font-mono text-fg-muted">
+        {block.hash.slice(0, SHORT_LEN)}
+      </span>
+    </li>
+  );
+}
+
 interface EvidenceChainProps {
   chain: EvidenceBlock[];
-  layout: 'row' | 'column';
+  /** column：纵向完整块；chips：单行标签，超出时横向滚动。 */
+  layout: 'chips' | 'column';
   /** 是否自带 aria-live 播报；页面已有统一播报区时传 false，避免两个播报区重叠。 */
   announce?: boolean;
 }
@@ -41,16 +56,18 @@ interface EvidenceChainProps {
 export function EvidenceChain({ chain, layout, announce = true }: EvidenceChainProps) {
   const t = useTranslations('guardianDemo.evidence');
   const label = useEventLabel();
+  const chips = layout === 'chips';
+  const Item = chips ? Chip : Block;
   return (
-    <section aria-label={t('title')}>
-      <h3 className="mb-2 text-sm font-semibold">{t('title')}</h3>
-      {chain.length === 0 && <p className="text-sm text-fg-muted">{t('empty')}</p>}
+    <section aria-label={t('title')} className={cn(chips && 'flex min-w-0 items-center gap-2')}>
+      <h3 className={cn('font-semibold', chips ? 'shrink-0 text-xs' : 'mb-2 text-sm')}>{t('title')}</h3>
+      {chain.length === 0 && <p className={cn('text-fg-muted', chips ? 'text-xs' : 'text-sm')}>{t('empty')}</p>}
       <ol
         aria-live={announce ? 'polite' : undefined}
-        className={cn('gap-2', layout === 'row' ? 'flex flex-row overflow-x-auto' : 'flex flex-col')}
+        className={cn('gap-2', chips ? 'flex min-w-0 flex-row overflow-x-auto pb-1' : 'flex flex-col')}
       >
         {chain.map((b) => (
-          <Block key={b.index} block={b} label={label(b.fields.eventType)} />
+          <Item key={b.index} block={b} label={label(b.fields.eventType)} />
         ))}
       </ol>
     </section>

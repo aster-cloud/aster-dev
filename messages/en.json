@@ -222,7 +222,10 @@
       "cedar": "The same rule, exported to Cedar.",
       "outcome": "Outcome",
       "controls": "Story controls",
-      "approval": "Approval"
+      "approval": "Approval",
+      "beat": "Beat {n}",
+      "progress": "Story progress",
+      "upcoming": "Upcoming"
     },
     "guard": {
       "title": "Aster guard"

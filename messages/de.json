@@ -222,7 +222,10 @@
       "cedar": "Dieselbe Regel, als Cedar exportiert.",
       "outcome": "Ergebnis",
       "controls": "Steuerung der Geschichte",
-      "approval": "Freigabe"
+      "approval": "Freigabe",
+      "beat": "Szene {n}",
+      "progress": "Story-Fortschritt",
+      "upcoming": "Folgt"
     },
     "guard": {
       "title": "Aster-Wächter"
