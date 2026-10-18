@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Container, Stack, cn } from '@/components/ui';
 import { Link } from '@/i18n/navigation';
+import { AgentView } from '@/features/guardian/views/agent';
 import { StageView } from '@/features/guardian/views/stage';
 
 const VIEWS = ['stage', 'agent'] as const;
@@ -32,13 +33,13 @@ function ViewSwitch({ current }: { current: ViewKey }) {
   );
 }
 
-/** 读取查询参数选择视图；Task 9 之前 agent 视图同样渲染舞台沙盒。 */
+/** 读取查询参数选择视图：默认舞台沙盒，view=agent 为 MCP 代理对话。 */
 function ViewSwitcher() {
   const view: ViewKey = useSearchParams().get('view') === 'agent' ? 'agent' : 'stage';
   return (
     <>
       <ViewSwitch current={view} />
-      <StageView />
+      {view === 'agent' ? <AgentView /> : <StageView />}
     </>
   );
 }

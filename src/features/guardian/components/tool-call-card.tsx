@@ -7,13 +7,20 @@ import { VerdictBadge } from './verdict-badge';
 
 const BLOCKED_STATUSES = new Set(['blocked', 'rejected', 'expired']);
 
+/** 拦截原因：拒绝取审批人说明，过期取状态文案，其余取裁决理由或 reasonCode 文案；绝不为空。 */
+export function blockedReason(step: Step, t: ReturnType<typeof useTranslations>): string {
+  if (step.status === 'rejected') return step.comment ?? t('status.rejected');
+  if (step.status === 'expired') return t('status.expired');
+  const { reason, reasonCode } = step.decision;
+  return reason ?? (reasonCode ? t(`reasonCode.${reasonCode}`) : t('status.blocked'));
+}
+
 /** 智能体变体的状态行：挂起或被拦截时说明原因，其余不显示。 */
 function AgentNote({ step }: { step: Step }) {
   const t = useTranslations('guardianDemo');
   if (step.status === 'pending') return <p className="text-xs text-warning">{t('agent.held')}</p>;
   if (!BLOCKED_STATUSES.has(step.status)) return null;
-  const reason = step.decision.reason ?? (step.decision.reasonCode ? t(`reasonCode.${step.decision.reasonCode}`) : '');
-  return <p className="text-xs text-danger">{t('agent.blocked', { reason, decisionId: step.decisionId })}</p>;
+  return <p className="text-xs text-danger">{t('agent.blocked', { reason: blockedReason(step, t), decisionId: step.decisionId })}</p>;
 }
 
 /** 工具调用卡片：工具名、参数 JSON、裁决徽章；pipeline 变体另显示执行状态。 */
