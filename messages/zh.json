@@ -222,7 +222,8 @@
       },
       "cedar": "同一条规则，导出为 Cedar。",
       "outcome": "结果",
-      "controls": "剧情控制"
+      "controls": "剧情控制",
+      "approval": "审批"
     },
     "guard": {
       "title": "Aster 守卫"

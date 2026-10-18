@@ -222,7 +222,8 @@
       },
       "cedar": "Dieselbe Regel, als Cedar exportiert.",
       "outcome": "Ergebnis",
-      "controls": "Steuerung der Geschichte"
+      "controls": "Steuerung der Geschichte",
+      "approval": "Freigabe"
     },
     "guard": {
       "title": "Aster-Wächter"

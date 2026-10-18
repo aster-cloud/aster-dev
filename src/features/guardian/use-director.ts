@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cuesBetween, type Cue } from './director';
 
+/** 单帧最多累计的毫秒数。 */
+const MAX_FRAME_MS = 250;
+
 /**
  * 剧情播放器：累计「已播放时长」并按提示索引派发；暂停时不累计。
  *
@@ -42,7 +45,8 @@ export function useDirector(timeline: Cue[], onCue: (cue: Cue) => void) {
     }
     let raf = 0;
     const loop = (t: number) => {
-      if (last.current !== null) elapsed.current += t - last.current;
+      // 单帧增量设上限：标签页被挂起后回来，从暂停处继续而不是一次性补派大量提示。
+      if (last.current !== null) elapsed.current += Math.min(t - last.current, MAX_FRAME_MS);
       last.current = t;
       fire(cuesBetween(timeline, indexRef.current, elapsed.current));
       if (indexRef.current >= timeline.length) {
