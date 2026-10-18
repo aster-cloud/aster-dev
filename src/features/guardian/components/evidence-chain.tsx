@@ -23,15 +23,22 @@ function Block({ block, label }: { block: EvidenceBlock; label: string }) {
       <div className="font-semibold">
         #{block.index} {label}
       </div>
-      <div className="mt-1 break-all font-mono text-fg-muted">
+      <div aria-hidden="true" className="mt-1 break-all font-mono text-fg-muted">
         {prev} → {block.hash.slice(0, SHORT_LEN)}
       </div>
     </li>
   );
 }
 
-/** 证据哈希链：aria-live 容器让屏幕阅读器播报新增的块。 */
-export function EvidenceChain({ chain, layout }: { chain: EvidenceBlock[]; layout: 'row' | 'column' }) {
+interface EvidenceChainProps {
+  chain: EvidenceBlock[];
+  layout: 'row' | 'column';
+  /** 是否自带 aria-live 播报；页面已有统一播报区时传 false，避免两个播报区重叠。 */
+  announce?: boolean;
+}
+
+/** 证据哈希链：新增块只播报「#N 决策 / 审批」，哈希串对读屏隐藏。 */
+export function EvidenceChain({ chain, layout, announce = true }: EvidenceChainProps) {
   const t = useTranslations('guardianDemo.evidence');
   const label = useEventLabel();
   return (
@@ -39,7 +46,7 @@ export function EvidenceChain({ chain, layout }: { chain: EvidenceBlock[]; layou
       <h3 className="mb-2 text-sm font-semibold">{t('title')}</h3>
       {chain.length === 0 && <p className="text-sm text-fg-muted">{t('empty')}</p>}
       <ol
-        aria-live="polite"
+        aria-live={announce ? 'polite' : undefined}
         className={cn('gap-2', layout === 'row' ? 'flex flex-row overflow-x-auto' : 'flex flex-col')}
       >
         {chain.map((b) => (

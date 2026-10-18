@@ -15,7 +15,7 @@ import { VerdictBadge } from '../components/verdict-badge';
 import { BlockedNote } from '../components/tool-call-card';
 import { BLOCKED_STATUSES } from '../blocked';
 
-const BTN = 'rounded-md border border-border px-3 py-1.5 text-sm font-semibold hover:bg-muted disabled:opacity-50';
+const BTN = 'rounded-md border border-border px-3 py-1.5 text-sm font-semibold hover:bg-muted aria-disabled:cursor-not-allowed aria-disabled:opacity-50';
 const CELL = 'flex min-w-0 flex-1 flex-col gap-1 rounded-md border border-border bg-muted p-2 text-xs';
 const FADE = 'transition-[opacity,transform] duration-300 motion-reduce:transition-none';
 
@@ -140,15 +140,22 @@ interface ControlsProps {
   onReplay: () => void;
 }
 
-/** 播放控制：始终可见（WCAG 2.2.2 暂停、停止、隐藏）。 */
+/**
+ * 播放控制：始终可见（WCAG 2.2.2 暂停、停止、隐藏）。
+ * 播完后「播放」「下一步」以 aria-disabled 标记且点击无效，而不是 disabled：
+ * 键盘焦点停在原按钮上，不会因按钮被禁用而掉回 <body>。
+ */
 function Controls({ playing, finished, onPlay, onPause, onStep, onReplay }: ControlsProps) {
   const t = useTranslations('guardianDemo.story');
+  const unlessFinished = (fn: () => void) => () => {
+    if (!finished) fn();
+  };
   return (
     <div role="group" aria-label={t('controls')} className="flex flex-wrap items-center gap-2">
-      <button type="button" className={BTN} disabled={finished} onClick={playing ? onPause : onPlay}>
+      <button type="button" className={BTN} aria-disabled={finished || undefined} onClick={unlessFinished(playing ? onPause : onPlay)}>
         {playing ? t('pause') : t('play')}
       </button>
-      <button type="button" className={BTN} disabled={finished} onClick={onStep}>
+      <button type="button" className={BTN} aria-disabled={finished || undefined} onClick={unlessFinished(onStep)}>
         {t('step')}
       </button>
       <button type="button" className={BTN} onClick={onReplay}>
@@ -238,7 +245,8 @@ export function PipelineView({ tryItHref }: { tryItHref: string }) {
         </ol>
         <ApproverLane steps={g.state.steps} />
       </div>
-      <EvidenceChain chain={g.chain} layout="row" />
+      {/* 视图 B 只保留上方一个播报区，证据链不再自带 aria-live。 */}
+      <EvidenceChain chain={g.chain} layout="row" announce={false} />
       {cedarShown && (
         <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
           <p className="text-sm font-semibold">{t('story.cedar')}</p>
