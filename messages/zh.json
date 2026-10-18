@@ -220,7 +220,9 @@
         "customer": "请退款 10 欧元。",
         "agent": "我现在无法办理——该账号已被停用。"
       },
-      "cedar": "同一条规则，导出为 Cedar。"
+      "cedar": "同一条规则，导出为 Cedar。",
+      "outcome": "结果",
+      "controls": "剧情控制"
     },
     "guard": {
       "title": "Aster 守卫"
