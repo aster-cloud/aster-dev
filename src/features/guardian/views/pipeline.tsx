@@ -66,20 +66,22 @@ function ApprovalCell({ step, show }: { step: Step | undefined; show: boolean })
   );
 }
 
-/** 结果格文案：仅在步骤真的执行/批准/驳回时给出剧情台词，否则如实显示状态与拦截原因。 */
+/** 结果格文案：仅在步骤真的执行/批准/驳回时给出剧情台词，否则如实显示状态；被拦截时先给出代理返回的工具错误，再给出代理回复。 */
 function OutcomeText({ beat, step }: { beat: StoryBeat; step: Step | undefined }) {
   const t = useTranslations('guardianDemo');
   if (!step) return null;
   if (step.status === 'executed' || step.status === 'approved' || step.status === 'rejected') {
     return <span>{t(`story.${beat.id}.agent`)}</span>;
   }
-  const blocked = step.status === 'blocked' || step.status === 'expired';
-  return (
-    <>
-      <span>{t(`status.${step.status}`)}</span>
-      {blocked && <span className="text-fg-muted">{blockedReason(step, t)}</span>}
-    </>
-  );
+  if (step.status === 'blocked') {
+    return (
+      <>
+        <span className="text-danger">{t('agent.blocked', { reason: blockedReason(step, t), decisionId: step.decisionId })}</span>
+        <span>{t(`story.${beat.id}.agent`)}</span>
+      </>
+    );
+  }
+  return <span>{t(`status.${step.status}`)}</span>;
 }
 
 function Lane({ beat, beatIndex, step, fired }: { beat: StoryBeat; beatIndex: number; step: Step | undefined; fired: Fired }) {
