@@ -124,7 +124,6 @@
     "views": {
       "stage": "Sandbox",
       "agent": "MCP-Agent",
-      "story": "Story",
       "label": "Ansicht"
     },
     "verdict": {
@@ -154,7 +153,6 @@
       "requester": "Support-Agent",
       "amount": "Erstattungsbetrag (€)",
       "suspended": "Agent-Konto gesperrt",
-      "fire": "Tool aufrufen",
       "reset": "Zurücksetzen"
     },
     "approver": {

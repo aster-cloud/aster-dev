@@ -12,7 +12,6 @@ interface ApproverPanelProps {
   onReject: (approvalId: string, comment: string) => void;
   onExpire: (approvalId: string) => void;
   now: number;
-  compact?: boolean;
 }
 
 const BTN = 'rounded-md border border-border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50';
@@ -24,7 +23,7 @@ function Countdown({ expiresAt, now }: { expiresAt: number | null; now: number }
 }
 
 /** 单个待审批项：批准 / 驳回（须填说明）/ 任其过期。 */
-function PendingItem({ step, now, compact, onApprove, onReject, onExpire }: Omit<ApproverPanelProps, 'steps'> & { step: Step }) {
+function PendingItem({ step, now, onApprove, onReject, onExpire }: Omit<ApproverPanelProps, 'steps'> & { step: Step }) {
   const t = useTranslations('guardianDemo');
   const [comment, setComment] = useState('');
   const approvalId = step.approvalId ?? '';
@@ -35,7 +34,7 @@ function PendingItem({ step, now, compact, onApprove, onReject, onExpire }: Omit
         <span className="text-sm font-semibold">{t(`tools.${step.call.tool}`)}</span>
         <Countdown expiresAt={step.expiresAt} now={now} />
       </div>
-      {!compact && <code className="break-all font-mono text-xs text-fg-muted">{JSON.stringify(step.call.args)}</code>}
+      <code className="break-all font-mono text-xs text-fg-muted">{JSON.stringify(step.call.args)}</code>
       <input
         type="text"
         value={comment}

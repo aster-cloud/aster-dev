@@ -13,6 +13,7 @@ export default createMiddleware(routing);
 
 export const config = {
   // 跳过 api / 嵌入路由 / 静态资源 / 内部路径。embed 自带 /embed/<name>/[locale] 段，
-  // 不走 locale 前缀重写，否则英文会被改写为 /en/embed/... 而 404。
-  matcher: ['/((?!api|embed|_next|_vercel|.*\\..*).*)'],
+  // 不走 locale 前缀重写，否则英文会被改写为 /en/embed/... 而 404。只排除 embed/ 目录，
+  // 不误伤以 embed 开头的其他路径（如 /embedding）。
+  matcher: ['/((?!api|embed/|_next|_vercel|.*\\..*).*)'],
 };

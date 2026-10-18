@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEngine, findRuleLine } from './engine';
+import { compileDiagnostics, createEngine, findRuleLine } from './engine';
 import { GUARD_SOURCE, SUPPORT_BOT, SUSPENDED_BOT, toGuardRequest } from './scenario';
 
 const engine = createEngine(GUARD_SOURCE);
@@ -50,6 +50,24 @@ describe('createEngine 容错', () => {
     const none = createEngine('Module x.\nnot a rule');
     expect(none.diagnostics.length).toBeGreaterThan(0);
     expect(none.decide(toGuardRequest(SUPPORT_BOT, { tool: 'lookup_order', args: { order_id: 'o' } })).reasonCode).toBe('evaluation_failed');
+  });
+});
+
+describe('compileDiagnostics', () => {
+  it('降级错误按原消息展示，而不是笼统的 compile failed', () => {
+    const d = compileDiagnostics({ success: false, loweringErrors: ['Unknown declaration kind: Foo'] });
+    expect(d).toEqual([{ message: 'Unknown declaration kind: Foo', line: null, col: null }]);
+  });
+
+  it('降级错误消息带位置时解析出行列', () => {
+    expect(compileDiagnostics({ success: false, loweringErrors: ['bad call at 4:9'] })[0]).toMatchObject({ line: 4, col: 9 });
+    expect(compileDiagnostics({ success: false, loweringErrors: ['bad call on line 7'] })[0]).toMatchObject({ line: 7, col: null });
+  });
+
+  it('解析错误带 span 行列；什么都没有时才退回 compile failed', () => {
+    const parse = compileDiagnostics({ success: false, parseErrors: [{ message: 'Expected newline', span: { start: { line: 2, col: 3 } } }] });
+    expect(parse).toEqual([{ message: 'Expected newline', line: 2, col: 3 }]);
+    expect(compileDiagnostics({ success: false })).toEqual([{ message: 'compile failed', line: null, col: null }]);
   });
 });
 

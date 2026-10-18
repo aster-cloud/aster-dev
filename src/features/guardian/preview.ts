@@ -1,5 +1,6 @@
 import type { Decision, GuardEngine } from './engine';
-import { GUARD_SOURCE, toGuardRequest } from './scenario';
+import { toGuardRequest } from './scenario';
+import { isBuiltInSource } from './cedar-source';
 import type { Step } from './machine';
 
 export interface DecisionPreview {
@@ -14,11 +15,11 @@ function sameDecision(a: Decision, b: Decision): boolean {
 
 /**
  * 以当前引擎重算最近一次请求的裁决。纯函数：只读，不写状态机、不产生证据。
- * 内置规则且结果与记录一致时返回记录本身（live=false）。规则编译失败时引擎沿用上一份可用规则。
+ * 内置规则（与 Cedar 面板同一判定，忽略行尾空白）且结果与记录一致时返回记录本身（live=false）。规则编译失败时引擎沿用上一份可用规则。
  */
 export function previewDecision(engine: GuardEngine, last: Step | undefined): DecisionPreview | null {
   if (!last) return null;
   const decision = engine.decide(toGuardRequest(last.principal, last.call));
-  const unchanged = engine.source === GUARD_SOURCE && sameDecision(decision, last.decision);
+  const unchanged = isBuiltInSource(engine.source) && sameDecision(decision, last.decision);
   return unchanged ? { decision: last.decision, live: false } : { decision, live: true };
 }

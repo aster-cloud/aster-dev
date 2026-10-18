@@ -77,7 +77,11 @@ export function useGuardian(opts: { now?: () => number } = {}) {
     },
     [],
   );
-  const reset = useCallback(() => dispatch({ type: 'reset' }), []);
+  // 重置同时恢复内置规则：沙盒里编辑过的规则不随状态机一起残留。
+  const reset = useCallback(() => {
+    dispatch({ type: 'reset' });
+    setEngine((prev) => (prev.source === GUARD_SOURCE ? prev : createEngine(GUARD_SOURCE)));
+  }, []);
 
   return useMemo(
     () => ({ state, now: clock, chain, engine, setSource, request, approve, reject, expire, reset }),

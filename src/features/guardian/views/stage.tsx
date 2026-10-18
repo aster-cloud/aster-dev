@@ -113,12 +113,20 @@ function GuardColumn({ g, preview }: { g: Guardian; preview: DecisionPreview | n
   );
 }
 
+interface PanelProps {
+  g: Guardian;
+  preview: DecisionPreview | null;
+  /** 每次重置加一：作为规则编辑器的 key，重置时丢弃编辑器里尚未提交（防抖中）的文本。 */
+  generation: number;
+}
+
 /** 标签页内容：规则、证据链、Cedar 三选一。 */
-function TabBody({ tab, g, preview }: { tab: TabKey; g: Guardian; preview: DecisionPreview | null }) {
+function TabBody({ tab, g, preview, generation }: PanelProps & { tab: TabKey }) {
   if (tab === 'evidence') return <EvidenceChain chain={g.chain} layout="column" />;
   if (tab === 'cedar') return <CedarPanel source={g.engine.source} />;
   return (
     <RulePanel
+      key={generation}
       source={g.engine.source}
       editable
       highlightLine={preview?.decision.ruleLine ?? null}
@@ -142,7 +150,7 @@ function useTabKeys(active: TabKey, select: (k: TabKey) => void, refs: React.Ref
 }
 
 /** 右栏：标签页容器。 */
-function InspectorColumn({ g, preview }: { g: Guardian; preview: DecisionPreview | null }) {
+function InspectorColumn({ g, preview, generation }: PanelProps) {
   const t = useTranslations('guardianDemo');
   const [tab, setTab] = useState<TabKey>('rule');
   const base = useId();
@@ -172,7 +180,7 @@ function InspectorColumn({ g, preview }: { g: Guardian; preview: DecisionPreview
         ))}
       </div>
       <div role="tabpanel" id={`${base}-panel-${tab}`} aria-labelledby={`${base}-tab-${tab}`} tabIndex={0}>
-        <TabBody tab={tab} g={g} preview={preview} />
+        <TabBody tab={tab} g={g} preview={preview} generation={generation} />
       </div>
     </section>
   );
@@ -183,17 +191,23 @@ export function StageView() {
   const t = useTranslations('guardianDemo');
   const g = useGuardian();
   const preview = previewDecision(g.engine, g.state.steps.at(-1));
+  const [generation, setGeneration] = useState(0);
+  // 重置：状态机与内置规则一起恢复，规则编辑器重新挂载并显示内置规则。
+  const reset = () => {
+    g.reset();
+    setGeneration((n) => n + 1);
+  };
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
-        <button type="button" className={BTN} onClick={g.reset}>
+        <button type="button" className={BTN} onClick={reset}>
           {t('sandbox.reset')}
         </button>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_auto_1.3fr]">
         <RequesterColumn g={g} />
         <GuardColumn g={g} preview={preview} />
-        <InspectorColumn g={g} preview={preview} />
+        <InspectorColumn g={g} preview={preview} generation={generation} />
       </div>
     </div>
   );

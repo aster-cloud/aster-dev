@@ -21,10 +21,11 @@ export interface Decision {
   ruleLine: number | null;
 }
 
+/** 编译诊断；降级（lowering）错误只有一条消息，消息里带位置时才有行列。 */
 export interface EngineDiagnostic {
   message: string;
-  line: number;
-  col: number;
+  line: number | null;
+  col: number | null;
 }
 
 export interface GuardEngine {
@@ -34,7 +35,12 @@ export interface GuardEngine {
 }
 
 type Core = NonNullable<ReturnType<typeof compile>['core']>;
-type CompileOutput = { success: boolean; core?: Core; parseErrors?: { message: string; span: { start: { line: number; col: number } } }[] };
+export type CompileOutput = {
+  success: boolean;
+  core?: Core;
+  parseErrors?: { message: string; span: { start: { line: number; col: number } } }[];
+  loweringErrors?: string[];
+};
 
 const MAX_STEPS = 10_000;
 const OUTCOMES: Outcome[] = ['ALLOW', 'DENY', 'REQUIRE_APPROVAL', 'ESCALATE'];
@@ -66,13 +72,29 @@ function decideWith(core: Core | null, source: string) {
   };
 }
 
+// 降级错误消息里可能出现的位置写法：「3:7」或「line 3」。
+const LINE_COL = /\b(\d+):(\d+)\b/;
+const LINE_ONLY = /\bline\s+(\d+)/i;
+
+function loweringDiagnostic(message: string): EngineDiagnostic {
+  const lc = LINE_COL.exec(message);
+  if (lc) return { message, line: Number(lc[1]), col: Number(lc[2]) };
+  const l = LINE_ONLY.exec(message);
+  return { message, line: l ? Number(l[1]) : null, col: null };
+}
+
+/** 汇总解析错误与降级错误；两者都没有时才退回笼统的「compile failed」。 */
+export function compileDiagnostics(out: CompileOutput): EngineDiagnostic[] {
+  const parse = (out.parseErrors ?? []).map((e) => ({ message: e.message, line: e.span.start.line, col: e.span.start.col }));
+  const lowering = (out.loweringErrors ?? []).map(loweringDiagnostic);
+  const all = [...parse, ...lowering];
+  return all.length > 0 ? all : [{ message: 'compile failed', line: null, col: null }];
+}
+
 export function createEngine(source: string, previous?: GuardEngine): GuardEngine {
   const out = compile(source, { lexicon: getLexicon('en') } as Parameters<typeof compile>[1]) as CompileOutput;
   if (out.success && out.core) {
     return { source, diagnostics: [], decide: decideWith(out.core, source) };
   }
-  const diagnostics = (out.parseErrors ?? [{ message: 'compile failed', span: { start: { line: 1, col: 1 } } }]).map((e) => ({
-    message: e.message, line: e.span.start.line, col: e.span.start.col,
-  }));
-  return { source, diagnostics, decide: previous ? previous.decide : decideWith(null, source) };
+  return { source, diagnostics: compileDiagnostics(out), decide: previous ? previous.decide : decideWith(null, source) };
 }

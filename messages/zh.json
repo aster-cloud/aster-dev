@@ -124,7 +124,6 @@
     "views": {
       "stage": "沙盒",
       "agent": "MCP 代理",
-      "story": "故事",
       "label": "视图"
     },
     "verdict": {
@@ -154,7 +153,6 @@
       "requester": "客服代理",
       "amount": "退款金额（€）",
       "suspended": "代理账号已停用",
-      "fire": "调用工具",
       "reset": "重置"
     },
     "approver": {

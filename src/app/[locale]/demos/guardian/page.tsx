@@ -2,7 +2,7 @@
  * AI Guardian 演示页（公开）。
  *
  * 浏览器内真编译真执行 Aster 守卫规则：AI 客服的工具调用被放行、升级、送审或拒绝，
- * 并留下哈希链证据；视图 A 为动手沙盒，视图 B 为 MCP 智能体对话。纯客户端，无网络。
+ * 并留下哈希链证据；视图 A 为动手沙盒，视图 C 为 MCP 智能体对话（视图 B 剧情只在嵌入路由）。纯客户端，无网络。
  */
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';

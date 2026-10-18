@@ -25,6 +25,12 @@ describe('previewDecision', () => {
     expect(p.live).toBe(false);
   });
 
+  it('与 Cedar 面板同一判定：仅行尾空白不同仍视为内置规则', () => {
+    const step = stepFor(refund(40));
+    const padded = createEngine(GUARD_SOURCE.replace(/\n/g, '  \n'));
+    expect(previewDecision(padded, step)!.live).toBe(false);
+  });
+
   it('把 10000 改成 5000 后 6000 的退款预览为 ESCALATE', () => {
     const step = stepFor(refund(6000));
     expect(step.decision.outcome).toBe('ALLOW');

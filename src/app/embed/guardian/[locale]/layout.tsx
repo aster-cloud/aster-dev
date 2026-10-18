@@ -16,6 +16,12 @@ const fraunces = Fraunces({ subsets: ['latin'], variable: '--aster-font-display-
 const inter = Inter({ subsets: ['latin'], variable: '--aster-font-sans-loaded', display: 'swap' });
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--aster-font-mono-loaded', display: 'swap' });
 
+// 与 embed-story 的 ?theme 解析一致：dark / light 强制，其余跟随系统。
+const THEME_BOOTSTRAP =
+  "(function(){try{var t=new URLSearchParams(location.search).get('theme');" +
+  "if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}" +
+  "var d=document.documentElement;d.setAttribute('data-theme',t);d.style.colorScheme=t}catch(e){}})();";
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -23,7 +29,7 @@ export function generateStaticParams() {
 /**
  * AI Guardian 嵌入布局：只提供字体、文案与样式，不渲染站点头尾。
  * 位于 [locale] 段之外，因为 [locale]/layout 会给所有页面加 SiteHeader / SiteFooter。
- * 主题由页面内的 ThemeProvider 提供（需要读取 ?theme 查询参数）。
+ * 主题由页面内的 ThemeProvider 提供（需要读取 ?theme 查询参数）；head 内联脚本在首帧前先行设置。
  */
 export default async function EmbedLayout({ children, params }: { children: ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -40,6 +46,8 @@ export default async function EmbedLayout({ children, params }: { children: Reac
               'globalThis.__name=globalThis.__name||function(t,n){try{Object.defineProperty(t,"name",{value:n,configurable:true})}catch(e){}return t};',
           }}
         />
+        {/* 首帧前按 ?theme 设置 data-theme（未指定则跟随系统），避免 ThemeProvider 挂载前闪一下默认主题。 */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body className="bg-bg text-fg antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>

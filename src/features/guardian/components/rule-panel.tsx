@@ -98,7 +98,7 @@ function Diagnostics({ items }: { items: EngineDiagnostic[] }) {
     <div role="alert" className="flex flex-col gap-1 rounded-md bg-danger/15 px-3 py-2 text-xs text-danger">
       <ul>
         {items.map((d, i) => (
-          <li key={i}>{t('diagnostics', { line: d.line, message: d.message })}</li>
+          <li key={i}>{d.line === null ? d.message : t('diagnostics', { line: d.line, message: d.message })}</li>
         ))}
       </ul>
       <p className="text-fg-muted">{t('keepsLast')}</p>
