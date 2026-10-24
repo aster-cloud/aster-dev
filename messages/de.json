@@ -10,7 +10,8 @@
     "docs": "Dokumentation",
     "playground": "Playground",
     "cloud": "Aster Cloud",
-    "demos": "Demos"
+    "demos": "Demos",
+    "blog": "Blog"
   },
   "devSite": {
     "badge": "Open Source · Zwei Laufzeiten · Wiederholbar",
@@ -387,5 +388,12 @@
   "docsFallback": {
     "title": "Noch nicht übersetzt",
     "body": "Diese Seite ist noch nicht in Ihrer Sprache verfügbar, daher wird die englische Fassung angezeigt."
+  },
+  "devBlog": {
+    "title": "Blog",
+    "description": "Produkt-Updates, Sprach-Deep-Dives und Designnotizen vom Aster-Lang-Team.",
+    "rss": "RSS-Feed",
+    "englishOnly": "Blogbeiträge erscheinen nur auf Englisch.",
+    "back": "Alle Beiträge"
   }
 }

@@ -20,6 +20,9 @@ export async function SiteFooter() {
           <Link href="/playground" className="transition-colors hover:text-fg">
             {t('playground')}
           </Link>
+          <Link href="/blog" className="transition-colors hover:text-fg">
+            {t('blog')}
+          </Link>
           <a
             href="https://aster-lang.cloud"
             className="transition-colors hover:text-fg"

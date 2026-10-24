@@ -1,0 +1,45 @@
+Welcome. This is the first post on the Aster Lang blog.
+
+## Why we're starting a blog
+
+Most of our documentation answers **"how do I use feature X?"** That's the right shape for a reference site, but it leaves a lot of useful conversations on the cutting-room floor:
+
+- **Why** we designed something the way we did.
+- **Where** we got the trade-off wrong and what we changed.
+- **What** we learned from customers running policies in production.
+
+That's what this space is for.
+
+## Who we're writing for
+
+Three audiences, in rough order of frequency:
+
+1. **Policy authors** — compliance officers, risk analysts, anyone writing Aster Lang rules. Expect posts on rule design patterns, common pitfalls, and language deep dives.
+2. **Engineers** — anyone integrating the engine into a service. Expect posts on architecture, performance, and the boring-but-important parts of GraalVM Native Image.
+3. **Decision-makers** — anyone choosing between Aster Lang and an alternative. Expect posts on why the language looks the way it does and what we mean by "auditable by default."
+
+## A taste
+
+Here's a rule that compiles and runs the same way in English, 中文, and Deutsch:
+
+```aster
+Module aster.example.greet.
+
+Rule greet given name, produce Text:
+    Return "Hello, " + name.
+```
+
+If the multi-language angle is new to you, the [Language Reference](/docs/reference) is a good next stop.
+
+## What's coming
+
+A few posts already drafted, queued for the coming weeks:
+
+- **Controlled natural language vs. DSL** — why Aster reads like a memo on purpose.
+- **Lexicon packs** — how to ship Aster Lang in a fourth language without writing Java.
+- **Why Truffle** — the boring engine choices that make the playground fast.
+- **Decision traces in production** — what we ship in `?trace=true` and why.
+
+If there's something you'd like us to write about, [drop us a note](mailto:hello@aster-lang.dev).
+
+— The Aster Lang team

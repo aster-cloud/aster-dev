@@ -1,0 +1,75 @@
+Most rule engines look like code. Some look like configuration. Aster Lang looks like a memo:
+
+```aster
+Module aster.finance.loan.
+
+Define Applicant has creditScore as Int, annualIncome as Int.
+
+Rule evaluateLoanEligibility given applicant as Applicant, produce Text:
+  If applicant.creditScore at least 700
+    If applicant.annualIncome at least 50000
+      Return "approved".
+  Return "rejected".
+```
+
+That's not by accident. It's the result of a series of decisions about who should be able to read, write, and review business rules. This post walks through those decisions and the trade-offs they imply.
+
+## The premise: rules belong to the business, not to engineering
+
+In every organization we've worked with, the same pattern shows up:
+
+- A compliance officer or product manager owns the rule **in concept**: they decide what the policy is.
+- An engineer owns the rule **in implementation**: they translate the policy into code.
+- The two diverge over time. The engineer fixes a corner case without telling compliance. Compliance updates the policy without telling the engineer. Six months later, no one can answer "what is our actual policy on X?" because the code and the doc disagree.
+
+DSLs and config languages don't fix this. They make the implementation easier to read, but the **author** is still the engineer. The compliance officer is still a step removed.
+
+Aster Lang's premise is that the compliance officer should be the author. Not "should be able to suggest edits" — should be the person who writes the rule, runs it in a playground, and ships it. That premise forces a series of design choices that a normal DSL wouldn't make.
+
+## Choice 1: keywords from the reader's vocabulary
+
+A rule reads like prose because every operator has a prose form: `is at least`, `is less than`, `equals`, `is one of`. The symbolic alternatives (`>=`, `<`, `==`, `in`) don't appear. Even arithmetic is written `plus`, `minus`, `times` when it's part of a condition.
+
+The cost: more typing. We accept that — the asymmetry between "writes the rule a few times a quarter" and "reads the rule any time something goes wrong" makes the reader's experience the one we optimize for.
+
+The bigger consequence: keywords are translatable. `is at least` ↔ `不低于` ↔ `mindestens`. The engine doesn't care; it canonicalizes everything before evaluation. We get multi-language support as a *free* consequence of the choice to spell out operators, not as a separately-built feature. (See [Lexicon packs](/blog/posts/2026-03-19-lexicon-packs).)
+
+## Choice 2: no general-purpose loops
+
+You can't write a `for` loop in Aster Lang. You can't write a `while` loop. You can iterate over a collection with a built-in (`for each applicant in batch:`), but you can't construct arbitrary recursion or arbitrary termination conditions.
+
+This is the most common pushback we get from engineers: "why not just let me write a real program?" The honest answer is: because that's the thing we're trying not to be.
+
+A general-purpose language puts every reader on equal footing with the author: you can't read a 200-line procedure without knowing the language. A controlled language with bounded structure means the **shape** of a rule is predictable. An auditor knows that an Aster Lang rule terminates. A compliance officer knows that an Aster Lang rule doesn't have side effects. Those guarantees come from the things the language *won't* let you express, not from the things it does.
+
+We pay for this by being unusable for problems that need general computation. Aster Lang is wrong for ETL, for rendering, for orchestration. It's right for decisions: given these inputs, what's the outcome?
+
+## Choice 3: explicit modules
+
+`Module aster.finance.loan.` is a required first line. Every rule lives in a named module. There are no globals.
+
+This sounds prosaic — most languages have modules — but the consequence is that an Aster Lang rule is **portable**. You can move a module from one tenant to another, from one deployment to another, from cloud to enterprise, by copying its text. There's no hidden state, no module-scoped imports that resolve differently elsewhere.
+
+The portability is the thing that makes "edition migration" (Cloud → Enterprise, see [Editions](/docs/editions)) a non-event. The rule is text; the audit log is text; the migration is a `git diff`. We chose the strict module model specifically so that "lock-in" wouldn't be a real concern for customers evaluating us.
+
+## Choice 4: AI as draft, not as oracle
+
+Built-in LLM assistance can draft a rule from a prompt and explain an existing rule in plain English. It cannot ship a rule by itself. The compile-validate loop runs the model's output through the parser and the type-checker; if it doesn't parse or doesn't type-check, the user sees "the assistant couldn't produce a valid rule" and not a broken rule.
+
+This is harder than it sounds. The natural temptation is to let the model edit the rule in place and trust the user to review. We chose the more conservative path because the audience that benefits most from AI assistance — non-engineers — is the audience least equipped to spot a subtle bug in generated code. A rule that doesn't parse is recoverable; a rule that *parses* and is subtly wrong is the failure mode you can't catch in review.
+
+## Where the controlled approach breaks
+
+Three places we've hit the limit and bent the rules:
+
+- **Domain-specific arithmetic.** Loan amortization, insurance reserve calculations, anything where the math is the point. We offer a polyglot escape hatch: a rule can call into a registered JavaScript helper. The helper's source is part of the deployment, the call is audited, and the result feeds back into the controlled flow. This is the only escape hatch in the language and we use it sparingly.
+- **Time arithmetic in non-Gregorian calendars.** "Three Islamic months from now" is not expressible as a controlled-language phrase that's both unambiguous and short. We special-case calendar arithmetic via a built-in `add` operator with a calendar parameter.
+- **Rule reuse.** You can't write a rule that returns a function, or curry over partial arguments. If you need rule composition, you write two rules and have the first one call the second. This is less elegant than first-class functions would be; it's also the boundary that keeps the language from drifting into general computation.
+
+## The takeaway
+
+A controlled natural language is a deliberate restriction. It optimizes for the reader at the cost of the writer, for portability at the cost of expressiveness, for auditability at the cost of generality.
+
+For the problem we're solving — making business policy executable, readable, and migratable — those are the right trade-offs. For other problems, they're the wrong ones.
+
+If you have a use case where you've considered Aster Lang and decided against it, [tell us why](mailto:hello@aster-lang.dev). The decisions that this post describes weren't obvious in advance and they get tested against new use cases every week.

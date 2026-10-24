@@ -1,0 +1,49 @@
+The playground on this site compiles a rule in your browser using the TypeScript engine. Click "Run on backend" and the same rule runs in the Java engine — which, after the first few executions of a given module, runs faster than the in-browser version even though the data round-trips a continent. The reason for that delta is GraalVM Truffle.
+
+This post is about the trade-offs we accepted to get there.
+
+## What Truffle gives us
+
+Truffle is a framework for writing language interpreters that can be specialized at runtime via partial evaluation. The interpreter you write looks like a tree-walking AST evaluator — slow, but simple. Truffle's job is to take that interpreter and turn it into JIT-compiled machine code that's competitive with hand-written compilers, **once the tree has stabilized**.
+
+For Aster Lang, that means:
+
+- **Cold path: a tree walk.** A brand-new module evaluates by interpreting AST nodes one at a time. Cheap to start, allocates almost nothing.
+- **Warm path: a compiled specialization.** After a module has run a handful of times, Truffle inlines the hot nodes, eliminates dead branches based on observed types, and produces native code that doesn't look anything like the original interpreter loop.
+- **Cliff-free deopt.** When an assumption breaks — e.g., a field that's always been an integer suddenly arrives as a string — the runtime invalidates the compiled code and falls back to the tree walker. The decision still runs; it just runs slower until Truffle re-specializes.
+
+The headline result, measured on the perf baseline runner: **P50 around 8 ms, P99 under 200 ms** for `/evaluate-source` on a representative 12-rule module. After warm-up that drops by roughly 4×.
+
+## What we gave up
+
+Truffle isn't free. Three trade-offs in particular shaped how we designed around it:
+
+**1. Build complexity.** GraalVM Native Image, Polyglot, and the Truffle framework itself bring a non-trivial dependency footprint. A `quarkusBuild` cold compile takes a minute longer than the equivalent without Truffle. For a service that boots in 50 ms via Native Image, that's a worthwhile trade; for a 10-line micro-service it would be overkill. Most rule-evaluation services are closer to the former.
+
+**2. Per-tenant isolation requires care.** Truffle aggressively specializes based on observed types. If tenant A has a `creditScore` field that's always an integer and tenant B has it as a float, naive specialization could leak between them — not data, but performance. We isolate Truffle contexts per tenant + per module, which costs us some warm-up overhead but eliminates that class of issue. See `DynamicCnlExecutor` in the source.
+
+**3. Stack traces are surprising.** A deopt-triggered fallback can produce a stack trace that mentions internal Truffle frames. Useful when debugging the engine; baffling for someone debugging their own rule. We trim those frames before they reach the customer-facing error surface — but the line numbers in the trimmed trace still refer to compiled positions, which occasionally don't map cleanly back to source. This is the single thing customers report most often, and we're working on it.
+
+## Why not just write a bytecode compiler?
+
+A reasonable question. The short answer is: we'd end up writing most of Truffle ourselves.
+
+A bytecode VM is straightforward up to the point where you want type specialization, inline caches, and deopt. After that, you've reinvented a JIT, with all the implementation complexity and none of the cross-language reuse that Truffle gives you (Aster Lang shares its Polyglot context with JavaScript when a rule needs to call into a user-supplied helper — that's a Truffle feature, not something we built).
+
+There's also the long-tail of optimizations Truffle brings that we don't have to think about: escape analysis, polymorphic inline caches, on-stack replacement, branch prediction hints. Each one would take an engineer-quarter to do badly and an engineer-year to do well.
+
+## When Truffle is the wrong choice
+
+If your rule shape is dominated by **single-execution evaluation** — every rule runs exactly once before being thrown away — Truffle's warm-up cost dominates and a simple tree walker wins. The TypeScript engine in the browser playground is exactly this case: it doesn't use Truffle (there is no Truffle for browsers), and it's plenty fast for one-shot use.
+
+If your rules need **sub-millisecond P99** on every evaluation, including the very first one, Truffle is the wrong shape. You probably want an ahead-of-time compiler to native code, accepting the longer build pipeline.
+
+For everything in between — multi-tenant SaaS, rules that get evaluated thousands of times across a day, a mix of new-module bursts and steady-state traffic — Truffle's "cheap to start, fast once warm, deopts gracefully" profile is hard to beat.
+
+## What to read next
+
+- [`evaluate-source` API reference ↗](https://aster-lang.cloud/docs/api/policies/evaluate-source) — the endpoint Truffle backs.
+- [Decision traces in production](/blog/posts/2026-05-07-decision-traces-in-production) — what the engine narrates about its own execution.
+- GraalVM Truffle [framework documentation](https://www.graalvm.org/latest/graalvm-as-a-platform/language-implementation-framework/) — the upstream we build on.
+
+If you're working on a similar engine choice and want to compare notes, [reach out](mailto:hello@aster-lang.dev).
