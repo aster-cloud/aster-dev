@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import createMDX from '@next/mdx';
+import { legacyRedirects } from './src/config/legacy-redirects';
 
 // next-intl 插件：把 src/i18n/request.ts 作为 getRequestConfig 入口。
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
@@ -24,6 +25,10 @@ const nextConfig: NextConfig = {
   // （~/package-lock.json 干扰）。指向本项目目录。
   turbopack: {
     root: dirname(fileURLToPath(import.meta.url)),
+  },
+  // 旧 VitePress 站的 URL 迁移表（issue #45），见 src/config/legacy-redirects.ts。
+  async redirects() {
+    return legacyRedirects();
   },
 };
 
