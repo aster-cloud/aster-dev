@@ -1,0 +1,70 @@
+A rule that returns "approved" is useful. A rule that returns "approved **because** the applicant's credit score was 720 AND the income was 65,000 AND the debt-to-income ratio was 0.31" is auditable. The second one is what an auditor, a regulator, or — most often — a customer's own compliance team asks for, six months after the decision was made, when no one can remember which version of the rule was live that day.
+
+`?trace=true` on `/api/v1/policies/evaluate-source` (and `/evaluate`) returns the full reasoning chain. This post explains what the payload looks like, what we deliberately included and excluded, and the operational trade-offs behind making it cheap enough to leave on.
+
+## What you get back
+
+```jsonc
+{
+  "success": true,
+  "result": "approved",
+  "executionTimeMs": 12,
+  "trace": {
+    "moduleName": "aster.finance.loan",
+    "functionName": "evaluateLoanEligibility",
+    "executionTimeMs": 12,
+    "finalResult": "approved",
+    "steps": [
+      {
+        "sequence": 1,
+        "expression": "applicant.creditScore is at least 700",
+        "result": 720,
+        "matched": true,
+        "children": []
+      },
+      {
+        "sequence": 2,
+        "expression": "applicant.annualIncome is at least 50000",
+        "result": 65000,
+        "matched": true,
+        "children": []
+      }
+    ]
+  }
+}
+```
+
+Three things to notice:
+
+1. **Steps are ordered by evaluation, not source line.** If the rule short-circuits on the first false condition in an `and`, the trace tells you so — there's no step for the rest. Same for `or` and the unreached `Otherwise` branch.
+2. **Both the expression and the resolved value are captured.** "credit score is at least 700" with `result: 720` lets you reconstruct the decision without re-running it against historical data — which is often impossible because the historical input has been deleted under DSAR / Art 17.
+3. **Children carry nested conditions.** A rule with `if X and (Y or Z): ...` produces a parent step for the top-level `and` plus children for `X`, `Y`, `Z`. The tree mirrors the AST, so the trace stays human-legible regardless of how deeply nested the rule gets.
+
+## Why it's always-on
+
+We considered making tracing a paid feature or a debug-mode toggle. We didn't, for three reasons.
+
+**Determinism is part of the product.** Aster Lang already controls clocks, UUIDs, and random sources at runtime so that re-running a rule against the same inputs always produces the same output. The trace is just the runtime narrating its own deterministic path. Hiding that behind a flag would be like hiding `EXPLAIN ANALYZE` in PostgreSQL — technically correct, but the wrong default for an engine that wants to be trusted.
+
+**Cost is negligible for the rule shapes that exist.** A typical loan-eligibility rule has 5–15 condition nodes. Each step is a fixed-shape struct (sequence + expression string + JSON-encoded result + boolean). The trace adds 1–3 KB to the response and roughly 50–200 μs to evaluation, both within noise of the JSON serialization round-trip. We have customers running rules with 200+ conditions where the trace is still under 50 KB; for them, the cost is the JSON serialization, not the trace collection.
+
+**Auditors will ask for it anyway.** When a regulator asks "why did this rule reject this applicant?", "we don't keep traces" is not an answer. We'd rather build the answer into the engine than add it as a forensic afterthought when subpoenaed.
+
+## What we deliberately *don't* include
+
+- **Input data verbatim.** The trace captures the **resolved value** at each condition, not the original input object. So if a rule reads `applicant.ssn` only to discard it, the trace shows the discard, not the SSN. This was a deliberate concession to data-minimization: the trace is shaped by the rule, not by the input, so a sloppy input shape doesn't leak into long-term storage.
+- **Engine internals.** No bytecode addresses, no GC pauses, no internal IR. The trace is what an auditor needs to reconstruct the decision, not what an engineer needs to debug the engine. The engine has its own observability path (OpenTelemetry; see [enterprise/telemetry-fields](https://github.com/aster-cloud/aster-lang-dev/blob/main/docs/community/compliance/telemetry-fields.md)).
+- **Cross-rule fan-out.** A rule that delegates to another rule produces a single step in the parent's trace, not a flattened combined trace. We'll surface cross-rule chains explicitly when the use case justifies the schema complexity — so far, customers prefer the per-rule scope.
+
+## In the playground
+
+The trace UI is built into the dev-site playground — toggle "Run on backend" in the toolbar, run a rule, and the decision-trace panel appears under the result. There's no extra flag; if the backend can produce a trace, the UI renders it. The same panel appears in aster-lang.cloud.
+
+## What's next
+
+The current trace is **what** the engine did. Two near-term extensions we're scoping:
+
+- **Why was a branch skipped?** Today, an unreached `Otherwise` is implicit. We're adding optional negative-evidence steps so the trace records *that* the branch was considered, not just that it didn't run.
+- **Trace-driven diffing.** Given two versions of a rule and the same input, what changed in the decision? This is the killer feature for policy migrations — "before/after for one applicant" is the question every legal team asks when a rule version bumps.
+
+If you have a rule shape that the current trace doesn't capture well, [open an issue](https://github.com/aster-cloud/aster-dev/issues) with the rule and the question you wished the trace answered.

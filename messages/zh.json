@@ -10,7 +10,8 @@
     "docs": "文档",
     "playground": "演练场",
     "cloud": "Aster Cloud",
-    "demos": "演示"
+    "demos": "演示",
+    "blog": "博客"
   },
   "devSite": {
     "badge": "开源 · 双运行时 · 可回放",
@@ -387,5 +388,12 @@
   "docsFallback": {
     "title": "尚未翻译",
     "body": "本页面暂无你所选语言的版本，此处显示英文原文。"
+  },
+  "devBlog": {
+    "title": "博客",
+    "description": "Aster Lang 团队的产品动态、语言深度解析与设计笔记。",
+    "rss": "RSS 订阅",
+    "englishOnly": "博客文章仅以英文发布。",
+    "back": "全部文章"
   }
 }

@@ -1,0 +1,85 @@
+Aster Lang ships with three first-class languages: English, Simplified Chinese, and German. The choice of three is historical — those are the languages our first customers needed. The choice of *only* three is not a limit. A lexicon pack is a JSON file plus some test fixtures; the engine doesn't need to be rebuilt to load a fourth.
+
+This post explains the contract a lexicon pack obeys, what the tooling does for you, and what you have to do yourself.
+
+## What's in a lexicon pack
+
+A lexicon defines the **surface-level keywords** that the canonicalizer translates back into the engine's internal canonical form. The internal form is invariant — it's the same AST whether the rule was written in English or Chinese — so the engine never has to think about your language.
+
+A pack is published as an npm package (`@aster-cloud/aster-lang-<locale>`) containing:
+
+```text
+.
+├── package.json
+├── lexicon.json         ← the keyword map
+├── README.md
+└── test/
+    ├── fixtures/        ← .aster source files in the new language
+    └── parity.test.ts   ← cross-language equivalence assertions
+```
+
+The `lexicon.json` is what does the work. A trimmed example for a hypothetical Japanese pack:
+
+```json
+{
+  "id": "JA_JP",
+  "bcp47": "ja-JP",
+  "displayName": "日本語",
+  "keywords": {
+    "module":   "モジュール",
+    "rule":     "規則",
+    "has":      "を持つ",
+    "given":    "について",
+    "return":   "返す",
+    "if":       "もし",
+    "and":      "かつ",
+    "or":       "または"
+  },
+  "operators": {
+    "is at least": "以上",
+    "is less than": "未満",
+    "equals": "等しい"
+  }
+}
+```
+
+That's the whole "language pack" in functional terms. The engine looks up the canonical keyword from your surface form during parsing and from the canonical form back to your surface form during AI-driven explanation.
+
+## What the tooling does for you
+
+Once you've published the pack:
+
+- **The Java engine picks it up via classpath scan.** Drop the jar in, restart, the new locale shows up in `/api/v1/lexicons`. No Java edits.
+- **The TypeScript engine picks it up via package resolution.** `import { JA_JP } from '@aster-cloud/aster-lang-ja'` and pass it to `compile()`. No compiler edits.
+- **The LSP gains syntax highlighting + diagnostics in the new language.** The Shiki grammar and the diagnostic-message bundle both consume the lexicon at startup.
+- **The playground gets a new dropdown entry.** [`AsterPlayground.vue`](https://github.com/aster-cloud/aster-lang-dev/blob/main/docs/.vitepress/components/AsterPlayground.vue) iterates the registered lexicons.
+
+What none of those steps need: an engine release. A lexicon pack is data, the engine treats it as data, and adding one is a matter of npm publish.
+
+## What you have to do yourself
+
+Three things that the tooling can't do for you:
+
+**1. Translate the keyword list with judgment.** A literal translation often produces ambiguous keywords. "And" in Japanese has at least four reasonable candidates depending on whether you're joining conditions, lists, or noun phrases — pick the wrong one and rules read oddly. We recommend running the candidate list past at least one native speaker who is *also* familiar with executable rule languages (SQL, predicate logic). The combination is rare; it's worth the consultant fee.
+
+**2. Decide on character-class boundaries.** English keywords end at whitespace. Chinese keywords end at the next non-CJK character. Japanese is in the middle — kana flows into kanji flows into hiragana with no whitespace, but native readers see boundaries that a regex doesn't. The lexicon ships a `tokenBoundary` field for this; for most languages the default works, but tonal/agglutinative languages may need overrides.
+
+**3. Author the test fixtures.** Each lexicon pack must include `.aster` source files in the new language that exercise: every keyword in the keyword map, every operator, at least one nested condition, and at least one example with each numeric/string/boolean literal type. The `parity.test.ts` runs your fixtures and the corresponding English fixtures through both engines and asserts that they produce the same AST. This catches a surprising number of subtle issues.
+
+The reference for what "complete enough" looks like is the existing [`aster-lang-en`](https://github.com/aster-cloud/aster-lang-en), [`aster-lang-zh`](https://github.com/aster-cloud/aster-lang-zh), and [`aster-lang-de`](https://github.com/aster-cloud/aster-lang-de) packages.
+
+## A note on AI
+
+Built-in LLM assistance — the "AI Draft" / "AI Explain" buttons in the cloud product — works for any registered lexicon, including ones you ship. The prompt template feeds the lexicon to the model, and the model produces output in whatever surface language the user asked for. Quality varies by language: English and Chinese are excellent, German is very good, anything else is "as good as your model is at that language." The compile-validate loop catches gibberish before it reaches the user, so the worst case is "the assistant says it couldn't generate a valid rule," not "a broken rule gets shipped."
+
+If you ship a fourth language pack, the AI gets it for free. The prompts have been deliberately written to be language-agnostic.
+
+## What's next
+
+Three things on the roadmap that touch lexicons:
+
+- **A lexicon-pack starter template** — a CLI scaffold that generates the package skeleton + fixtures + a translation worksheet. ETA Q3.
+- **Operator polymorphism** — "is at least" and "is greater than or equal to" should both be valid in English without two separate canonical forms. Today they're separate; the canonicalizer should fold them.
+- **A community lexicon directory** — once we have three or four community packs, a page that lists them with maintainer + last-publish date. Bootstrapping problem; if you're considering shipping one, [tell us](mailto:hello@aster-lang.dev) and we'll feature it.
+
+The barrier to adding Aster Lang to a new language is intentionally low. If your team needs Aster Lang in a language we don't yet support, the lift is on the order of one engineering week — most of which is reviewing keyword translations, not writing code.
