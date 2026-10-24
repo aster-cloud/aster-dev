@@ -3,14 +3,12 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
 import { formatPostDate, getPost, listPosts, loadPostContent } from '@/lib/blog';
+import { SITE_URL } from '@/lib/blog-feed';
 import type { Metadata } from 'next';
 
 export function generateStaticParams() {
   return routing.locales.flatMap((locale) => listPosts().map((p) => ({ locale, slug: p.slug })));
 }
-
-// 只服务清单里的文章，未知 slug 直接 404，不在运行时尝试渲染。
-export const dynamicParams = false;
 
 type Params = Promise<{ locale: string; slug: string }>;
 
@@ -21,7 +19,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: post.title,
     description: post.description,
-    alternates: { canonical: `/blog/posts/${post.slug}` },
+    alternates: { canonical: `${SITE_URL}/blog/posts/${post.slug}` },
   };
 }
 
@@ -34,7 +32,8 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   const t = await getTranslations('devBlog');
 
   return (
-    <article className="prose prose-zinc mx-auto max-w-3xl px-4 py-12 dark:prose-invert sm:px-6">
+    // 正文只有英文：显式标 lang，避免 zh/de/hi 页面上的英文被按页面语言朗读与索引。
+    <article lang="en" className="prose prose-zinc mx-auto max-w-3xl px-4 py-12 dark:prose-invert sm:px-6">
       <p className="not-prose text-sm">
         <Link href="/blog" className="text-fg-muted hover:text-fg">
           ← {t('back')}
