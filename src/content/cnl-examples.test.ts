@@ -43,6 +43,9 @@ import {
   ZH_CN,
   DE_DE,
   HI_IN,
+  IdentifierKind,
+  vocabularyRegistry,
+  type DomainVocabulary,
   type Lexicon,
 } from '@aster-cloud/aster-lang-ts/browser';
 
@@ -92,18 +95,50 @@ function extractAsterBlocks(absPath: string): AsterBlock[] {
   return blocks;
 }
 
+/**
+ * 文档里「先注册词汇再编译」的示例（lexicons.mdx 字面量宏一节）：按文档原样注册，
+ * 并用文档给出的 domain + tenantId 编译。按位置解析（ADR 0051）后，未注册的触发词是
+ * 无法解析的名字（E802），不能再不带词汇编译这些块。
+ */
+const DOC_TENANT = 'acme-tenant';
+const DOC_DOMAIN = 'poem';
+
+function poemVocabulary(localized: string, canonical: string): DomainVocabulary {
+  return {
+    id: DOC_DOMAIN, name: DOC_DOMAIN, locale: 'en-US', version: '1',
+    structs: [], fields: [], functions: [], enumValues: [],
+    literals: [{ canonical, localized, kind: IdentifierKind.LITERAL }],
+  };
+}
+
+/** 文件（相对 content/）→ 该文件示例所注册的词汇与触发词展开后的文案。 */
+const DOC_VOCABULARIES: Record<string, { vocabulary: DomainVocabulary; expands: string }> = {
+  'en/lexicons.mdx': { vocabulary: poemVocabulary('homesick', 'Quiet Night Thoughts'), expands: 'Quiet Night Thoughts' },
+  'zh/lexicons.mdx': { vocabulary: poemVocabulary('思故乡', '静夜思'), expands: '静夜思' },
+};
+
+/** 编译诊断：解析错误 + 名称解析诊断（有 E8xx 时引擎不做类型检查，只看 parseErrors 会显示「无诊断」）。 */
+function describeFailure(result: ReturnType<typeof compile>): string {
+  const parse = (result.parseErrors ?? []).map((e) => e.message);
+  const resolution = (result.resolutionDiagnostics ?? []).map((d) => `${d.code} ${d.message}`);
+  return [...parse, ...resolution].join('; ') || '编译失败（无诊断）';
+}
+
 /** 尝试用每种 lexicon 编译；返回成功的 locale id + 编译产物，或全部失败时的错误清单。 */
 function compileInAnyLexicon(
   source: string,
+  file?: string,
 ):
   | { ok: true; locale: string; lexicon: Lexicon; core: unknown }
   | { ok: false; errors: string[] } {
+  const doc = file ? DOC_VOCABULARIES[file] : undefined;
+  if (doc) vocabularyRegistry.registerCustom(DOC_TENANT, doc.vocabulary);
+  const scope = doc ? { domain: DOC_DOMAIN, tenantId: DOC_TENANT } : {};
   const errors: string[] = [];
   for (const [id, lexicon] of LEXICONS) {
-    const result = compile(source, { lexicon });
+    const result = compile(source, { lexicon, ...scope });
     if (result.success) return { ok: true, locale: id, lexicon, core: result.core };
-    const msgs = (result.parseErrors ?? []).map((e) => e.message).join('; ');
-    errors.push(`${id}: ${msgs || '编译失败（无诊断）'}`);
+    errors.push(`${id}: ${describeFailure(result)}`);
   }
   return { ok: false, errors };
 }
@@ -198,8 +233,8 @@ describe('文档 CNL 示例可编译', () => {
     expect(blocks.length).toBeGreaterThan(0);
   });
 
-  it.each(blocks)('$file 第 $index 个 aster 块编译通过', ({ source }) => {
-    const outcome = compileInAnyLexicon(source);
+  it.each(blocks)('$file 第 $index 个 aster 块编译通过', ({ file, source }) => {
+    const outcome = compileInAnyLexicon(source, file);
     if (!outcome.ok) {
       // 失败时把源码与各语言错误一并打印，方便直接定位修复。
       throw new Error(
@@ -220,10 +255,22 @@ describe('文档 CNL 示例可编译', () => {
     expect(blocks.length).toBe(EXPECTED_BLOCK_COUNT);
   });
 
+  // 字面量宏示例不只要能编译：触发词必须真的展开成文档所说的文案（旧引擎把它当未知名字放行，
+  // 编译通过但从未展开）。
+  it.each(Object.entries(DOC_VOCABULARIES))('%s 的字面量宏示例展开为文档所述文案', (file, { expands }) => {
+    const block = blocks.find((b) => b.file === file && /^Rule title\b/m.test(b.source));
+    expect(block, `${file} 缺少字面量宏示例块`).toBeDefined();
+    const outcome = compileInAnyLexicon(block!.source, file);
+    expect(outcome.ok, outcome.ok ? '' : outcome.errors.join('\n')).toBe(true);
+    if (!outcome.ok) return;
+    const run = evaluate(outcome.core as never, 'title', {}) as { success: boolean; value?: unknown };
+    expect(run).toMatchObject({ success: true, value: expands });
+  });
+
   it.each(blocks)(
     '$file 第 $index 个 aster 块所调用的函数都存在',
-    ({ source }) => {
-      const outcome = compileInAnyLexicon(source);
+    ({ file, source }) => {
+      const outcome = compileInAnyLexicon(source, file);
       if (!outcome.ok) return; // 编译失败已由上一条用例报出，此处不重复报错
       const moduleFuncs = new Set(
         ((outcome.core as { decls?: Array<{ kind?: string; name?: string }> }).decls ?? [])

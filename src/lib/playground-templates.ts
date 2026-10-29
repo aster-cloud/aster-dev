@@ -156,7 +156,7 @@ Regel berechnePreis gegeben betrag als Ganzzahl, liefert Ganzzahl:
     source: `Modul rueckerstattung.
 Profil "eu-ai-act-high-risk".
 
-Definiere Anfrage hat aktion als Text, betrag als Ganzzahl, gesperrt als Wahrheitswert.
+Definiere Anfrage hat aktion als Text, betrag als Ganzzahl, gesperrt als Boolesch.
 
 @id("REFUND-001")
 @control("EU_AI_ACT:ART14")

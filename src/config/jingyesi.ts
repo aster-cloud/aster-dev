@@ -3,6 +3,8 @@
  *
  * 李白《静夜思》按原词序即 Aster 源码：诗句领字做关键词别名（ADR 0022），末句「思故乡」用
  * 字面量宏（IdentifierKind.LITERAL）展开成「静夜思」。运行输出诗名。
+ * 「举头 望明月」即 `produce 望明月`：望明月处在返回类型位置，按位置解析（ADR 0051）必须是
+ * 已知类型，故在词汇中把它映射为内置 Text（输出的诗名正是一段文本）。
  *
  * LayoutMap（显示/编译解耦）：canonical（受 Aster 语法约束的排版，编译真源）↔ display
  * （李白原诗工整四句）。同一段程序两种排版，编译走 canonical。
@@ -28,14 +30,14 @@ export const JINGYESI_LEXICON: Lexicon = {
   },
 };
 
-/** 注册静夜思字面量宏：思故乡 → 内容「静夜思」。幂等。 */
+/** 注册静夜思词汇：望明月 → 返回类型 Text；思故乡 → 字面量「静夜思」。幂等。 */
 export function registerJingyesiVocab(): void {
   vocabularyRegistry.registerCustom(JINGYESI_DOMAIN, {
     id: JINGYESI_DOMAIN,
     name: '静夜思',
     locale: JINGYESI_DOMAIN,
     version: '1.0.0',
-    structs: [],
+    structs: [{ localized: '望明月', canonical: 'Text', kind: IdentifierKind.STRUCT }],
     fields: [],
     functions: [],
     enumValues: [],
