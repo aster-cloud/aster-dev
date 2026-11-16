@@ -16,7 +16,7 @@ function run() {
   if (!c.success || !c.core) {
     return { canonical, display, error: (c.parseErrors ?? []).map((e) => e.message).join('; ') || 'compile failed' };
   }
-  const rule = c.core.decls?.[0]?.name ?? '';
+  const rule = c.core.decls.find((d) => d.kind === 'Func')?.name ?? '';
   const ev = evaluate(c.core, rule, {});
   return { canonical, display, module: c.core.name ?? '', rule, output: ev.success ? String(ev.value) : `run failed: ${ev.error}` };
 }

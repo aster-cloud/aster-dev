@@ -10,6 +10,12 @@ import { toCanonical, toDisplay } from '../lib/layout-map';
 import { JINGYESI_LAYOUT, JINGYESI_LEXICON, JINGYESI_DOMAIN, registerJingyesiVocab } from './jingyesi';
 import { SHERLOCK_LAYOUT, SHERLOCK_LEXICON, SHERLOCK_DOMAIN, SHERLOCK_CLUES, SHERLOCK_PRESETS } from './sherlock';
 
+/** 模块中第一条规则的名字：Core IR v2 的 decls 含 Import 等无名声明，按 kind 取 Func。 */
+function firstRule(core: { decls: ReadonlyArray<{ kind: string; name?: string }> }): string {
+  const fn = core.decls.find((d) => d.kind === 'Func');
+  return fn?.name ?? '';
+}
+
 /** 把预设的 on(id 列表) 转成喂给引擎的 clue context {field: bool}——与探案台组件同一路径。 */
 function presetContext(key: string): Record<string, boolean> {
   const on = new Set(SHERLOCK_PRESETS.find((p) => p.key === key)!.on);
@@ -21,7 +27,7 @@ describe('静夜思 demo（LayoutMap）', () => {
     registerJingyesiVocab();
     const c = compile(toCanonical(JINGYESI_LAYOUT), { lexicon: JINGYESI_LEXICON, domain: JINGYESI_DOMAIN, tenantId: JINGYESI_DOMAIN });
     expect(c.success, JSON.stringify(c.parseErrors)).toBe(true);
-    const ev = evaluate(c.core!, c.core!.decls[0].name, {});
+    const ev = evaluate(c.core!, firstRule(c.core!), {});
     expect(ev.success).toBe(true);
     expect(ev.value).toBe('静夜思');
   });
@@ -36,7 +42,7 @@ describe('斑点带子案 demo（LayoutMap）', () => {
     const c = compile(toCanonical(SHERLOCK_LAYOUT), { lexicon: SHERLOCK_LEXICON, domain: SHERLOCK_DOMAIN, tenantId: SHERLOCK_DOMAIN });
     expect(c.success, JSON.stringify(c.parseErrors)).toBe(true);
     expect(c.core!.name).toBe('斑点带子案');
-    expect(c.core!.decls[0].name).toBe('揪出真凶');
+    expect(firstRule(c.core!)).toBe('揪出真凶');
   });
 
   it('canonical 的 inline-if 连接词已全中文化（那么/否则），无残留英文 then/else', () => {
@@ -56,7 +62,7 @@ describe('斑点带子案 demo（LayoutMap）', () => {
 
   it('真决策：不同线索组合导出不同真凶（探案台预设路径）', () => {
     const c = compile(toCanonical(SHERLOCK_LAYOUT), { lexicon: SHERLOCK_LEXICON, domain: SHERLOCK_DOMAIN, tenantId: SHERLOCK_DOMAIN });
-    const rule = c.core!.decls[0].name;
+    const rule = firstRule(c.core!);
     const out = (key: string) => {
       const ev = evaluate(c.core!, rule, presetContext(key));
       return ev.success ? String(ev.value) : `fail:${ev.error}`;
