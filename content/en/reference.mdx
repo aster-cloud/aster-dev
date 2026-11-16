@@ -110,6 +110,31 @@ parenthesise the inner type:
 ((result of Int), Text) -> Bool     ✅ two parameters
 ```
 
+### Signature syntax rulings (available from 1.0.49 / `aster-lang-ts` 3.2.0)
+
+Engines 1.0.49 and `aster-lang-ts` 3.2.0 settle the remaining differences between
+the two engines in parameter lists and type expressions. Both engines now behave as
+follows:
+
+| Written | Result | Write instead |
+| --- | --- | --- |
+| `given x as Pair<Int, Text>` | `E056` at `<` — angle-bracket type arguments are not supported | `Pair of Int and Text` |
+| `given Customer as Text` | `E055` — a parameter name must not start with an uppercase A–Z letter | `customer as Text` |
+| `given xs as list of Int and Text` | `E055` — `list of` takes one type, and `Text` would be an uppercase parameter name | `list of Int` |
+| `given r as result of Int or Text` | `E062` at `or` | `result of Int and Text` |
+| `given n as maybe of Text` | `E061` at `of` | `maybe Text` |
+| `given @pii(L1, email) email as Text` | accepted: annotations before a parameter name | — |
+| `Type Amount as Int.` | accepted: the `type` keyword is case-insensitive, like the other declaration keywords | — |
+| `given n as maybe Text`, `maybe @pii(L1, name) Text` | accepted: `maybe T` is the prefix form of `T?` | — |
+
+Annotations written before a parameter name and a `@pii(…)` on the outermost type
+both end up in the parameter's `annotations` in Core IR, the same in both engines.
+
+```text
+Rule f given x as Pair of Int, @pii(L1, email) y as Text, produce Int:   ✅ two parameters
+Rule f given r as result of Int or Text, produce Int:                   ❌ E062
+```
+
 ## Control flow
 
 Conditional logic uses `If … Return …`. Branches are evaluated top to bottom; the

@@ -172,6 +172,30 @@ E706  Rule 'decide' violates profile 'eu-ai-act-high-risk': no registered contro
 （与编译服务不可达时相同）：保存被拒绝，返回可重试的 `503 compile_unavailable`，而不是 `400`。
 基础设施故障绝不会被当作策略违规，声明了档案的策略也绝不会未经检查就被保存。
 
+### 个人数据作为文本返回（W709）
+
+*自 1.0.49 / `aster-lang-ts` 3.2.0 起提供。*
+
+执行输出原样存储并显示在执行日志中，日志只会打码可识别的模式（如邮箱地址、电话号码）。规则用 `@pii` 值拼出返回的
+`Text`，就会把这个值泄漏到日志里。编译器为此报警告 `W709`（`GOV_PII_RETURNED_AS_TEXT`），在 `Return` 处每个字段报一次：
+
+```aster
+Module demo.pii.
+
+Define Applicant has name as @pii(L2, name) Text, city as Text.
+
+Rule greet given applicant as Applicant, produce Text:
+  Return "Hello, " + applicant.name + "!".
+```
+
+```text
+W709  Rule 'greet' returns Text built from @pii field 'applicant.name'; the execution output is stored and shown unmasked
+```
+
+`W709` 恒为警告，从不阻止保存。它在规则内部沿 `+`、`Text.concat`、`Let` / `Set` 绑定与 `if` 表达式的分支追踪取值，
+且有意到此为止：不跟进对其他规则的调用、集合中的值或其他内置函数；规则的返回类型本身声明为 `@pii(…) Text`，或不是
+`Text` 时也不报。请改为返回不含个人数据的值（例如 `"Hello from " + applicant.city`），或把返回的文本声明为个人数据。
+
 ## 在哪里看到这些
 
 - **Aster Cloud 策略详情页**以徽标显示已声明的档案，数据取自已保存的策略版本。

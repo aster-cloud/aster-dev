@@ -203,6 +203,37 @@ service — as *fail closed*: the save is rejected with a retryable
 `503 compile_unavailable`, not a `400`. An infrastructure fault is never read as a
 policy violation, and a profiled policy is never saved unchecked.
 
+### Personal data returned as text (W709)
+
+*Available from 1.0.49 / `aster-lang-ts` 3.2.0.*
+
+Execution outputs are stored as they are and shown in execution logs, where only
+recognisable patterns such as e-mail addresses and phone numbers are masked. A rule
+that builds its returned `Text` from a `@pii` value therefore leaks that value into
+the logs. The compiler reports this as warning `W709`
+(`GOV_PII_RETURNED_AS_TEXT`), once per field, at the `Return`:
+
+```aster
+Module demo.pii.
+
+Define Applicant has name as @pii(L2, name) Text, city as Text.
+
+Rule greet given applicant as Applicant, produce Text:
+  Return "Hello, " + applicant.name + "!".
+```
+
+```text
+W709  Rule 'greet' returns Text built from @pii field 'applicant.name'; the execution output is stored and shown unmasked
+```
+
+`W709` is always a warning and never blocks saving. It follows values through `+`,
+`Text.concat`, `Let` / `Set` bindings and `if` expression branches inside the rule,
+and deliberately goes no further: it does not follow calls to other rules, values
+inside collections or other built-in functions, and it is not reported when the
+rule's return type is itself declared `@pii(…) Text` or is not `Text`. Return a
+non-personal value instead (for example `"Hello from " + applicant.city`), or
+declare the returned text as personal data.
+
 ## Where this shows up
 
 - **Policy detail in Aster Cloud** shows the declared profile as a badge, read from
