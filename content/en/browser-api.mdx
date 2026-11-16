@@ -43,7 +43,11 @@ Rule discountedPrice given amount as Int, produce Int:
 // 1. compile → Core IR
 const result = compile(source, { lexicon: EN_US });
 if (!result.success) {
-  console.error(result.parseErrors ?? result.resolutionDiagnostics ?? result.loweringDiagnostics);
+  console.error([
+    ...(result.parseErrors ?? []),
+    ...(result.resolutionDiagnostics ?? []),
+    ...(result.loweringDiagnostics ?? []),
+  ]);
 } else {
   // 2. evaluate a rule against an input context
   const out = evaluate(result.core, 'discountedPrice', { amount: 200 });

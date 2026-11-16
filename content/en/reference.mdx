@@ -203,12 +203,19 @@ has to be parsed.
 
 | Range | Stage |
 | --- | --- |
-| `E050`–`E069` | lexing and parsing |
+| `E001`–`E099` | types (`E050`–`E069` within it: lexing and parsing) |
+| `E100`–`E199` | scopes and imports |
 | `E200`–`E399` | effects and capabilities |
+| `E400`–`E499` | PII |
+| `E500`–`E599` | async |
 | `E600`–`E606` | lowering to Core IR |
 | `E700`–`E799`, `W7xx` | governance and Cedar export (see [Governance](/docs/governance)) |
 | `E800`–`E807`, `W800`–`W801` | name resolution (see [Lexicons](/docs/lexicons#how-names-are-resolved)) |
 | `E900` | an annotation repeats a named argument |
+| `Wxxx` | warnings |
+
+The full list is in the engine's error-code table
+([`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.1.0/docs/error-codes.md)).
 
 The parse codes:
 

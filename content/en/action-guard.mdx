@@ -140,16 +140,18 @@ An `ALLOW` decision — issued directly, or when an approver approves — includ
 will*:
 
 ```json
-"executionReceipt": {
-  "kid": "2026-11a",
-  "payload": {
-    "actionHash": "…64 hex…", "decisionId": "7c1e2a90-…", "expiresAt": "2026-11-16T01:05:00Z",
-    "issuedAt": "2026-11-16T01:00:00Z", "kid": "2026-11a", "outcome": "ALLOW",
-    "policyFunction": "decide", "policyModule": "guard.customer",
-    "policyVersionId": 1730890123456, "tenantId": "team-1", "v": 1
-  },
-  "revision": 3,
-  "signature": "<base64url, 64 bytes>"
+{
+  "executionReceipt": {
+    "kid": "2026-11a",
+    "payload": {
+      "actionHash": "…64 hex…", "decisionId": "7c1e2a90-…", "expiresAt": "2026-11-16T01:05:00Z",
+      "issuedAt": "2026-11-16T01:00:00Z", "kid": "2026-11a", "outcome": "ALLOW",
+      "policyFunction": "decide", "policyModule": "guard.customer",
+      "policyVersionId": 1730890123456, "tenantId": "team-1", "v": 1
+    },
+    "revision": 3,
+    "signature": "<base64url, 64 bytes>"
+  }
 }
 ```
 
@@ -373,7 +375,9 @@ be exposed (without it every tool is exposed and the proxy warns at start-up).
 
 For each tool call the proxy uses the tool name as `action.name` and the normalised
 tool arguments (keys sorted, `null` kept) as both `context` and the arguments it
-forwards — one object, so what was decided is what runs. `--resource-from <argName>`
+forwards — one object, so what was decided is what runs. The exception is a per-tool
+`digestArgs` mapping in `--config`: those keys reach the policy as
+`{ "$sha256": … }` digests, while the upstream still receives the original values. `--resource-from <argName>`
 takes that top-level argument as the resource id. Only a consumed `ALLOW` is
 forwarded. `DENY`, a `PENDING` that outlasts `--approval-timeout`, and any failed
 verification or consume return a tool error (`Blocked by Aster Guard: …`) with a

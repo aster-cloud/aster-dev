@@ -122,16 +122,18 @@ Rule decide given req as GuardRequest, produce Verdict:
 而不是「随时可以执行」：
 
 ```json
-"executionReceipt": {
-  "kid": "2026-11a",
-  "payload": {
-    "actionHash": "…64 位十六进制…", "decisionId": "7c1e2a90-…", "expiresAt": "2026-11-16T01:05:00Z",
-    "issuedAt": "2026-11-16T01:00:00Z", "kid": "2026-11a", "outcome": "ALLOW",
-    "policyFunction": "decide", "policyModule": "guard.customer",
-    "policyVersionId": 1730890123456, "tenantId": "team-1", "v": 1
-  },
-  "revision": 3,
-  "signature": "<base64url，64 字节>"
+{
+  "executionReceipt": {
+    "kid": "2026-11a",
+    "payload": {
+      "actionHash": "…64 位十六进制…", "decisionId": "7c1e2a90-…", "expiresAt": "2026-11-16T01:05:00Z",
+      "issuedAt": "2026-11-16T01:00:00Z", "kid": "2026-11a", "outcome": "ALLOW",
+      "policyFunction": "decide", "policyModule": "guard.customer",
+      "policyVersionId": 1730890123456, "tenantId": "team-1", "v": 1
+    },
+    "revision": 3,
+    "signature": "<base64url，64 字节>"
+  }
 }
 ```
 
@@ -308,7 +310,8 @@ API key 只从环境变量读取（`--api-key-env` 可改变量名），也不�
 `--isolation` 必填，`--tools` 列出允许暴露的工具（不配置则全部暴露，代理启动时告警）。
 
 对每一次工具调用，代理以工具名作 `action.name`，以规范化后的工具参数（键排序、保留 `null`）同时作 `context`
-和转发给上游的参数——同一个对象，裁决的就是将要执行的。`--resource-from <argName>` 取该顶层参数作资源 id。
+和转发给上游的参数——同一个对象，裁决的就是将要执行的。例外是 `--config` 中按工具配置的 `digestArgs`：
+这些键以 `{ "$sha256": … }` 摘要形式进入策略，转发给上游的仍是原值。`--resource-from <argName>` 取该顶层参数作资源 id。
 只有已 consume 的 `ALLOW` 才转发；`DENY`、等到 `--approval-timeout` 仍为 `PENDING`、以及任何验签或 consume
 失败，都返回工具错误（`Blocked by Aster Guard: …`），附结构化的 `asterGuard` 载荷，`status` 为 `denied`、
 `pending` 或 `blocked`。再次调用同一工具是一次新的决策。

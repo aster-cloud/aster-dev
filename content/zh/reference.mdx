@@ -184,12 +184,18 @@ Rule classify given score as Int, produce Text:
 
 | 范围 | 阶段 |
 | --- | --- |
-| `E050`–`E069` | 词法与语法解析 |
+| `E001`–`E099` | 类型（其中 `E050`–`E069` 为词法与语法解析） |
+| `E100`–`E199` | 作用域与导入 |
 | `E200`–`E399` | 效果与能力 |
+| `E400`–`E499` | PII |
+| `E500`–`E599` | 异步 |
 | `E600`–`E606` | 降级到 Core IR |
 | `E700`–`E799`、`W7xx` | 治理与 Cedar 导出（见[策略即治理](/docs/governance)） |
 | `E800`–`E807`、`W800`–`W801` | 名称解析（见[词法表](/docs/lexicons#名称如何解析)） |
 | `E900` | 注解重复给出同一个具名参数 |
+| `Wxxx` | 警告 |
+
+完整列表见引擎的错误码表（[`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.1.0/docs/error-codes.md)）。
 
 解析错误码：
 
