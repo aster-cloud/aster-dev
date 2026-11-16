@@ -43,7 +43,7 @@ Rule discountedPrice given amount as Int, produce Int:
 // 1. compile → Core IR
 const result = compile(source, { lexicon: EN_US });
 if (!result.success) {
-  console.error(result.diagnostics);
+  console.error(result.parseErrors ?? result.resolutionDiagnostics ?? result.loweringDiagnostics);
 } else {
   // 2. evaluate a rule against an input context
   const out = evaluate(result.core, 'discountedPrice', { amount: 200 });
@@ -67,11 +67,13 @@ const result = compile(source, { lexicon: ZH_CN });
 ### `validateSyntaxWithSpan(source, lexicon?)`
 
 Parse-checks the source and returns diagnostics with line/column spans — ideal for an
-editor's squiggly underlines.
+editor's squiggly underlines. Each carries a stable `code` (`E050`–`E069`) and named
+`params`; `message` is the English fallback, so localise by `code` rather than by
+parsing the text.
 
 ```js
 const diags = validateSyntaxWithSpan(source);
-// → [{ message, severity, start: {line, col}, end: {line, col} }]
+// → [{ message, code, params, span: { start: {line, col}, end: {line, col} } }]
 ```
 
 ### `compile(source, options?)`
@@ -80,7 +82,14 @@ Lowers source to the Core IR. Returns a `CompileResult`:
 
 ```js
 const result = compile(source, { lexicon: EN_US });
-// result: { success: boolean, core?: Module, diagnostics?: Diagnostic[] }
+// result: {
+//   success: boolean,
+//   core?: Module,            // Core IR v2 object
+//   coreJson?: string,        // its canonical bytes
+//   parseErrors?: ParseError[],                 // E050–E069
+//   loweringDiagnostics?: TypecheckDiagnostic[], // E600–E606
+//   resolutionDiagnostics?: TypecheckDiagnostic[], // E800–E807, W800–W801
+// }
 if (result.success) {
   console.log(result.core); // the compiled Core IR module
 }
@@ -89,12 +98,35 @@ if (result.success) {
 > Note: the compiled module is `result.core` (the Core IR). `compile` does **not**
 > return an `ir` field.
 
-`options` (`CompileOptions`): `{ lexicon?, domain?, tenantId?, includeIntermediates? }`.
+`options` (`CompileOptions`): `{ lexicon?, vocabulary?, domain?, tenantId?, controls?, includeIntermediates? }`
+— `vocabulary` (or `domain` + `tenantId`) supplies a [domain vocabulary](/docs/lexicons#domain-vocabulary),
+`controls` replaces the built-in control registry. A name-resolution error (`E8xx`)
+makes `success` false and produces no `core`.
+
+### Core IR v2: `coreJson`, `serializeCoreIr`, `readCoreIr`
+
+`result.core` is the Core IR v2 object; `result.coreJson` is its **canonical bytes**
+(`serializeCoreIr(core)`: keys in code-point order, no whitespace, every field
+present). Hash, store or `POST` to `/evaluate-json` the `coreJson` string — do not
+`JSON.stringify(core)` yourself.
+
+```js
+import { serializeCoreIr, validateCoreIrInvariants } from '@aster-cloud/aster-lang-ts/browser';
+import { readCoreIr } from '@aster-cloud/aster-lang-ts'; // Node entry only
+
+const json = serializeCoreIr(result.core);   // === result.coreJson
+const core = readCoreIr(json);               // strict: schema version, schema, invariants
+```
+
+`readCoreIr` throws `CoreIrFormatError` (`code`: `unsupported_schema_version` or
+`invalid_request`) for anything that is not valid v2 IR — including IR saved by
+pre-2.0 versions, which must be recompiled from source.
 
 ### `compileAndTypecheck(source, options?)`
 
 `compile` plus static type inference — catches type errors (e.g. comparing `Text` to
-`Int`) before evaluation. Same `CompileResult` shape, with type diagnostics included.
+`Int`) before evaluation. Same `CompileResult` shape plus `typeErrors`; type errors
+do not make `success` false, so check their `severity`.
 
 ### `extractSchema(source, options?)`
 
@@ -144,11 +176,17 @@ import {
 
 // 1. validate as the user types
 const diags = validateSyntaxWithSpan(source);
-if (diags.some((d) => d.severity === 'error')) return showErrors(diags);
+if (diags.length > 0) return showErrors(diags);
 
 // 2. compile + typecheck
 const result = compileAndTypecheck(source, { lexicon: EN_US });
-if (!result.success) return showErrors(result.diagnostics);
+const errors = [
+  ...(result.parseErrors ?? []),
+  ...(result.loweringDiagnostics ?? []),
+  ...(result.resolutionDiagnostics ?? []),
+  ...(result.typeErrors ?? []).filter((d) => d.severity === 'error'),
+];
+if (!result.success || errors.length > 0) return showErrors(errors);
 
 // 3. extract schema → build an input form (parameter names + inferred types)
 const schema = extractSchema(source, { lexicon: EN_US });

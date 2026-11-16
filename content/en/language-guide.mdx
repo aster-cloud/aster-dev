@@ -18,7 +18,8 @@ Rule discountedPrice given amount as Int, produce Int:
 ```
 
 - `Module <Name>.` declares the module.
-- `Rule <name> given <params>:` declares a rule (function) and its inputs.
+- `Rule <name> given <params>:` declares a rule (function) and its inputs. The
+  whole header — up to its `:` — goes on one line.
 - Each statement ends with a period; the rule returns the value of its last
   `Return`.
 
@@ -35,7 +36,10 @@ Aster is statically typed with inference. The core types:
 | List | `[1, 2, 3]` |
 | Record | `applicant.creditScore` |
 
-You rarely write types — they are inferred from literals and field access.
+You rarely write types — they are inferred from literals and field access. When you
+do, composite types read as words: `list of Int`, `option of Text`,
+`result of Int and Text`, `map Text to Int`, `(Int) -> Bool` (see the
+[Reference](/docs/reference#composite-types)).
 
 ## Expressions
 

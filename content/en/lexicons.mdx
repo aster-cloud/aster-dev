@@ -134,6 +134,29 @@ Rule decide given who as Borrower, produce Text:
   Return "REFER".
 ```
 
+### How names are resolved
+
+Vocabulary terms are resolved **by position, after parsing**. A written name is
+looked up only among the terms of the role its position calls for: a type position
+among `structs`, the part after `.` among the `fields` of the receiver's type, a
+pattern among `enumValues`, a call among `functions`. So the same localized word can
+be a struct in one place and a field in another, and one localized field name can
+map to different canonical fields in different structs.
+
+Names the source declares itself — parameters, `Let` bindings, pattern bindings,
+lambda parameters — are never rewritten by the vocabulary; a declaration that hides
+a vocabulary entry wins and reports `W800`. Keywords, keyword aliases and literal
+macros are still applied before parsing.
+
+When a name cannot be decided, the compiler reports it instead of guessing:
+
+| Code | Meaning |
+| --- | --- |
+| `E800`–`E803` | unresolved type, field, name or pattern |
+| `E804`–`E806` | ambiguous name, field or pattern — qualify an enum member (`Level.High`) or annotate the receiver's type |
+| `E807` | duplicate declaration |
+| `W801` | resolved without a known receiver type |
+
 ### Evaluation inputs use canonical names
 
 This is the one thing that catches everyone. The **source** is written in localized

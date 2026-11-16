@@ -17,13 +17,14 @@ Rule discountedPrice given amount as Int, produce Int:
 ```
 
 - `Module <名称>.` 声明模块。
-- `Rule <名称> given <参数>:` 声明规则（函数）及其输入。
+- `Rule <名称> given <参数>:` 声明规则（函数）及其输入。整个规则头——直到它的 `:`——写在一行。
 - 每条语句以句号结尾；规则返回最后一个 `Return` 的值。
 
 ## 类型
 
 Aster 是带推断的静态类型。核心类型：整数、小数、文本、布尔、列表、记录。
-你很少需要显式写类型——它们从字面量和字段访问推断而来。
+你很少需要显式写类型——它们从字面量和字段访问推断而来。需要写时，复合类型也用词语表达：`list of Int`、
+`option of Text`、`result of Int and Text`、`map Text to Int`、`(Int) -> Bool`（见[语言参考](/docs/reference#复合类型)）。
 
 ## 表达式
 

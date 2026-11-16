@@ -9,13 +9,16 @@ the tenant's deployed policy decides, and the agent acts only on `ALLOW`.
 ```text
 agent proposes action ──► POST /api/v1/guard/decisions ──► deployed Verdict rule
                                                               │
-        ALLOW ──► receipt on the hash chain ──► agent acts
+        ALLOW ──► receipt on the hash chain + signed execution receipt ──► agent verifies, consumes, then acts
         DENY  ──► receipt on the hash chain ──► agent does not act
         REQUIRE_APPROVAL / ESCALATE ──► receipt + pending approval ──► a person approves, rejects, or it expires
 ```
 
 Every decision — including every refusal — leaves a receipt in the tenant's
-tamper-evident audit chain.
+tamper-evident audit chain. An `ALLOW` additionally carries a signed, single-use
+**execution receipt**: the guard is an enforcement point, not advice. The agent acts
+only after it has verified that receipt and the server has accepted its one-time
+*consume* (see [Execution receipts](#execution-receipts)).
 
 ## The guard request
 
@@ -116,10 +119,10 @@ empty values are omitted:
 ```
 
 `outcome` is what the rule said. `effectiveOutcome` — `ALLOW`, `DENY` or
-`PENDING` — is the only field an agent should act on: execute on `ALLOW`, stop on
-`DENY`, and on `PENDING` poll `GET /api/v1/guard/decisions/{decisionId}` until it
-changes. A pending approval expires after 24 hours by default, and an expired
-approval reads as `DENY`.
+`PENDING` — is the only field an agent should act on: on `ALLOW` verify and consume
+the execution receipt, then act; stop on `DENY`; on `PENDING` poll
+`GET /api/v1/guard/decisions/{decisionId}` until it changes. A pending approval
+expires after 24 hours by default, and an expired approval reads as `DENY`.
 
 ### No receipt, no action
 
@@ -129,6 +132,105 @@ The guard fails closed. The decision receipt is appended to the audit chain
 error or a timeout (10 seconds) is `DENY` with `reasonCode: "evaluation_failed"`.
 A transient `DENY` is stored under its idempotency key, so retry with a new key.
 An unknown policy or a policy without an active version is `404 policy_not_found`.
+
+## Execution receipts
+
+An `ALLOW` decision — issued directly, or when an approver approves — includes an
+`executionReceipt`. `ALLOW` means *may be consumed once*, not *may be executed at
+will*:
+
+```json
+"executionReceipt": {
+  "kid": "2026-11a",
+  "payload": {
+    "actionHash": "…64 hex…", "decisionId": "7c1e2a90-…", "expiresAt": "2026-11-16T01:05:00Z",
+    "issuedAt": "2026-11-16T01:00:00Z", "kid": "2026-11a", "outcome": "ALLOW",
+    "policyFunction": "decide", "policyModule": "guard.customer",
+    "policyVersionId": 1730890123456, "tenantId": "team-1", "v": 1
+  },
+  "revision": 3,
+  "signature": "<base64url, 64 bytes>"
+}
+```
+
+- **Signature** — Ed25519 over the `payload` canonicalised with RFC 8785 (JCS). The
+  public keys are a JWKS at `GET /api/v1/guard/keys` (`kty: OKP`, `crv: Ed25519`;
+  API key required, `Cache-Control: max-age=300`). `revision` is outside the
+  signature and only tells executors to refresh the key set.
+- **`actionHash`** — SHA-256 of the JCS-canonical request `action` object
+  (`jcs-sha256/v1`). The executor computes it itself from the action it is about to
+  perform.
+- **Policy binding** — `policyModule` and `policyFunction` are inside the signature,
+  so a receipt from a different, more permissive policy in the same tenant cannot be
+  passed off as one from the policy the executor asked. `policyVersionId` is
+  omitted when the decision has no stored policy version.
+- **Lifetime** — 5 minutes by default (`expiresAt` is exclusive). After an approval
+  the window starts at the approval time. An expired receipt cannot be renewed:
+  request a new decision with a new `Idempotency-Key`.
+
+The executor then follows one fixed order and stops at the first failure:
+
+1. **Verify** offline: `kid` is in the JWKS (refresh once on a miss); the signature
+   is valid; `tenantId`, `decisionId` and `outcome: "ALLOW"` match;
+   `issuedAt − 60 s ≤ now < expiresAt`; `actionHash` equals its own hash; and
+   `policyModule` / `policyFunction` are present and equal to the policy it asked.
+2. **Consume**: `POST /api/v1/guard/receipts/{decisionId}/consume` with
+   `{ "actionHash", "attemptId", "executorId" }`. Exactly one consume per decision
+   ever succeeds (`200`).
+3. **Act**, and only then.
+4. **Report**: `POST /api/v1/guard/receipts/{decisionId}/result` with
+   `{ "attemptId", "executorId", "status": "executed" | "failed" | "aborted" }`
+   and optionally `finishedAt`, `resultHash` and `errorCode`.
+
+| Consume response | Meaning |
+| --- | --- |
+| `200` | consumed: `{ consumedAt, decisionId, executionReceipt }` |
+| `409 not_allowed` | no receipt — the decision is not (or not yet) `ALLOW` |
+| `409 kid_revoked` | the signing key was revoked |
+| `409 receipt_consumed` | already consumed (the body names the original consumer) |
+| `409 receipt_expired` | `now ≥ expiresAt` |
+| `409 action_mismatch` | the action changed after the decision |
+| `400 invalid_consume` | malformed `actionHash`, `attemptId` or `executorId` |
+| `503 receipt_unavailable` | the consume could not be recorded on the audit chain |
+
+Anything other than `200` — including a lost response — means *do not act*. To retry
+an action, request a new decision. An `ALLOW` you read anywhere else (an idempotent
+replay, `GET /decisions/{id}`, a copied receipt) is not an authorisation; only your
+own successful consume is.
+
+## Reconciliation
+
+Receipts close the front door; reconciliation looks for actions that went round it.
+Every 5 minutes the policy API compares the receipt ledger with side effects that
+your systems report, and records **orphans**.
+
+Systems where effects land (tool services, business systems) report them in batches
+of 1–500 with `POST /api/v1/guard/side-effects`:
+
+```json
+{ "effects": [ { "effectId": "refund-5531", "source": "billing", "occurredAt": "2026-11-16T01:02:03Z",
+                 "action": { "name": "refund" }, "resource": { "type": "order", "id": "O-17" },
+                 "decisionId": "7c1e2a90-…", "attemptId": "…", "actionHash": "…" } ] }
+```
+
+`effectId` is the reporter's own record key and must stay the same across network
+retries of the same report (repeats are counted as `duplicates`). Report each guarded
+action once per `source`.
+
+| Orphan `kind` | Severity |
+| --- | --- |
+| `side_effect_without_decision` — a reported effect names no decision of this tenant | critical |
+| `side_effect_unconsumed` — the decision exists but was never validly consumed | critical |
+| `side_effect_mismatch` — `attemptId` / `actionHash` differ, or the decision was already matched | critical |
+| `consume_on_non_allow`, `result_without_consume` — ledger states that should be impossible | critical |
+| `consumed_without_result` — consumed, no result after 15 minutes | warning |
+| `allow_unconsumed`, `orphan_receipt` — never consumed / chain-only noise | info |
+
+Read the state with `GET /api/v1/guard/reconciliation` and
+`GET /api/v1/guard/reconciliation/orphans?status=OPEN&kind=…`; an admin closes a
+reviewed orphan with `POST /api/v1/guard/reconciliation/orphans/{id}/ack` and a
+`comment`, which is recorded on the audit chain. Critical orphans also raise the
+`AsterGuardBypassSuspected` alert.
 
 ## Four-eyes approval
 
@@ -153,6 +255,25 @@ request, and must not use the same API key; any match is
 the required role, otherwise `403 role_mismatch`. `ESCALATE` carries no role, so
 any other member may resolve it.
 
+### Reviewing the decision input
+
+Approvers see what the rule decided on through a masked view:
+`GET /api/v1/guard/approvals/{approvalId}/input`. Fields the policy declares `@pii`
+appear as `{ "$pii": { "level": "L2", "category": "email" } }`; a value whose shape
+does not match the declaration appears as `{ "$pii": { "level": "unknown" } }`; and
+keys the policy does not declare are not shown at all — all undeclared keys of an
+object collapse into one `"$undeclared"` entry, because a key name can itself be
+personal data. Other declared text is passed through the same pattern redactor as
+the logs (e-mail, phone, card numbers and so on).
+
+A holder of the required role may reveal the declared `@pii` values of a `PENDING`
+approval with `POST /api/v1/guard/approvals/{approvalId}/input/reveal` (body `{}`);
+each first reveal per person is recorded on the audit chain. Undeclared content can
+never be revealed, and `ESCALATE` items cannot be revealed. When approving or
+rejecting, send the `inputSnapshotHash` of the view you looked at; if the view has
+changed since, the answer is `409 input_snapshot_mismatch` — refresh and review
+again.
+
 ### Business roles (ADR 0042)
 
 Roles are not taken from the caller's word. In Aster Cloud, a team owner or admin
@@ -169,38 +290,73 @@ execution in Cloud returns `REQUIRE_APPROVAL` or `ESCALATE`, Cloud opens the gua
 decision from the execution's evidence, links it to the execution record, and
 notifies the role holders in the app.
 
-## Guarding an MCP agent: `aster-guard`
+## Guarding an agent: `aster-guard`
 
-[`aster-guard`](https://github.com/aster-cloud/aster-guard) (Node ≥ 24, not yet
-published to npm; build it from the repository) provides two pieces:
+[`@aster-cloud/aster-guard`](https://www.npmjs.com/package/@aster-cloud/aster-guard)
+(0.3.0; Node ≥ 24, ESM only; source on
+[GitHub](https://github.com/aster-cloud/aster-guard)) is the reference executor.
+It provides:
 
-- **`GuardClient`** — a TypeScript SDK: `check`, `get`, `waitFor`,
-  `listApprovals`, `approve`, `reject`. It generates a fresh idempotency key per
-  call and turns any non-200 response or network error into `DENY`.
-- **`aster-guard-mcp`** — a stdio MCP proxy. Put it between the MCP host and any
-  upstream MCP server; it forwards `tools/list` and checks every `tools/call`
-  first.
+- **`GuardClient`** — a TypeScript SDK. Its `run` method performs the whole
+  sequence — hash the action → decide (waiting while `PENDING`) → verify the
+  execution receipt → consume → call your function → report the result — in that
+  fixed order. There is no option to skip verification or consume. The lower-level
+  methods (`check`, `get`, `waitFor`, `listApprovals`, `getApprovalInput`,
+  `revealApprovalInput`, `approve`, `reject`, `keys`, `verifyReceipt`, `consume`,
+  `reportResult`, `hashAction`, `reportSideEffects`) stay public.
+- **`aster-guard-mcp`** — an MCP proxy. It wraps an upstream MCP server, exposes its
+  tools under the same names, and runs every `tools/call` through the same sequence
+  before forwarding it.
+- **`@aster-cloud/aster-guard/tool`** — the tool-side check for `--isolation auth`
+  (below).
 
 ```bash
-git clone https://github.com/aster-cloud/aster-guard
-cd aster-guard && pnpm install && pnpm build
+npm install @aster-cloud/aster-guard
 ```
 
-An MCP host then launches the proxy instead of the upstream server. In Claude
-Desktop's `claude_desktop_config.json` (Cursor's `mcp.json` uses the same
-`mcpServers` shape):
+```ts
+import { GuardClient } from '@aster-cloud/aster-guard';
+
+const guard = new GuardClient({
+  baseUrl: 'https://policy.aster-lang.dev',
+  apiKey: process.env.ASTER_API_KEY!, // ak_…
+  policyModule: 'guard.customer',
+  policyFunction: 'decide',
+  principal: { id: 'agent-42', type: 'agent' },
+  tenantId: 'team-1', // the API key's tenant; checked against the receipt
+});
+
+const outcome = await guard.run(
+  { action: { name: 'delete_customer_record' }, resource: { type: 'customer', id: 'C-1001' } },
+  async () => deleteCustomerRecord('C-1001'), // called only after consume returned 200
+  { executorId: 'billing-worker@pod-3', approvalTimeoutMs: 300_000 },
+);
+// outcome.kind: 'executed' | 'blocked' | 'pending' | 'failed'
+```
+
+A receipt whose `policyModule` / `policyFunction` is missing or differs from the
+client's configured policy is rejected as `blocked` with `receipt_invalid`
+(`detail: policy_mismatch`); nothing is consumed or executed.
+
+### The MCP proxy
+
+An MCP host launches the proxy instead of the upstream server. In Claude Desktop's
+`claude_desktop_config.json` (Cursor's `mcp.json` uses the same `mcpServers` shape):
 
 ```json
 {
   "mcpServers": {
     "guarded-filesystem": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/path/to/aster-guard/dist/mcp/cli.js",
+        "-y", "-p", "@aster-cloud/aster-guard", "aster-guard-mcp",
         "--upstream", "npx -y @modelcontextprotocol/server-filesystem /tmp",
-        "--base-url", "http://localhost:8080",
+        "--base-url", "https://policy.aster-lang.dev",
         "--policy", "guard.customer/decide",
         "--principal-id", "agent-claude",
+        "--tenant-id", "team-1",
+        "--isolation", "network",
+        "--tools", "write_file,move_file",
         "--resource-from", "path",
         "--approval-timeout", "300"
       ],
@@ -210,22 +366,61 @@ Desktop's `claude_desktop_config.json` (Cursor's `mcp.json` uses the same
 }
 ```
 
-The API key is read only from the environment variable (`--api-key-env` changes
-its name) and is not passed on to the upstream process.
+The API key is read only from the environment variable (`--api-key-env` changes its
+name) and is not passed on to the upstream process. When wrapping an upstream,
+`--tenant-id` and `--isolation` are required, and `--tools` lists the tools that may
+be exposed (without it every tool is exposed and the proxy warns at start-up).
 
-For each tool call the proxy builds the action: the tool name becomes
-`action.name`, the tool arguments (with `null` values removed) become `context`,
-and `--resource-from <argName>` takes that **top-level** argument as
-`resource: { type: "arg", id }` (values over 255 characters become
-`sha256:<hex>`). Only a confirmed `ALLOW` is forwarded; `DENY` returns a tool
-error `Blocked by Aster Guard: <reason> (decision <id>)`; `PENDING` is waited on
-for up to `--approval-timeout` seconds (default 300). Without `--upstream` the
-proxy exposes five governance tools instead: `guard_check`, `guard_status`,
-`guard_list_approvals`, `guard_approve`, `guard_reject`.
+For each tool call the proxy uses the tool name as `action.name` and the normalised
+tool arguments (keys sorted, `null` kept) as both `context` and the arguments it
+forwards — one object, so what was decided is what runs. `--resource-from <argName>`
+takes that top-level argument as the resource id. Only a consumed `ALLOW` is
+forwarded. `DENY`, a `PENDING` that outlasts `--approval-timeout`, and any failed
+verification or consume return a tool error (`Blocked by Aster Guard: …`) with a
+structured `asterGuard` payload whose `status` is `denied`, `pending` or `blocked`.
+Calling the tool again is a new decision.
 
-The repository's `scripts/e2e-local.mjs` runs the whole loop against a local
-aster-api with two keys — check an allowed action, check a deletion (`PENDING`),
-approve it with the second key, read the final `ALLOW`.
+Without an upstream the proxy instead exposes five governance tools: `guard_check`,
+`guard_status`, `guard_list_approvals`, `guard_approve`, `guard_reject`.
+
+#### HTTP upstreams and listen mode
+
+- `--upstream-url <url>` connects to an upstream over Streamable HTTP instead of
+  starting a child process (`--upstream-auth-env <name>` sends that variable as a
+  bearer token to the upstream).
+- `--listen <host>:<port>` serves the proxy itself over stateless Streamable HTTP
+  (`POST /mcp`, request body ≤ 1 MiB). Agents are registered in `--agents-file`
+  (only the SHA-256 of each agent's token is stored), and each agent is decided as
+  its own principal. `GET /healthz` is liveness; `GET /readyz` is `200` only after
+  a successful upstream `tools/list` in the last 30 seconds.
+- In listen mode an unreachable or dropped HTTP upstream does not stop the process:
+  the proxy reconnects in the background with capped exponential backoff (from
+  about 0.5 s up to 30 s, with jitter). Until it is ready, `/readyz` is `503` and a
+  `tools/call` is refused **before** any decision with
+  `{ "asterGuard": { "status": "blocked", "reasonCode": "upstream_unavailable" } }`.
+
+#### Isolation: the agent must not reach the raw tool
+
+A proxy only helps if the model cannot call the tool directly. `--isolation` states
+how that is guaranteed, and the bypass test suite proves it:
+
+- `network` — the upstream accepts connections only from the proxy. A stdio child
+  process satisfies this by construction; for an HTTP upstream it is your network
+  policy (for example `aster-agents → aster-guard → aster-tools` namespaces in
+  Kubernetes).
+- `auth` — the proxy attaches the consume ticket to the forwarded call
+  (`params._meta["io.aster/guard-consume"]`), and the tool verifies it with
+  `@aster-cloud/aster-guard/tool` before doing anything.
+- `network,auth` — both, so either still holds if the other fails.
+
+#### Server version
+
+0.3.0 requires a policy API that signs the policy address into receipts (live on
+`policy.aster-lang.dev`). Against an older or rolled-back self-hosted API, every
+action is refused with `policy_mismatch` (fail-closed) — pin
+`@aster-cloud/aster-guard@0.2.0` there. When upgrading a self-hosted deployment,
+deploy the API first, wait at least one receipt lifetime (5 minutes), then upgrade
+the executors.
 
 ### Known limit: host timeouts
 

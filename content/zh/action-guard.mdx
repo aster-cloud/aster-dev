@@ -7,12 +7,14 @@
 ```text
 Agent 提议动作 ──► POST /api/v1/guard/decisions ──► 已部署的 Verdict 规则
                                                         │
-        ALLOW ──► 收据入哈希链 ──► Agent 执行
+        ALLOW ──► 收据入哈希链 + 签名执行收据 ──► Agent 验签、consume，然后执行
         DENY  ──► 收据入哈希链 ──► Agent 不执行
         REQUIRE_APPROVAL / ESCALATE ──► 收据 + 待审批 ──► 有人批准、拒绝，或到期
 ```
 
-每一次裁决——包括每一次拒绝——都会在租户防篡改的审计链上留下收据。
+每一次裁决——包括每一次拒绝——都会在租户防篡改的审计链上留下收据。`ALLOW` 另外带一份签名的、只能用一次的
+**执行收据**：守卫是执行点，不是建议。Agent 只有在验签通过、且服务端接受了它那一次 *consume*（消耗）之后才执行
+（见[执行收据](#执行收据)）。
 
 ## 守卫请求
 
@@ -103,7 +105,8 @@ Rule decide given req as GuardRequest, produce Verdict:
 ```
 
 `outcome` 是规则给出的结论。`effectiveOutcome`（`ALLOW`、`DENY` 或 `PENDING`）是 Agent 唯一需要看的字段：
-`ALLOW` 执行，`DENY` 停止，`PENDING` 则轮询 `GET /api/v1/guard/decisions/{decisionId}` 直到它变化。
+`ALLOW` 先验签并 consume 执行收据再执行，`DENY` 停止，`PENDING` 则轮询 `GET /api/v1/guard/decisions/{decisionId}`
+直到它变化。
 待审批默认 24 小时后过期，过期按 `DENY` 读取。
 
 ### 无收据则拒绝
@@ -112,6 +115,86 @@ Rule decide given req as GuardRequest, produce Verdict:
 `reasonCode` 为 `"receipt_unavailable"`，也不会开待审批。评估异常或超时（10 秒）是 `DENY`，
 `reasonCode` 为 `"evaluation_failed"`。这类瞬时 `DENY` 同样绑定在幂等键上，重试须换新键。
 策略不存在或没有活跃版本返回 `404 policy_not_found`。
+
+## 执行收据
+
+`ALLOW` 决策（直接放行，或审批人批准后转为放行）带一份 `executionReceipt`。`ALLOW` 的含义是「可以消耗一次」，
+而不是「随时可以执行」：
+
+```json
+"executionReceipt": {
+  "kid": "2026-11a",
+  "payload": {
+    "actionHash": "…64 位十六进制…", "decisionId": "7c1e2a90-…", "expiresAt": "2026-11-16T01:05:00Z",
+    "issuedAt": "2026-11-16T01:00:00Z", "kid": "2026-11a", "outcome": "ALLOW",
+    "policyFunction": "decide", "policyModule": "guard.customer",
+    "policyVersionId": 1730890123456, "tenantId": "team-1", "v": 1
+  },
+  "revision": 3,
+  "signature": "<base64url，64 字节>"
+}
+```
+
+- **签名**——Ed25519，作用于按 RFC 8785（JCS）规范化后的 `payload`。公钥以 JWKS 形式由
+  `GET /api/v1/guard/keys` 提供（`kty: OKP`、`crv: Ed25519`；需 API key，`Cache-Control: max-age=300`）。
+  `revision` 不在签名内，只用来提示执行方刷新公钥集。
+- **`actionHash`**——请求体中 `action` 对象按 JCS 规范化后的 SHA-256（`jcs-sha256/v1`）。执行方按自己将要执行的动作自行计算。
+- **绑定策略**——`policyModule` 与 `policyFunction` 在签名之内：同租户另一条更宽松的策略签发的收据，
+  不能冒充执行方所请求的那条策略的收据。决策没有已保存的策略版本时不带 `policyVersionId`。
+- **有效期**——缺省 5 分钟（`expiresAt` 不含端点）。经审批放行的，从批准时刻起算。过期收据不能续签：
+  换一个新的 `Idempotency-Key` 重新申请决策。
+
+执行方按固定顺序处理，任一步失败即停止：
+
+1. **离线验签**：`kid` 在 JWKS 中（未命中刷新一次）；签名有效；`tenantId`、`decisionId` 与 `outcome: "ALLOW"` 相符；
+   `issuedAt − 60 秒 ≤ 当前时间 < expiresAt`；`actionHash` 等于自算的哈希；`policyModule` / `policyFunction` 存在且等于自己请求的策略。
+2. **consume**：`POST /api/v1/guard/receipts/{decisionId}/consume`，请求体 `{ "actionHash", "attemptId", "executorId" }`。
+   每个决策只有一次 consume 会成功（`200`）。
+3. **执行**，且只在此时执行。
+4. **回写结果**：`POST /api/v1/guard/receipts/{decisionId}/result`，请求体
+   `{ "attemptId", "executorId", "status": "executed" | "failed" | "aborted" }`，可选 `finishedAt`、`resultHash`、`errorCode`。
+
+| consume 响应 | 含义 |
+| --- | --- |
+| `200` | 已消耗：`{ consumedAt, decisionId, executionReceipt }` |
+| `409 not_allowed` | 没有收据——决策不是（或尚未成为）`ALLOW` |
+| `409 kid_revoked` | 签名密钥已被吊销 |
+| `409 receipt_consumed` | 已被消耗（响应体给出原消耗者） |
+| `409 receipt_expired` | 当前时间 ≥ `expiresAt` |
+| `409 action_mismatch` | 决策之后动作被改动过 |
+| `400 invalid_consume` | `actionHash`、`attemptId` 或 `executorId` 格式不合法 |
+| `503 receipt_unavailable` | consume 无法记入审计链 |
+
+除 `200` 以外的任何结果——包括响应丢失——都意味着**不执行**。要重试动作，就重新申请决策。在别处读到的 `ALLOW`
+（幂等重放、`GET /decisions/{id}`、拷贝来的收据）都不是授权；只有你自己这一次成功的 consume 才是。
+
+## 对账
+
+收据守住了正门；对账去找绕过正门的动作。策略 API 每 5 分钟把收据账本与你的系统上报的副作用对一遍，记下**孤儿**。
+
+副作用的落地方（工具服务、业务系统）用 `POST /api/v1/guard/side-effects` 批量上报，每批 1–500 条：
+
+```json
+{ "effects": [ { "effectId": "refund-5531", "source": "billing", "occurredAt": "2026-11-16T01:02:03Z",
+                 "action": { "name": "refund" }, "resource": { "type": "order", "id": "O-17" },
+                 "decisionId": "7c1e2a90-…", "attemptId": "…", "actionHash": "…" } ] }
+```
+
+`effectId` 是上报方自己的记录键，同一条上报的网络重试必须沿用同一个值（重复的计入 `duplicates`）。
+每个 `source` 对一次受守卫的动作只上报一条。
+
+| 孤儿 `kind` | 严重度 |
+| --- | --- |
+| `side_effect_without_decision`——上报的副作用指不到本租户的任何决策 | critical |
+| `side_effect_unconsumed`——决策存在，但从未被有效消耗 | critical |
+| `side_effect_mismatch`——`attemptId` / `actionHash` 不符，或该决策已被匹配过 | critical |
+| `consume_on_non_allow`、`result_without_consume`——本不应出现的账本状态 | critical |
+| `consumed_without_result`——已消耗，15 分钟后仍无结果 | warning |
+| `allow_unconsumed`、`orphan_receipt`——从未被消耗 / 只在链上的噪声 | info |
+
+用 `GET /api/v1/guard/reconciliation` 与 `GET /api/v1/guard/reconciliation/orphans?status=OPEN&kind=…` 查看状态；
+管理员核实后用 `POST /api/v1/guard/reconciliation/orphans/{id}/ack`（带 `comment`）关闭孤儿，这一步记入审计链。
+critical 孤儿还会触发 `AsterGuardBypassSuspected` 告警。
 
 ## 四眼审批
 
@@ -130,6 +213,18 @@ POST /api/v1/guard/approvals/{approvalId}/reject    请求体 {"comment": "…"}
 API key；任一相同即 `403 segregation_of_duties`。对 `REQUIRE_APPROVAL`，审批人还必须持有所需角色，
 否则 `403 role_mismatch`。`ESCALATE` 不带角色，任何其他成员都可以处理。
 
+### 查看决策输入
+
+审批人通过打码视图查看规则据以裁决的输入：`GET /api/v1/guard/approvals/{approvalId}/input`。策略声明为 `@pii`
+的字段显示为 `{ "$pii": { "level": "L2", "category": "email" } }`；形状与声明不符的值显示为
+`{ "$pii": { "level": "unknown" } }`；策略没有声明的键完全不展示——同一对象里的全部未声明键合并为一项
+`"$undeclared"`，因为键名本身就可能是个人数据。其余已声明的文本会经过与日志相同的模式打码（邮箱、电话、卡号等）。
+
+持有所需角色的审批人可以对 `PENDING` 的审批用 `POST /api/v1/guard/approvals/{approvalId}/input/reveal`
+（请求体 `{}`）还原已声明的 `@pii` 原值；每人首次还原都会记入审计链。未声明的内容任何人都不能还原，`ESCALATE`
+项也不能还原。批准或拒绝时，把你所看视图的 `inputSnapshotHash` 一并提交；视图在此期间变化了则返回
+`409 input_snapshot_mismatch`——刷新后重新审阅。
+
 ### 业务角色（ADR 0042）
 
 角色不凭调用方自报。在 Aster Cloud 中，团队 owner 或 admin 给团队成员授予**业务角色**——自由文本，
@@ -140,35 +235,66 @@ API key；任一相同即 `403 segregation_of_duties`。对 `REQUIRE_APPROVAL`�
 （或该项是升级）时可以处理；没有该角色的成员（包括 owner 与 admin）只能只读查看。当 Cloud 中的控制台执行或 API 执行返回
 `REQUIRE_APPROVAL` 或 `ESCALATE` 时，Cloud 以该次执行的证据开出守卫决策、关联到执行记录，并站内通知角色持有者。
 
-## 守护 MCP Agent：`aster-guard`
 
-[`aster-guard`](https://github.com/aster-cloud/aster-guard)（Node ≥ 24，尚未发布到 npm，需从仓库构建）
-提供两样东西：
+## 守护 Agent：`aster-guard`
 
-- **`GuardClient`**——TypeScript SDK：`check`、`get`、`waitFor`、`listApprovals`、`approve`、`reject`。
-  每次调用生成新的幂等键，任何非 200 响应或网络错误都解析为 `DENY`。
-- **`aster-guard-mcp`**——stdio MCP 代理。放在 MCP 宿主与任意上游 MCP 服务器之间，原样转发 `tools/list`，
-  每一次 `tools/call` 先过守卫。
+[`@aster-cloud/aster-guard`](https://www.npmjs.com/package/@aster-cloud/aster-guard)（0.3.0；Node ≥ 24，纯 ESM；
+源码在 [GitHub](https://github.com/aster-cloud/aster-guard)）是参考执行方，提供：
+
+- **`GuardClient`**——TypeScript SDK。它的 `run` 方法按固定顺序完成整个流程：计算动作哈希 → 申请决策
+  （`PENDING` 时等待）→ 验签执行收据 → consume → 调用你的函数 → 回写结果。没有跳过验签或 consume 的选项。
+  低层方法（`check`、`get`、`waitFor`、`listApprovals`、`getApprovalInput`、`revealApprovalInput`、`approve`、
+  `reject`、`keys`、`verifyReceipt`、`consume`、`reportResult`、`hashAction`、`reportSideEffects`）仍然公开。
+- **`aster-guard-mcp`**——MCP 代理。包在上游 MCP 服务器外面，以同名暴露上游的工具，每一次 `tools/call`
+  先走同样的流程再转发。
+- **`@aster-cloud/aster-guard/tool`**——`--isolation auth` 时工具侧的核对（见下文）。
 
 ```bash
-git clone https://github.com/aster-cloud/aster-guard
-cd aster-guard && pnpm install && pnpm build
+npm install @aster-cloud/aster-guard
 ```
 
-之后让 MCP 宿主启动代理而不是上游服务器。Claude Desktop 的 `claude_desktop_config.json`
+```ts
+import { GuardClient } from '@aster-cloud/aster-guard';
+
+const guard = new GuardClient({
+  baseUrl: 'https://policy.aster-lang.dev',
+  apiKey: process.env.ASTER_API_KEY!, // ak_…
+  policyModule: 'guard.customer',
+  policyFunction: 'decide',
+  principal: { id: 'agent-42', type: 'agent' },
+  tenantId: 'team-1', // API key 所属租户，用来核对收据
+});
+
+const outcome = await guard.run(
+  { action: { name: 'delete_customer_record' }, resource: { type: 'customer', id: 'C-1001' } },
+  async () => deleteCustomerRecord('C-1001'), // 只有 consume 返回 200 之后才会被调用
+  { executorId: 'billing-worker@pod-3', approvalTimeoutMs: 300_000 },
+);
+// outcome.kind: 'executed' | 'blocked' | 'pending' | 'failed'
+```
+
+收据中的 `policyModule` / `policyFunction` 缺失或与客户端配置的策略不符时，结果为 `blocked`、`receipt_invalid`
+（`detail: policy_mismatch`），不 consume、不执行。
+
+### MCP 代理
+
+让 MCP 宿主启动代理而不是上游服务器。Claude Desktop 的 `claude_desktop_config.json`
 （Cursor 的 `mcp.json` 使用相同的 `mcpServers` 结构）：
 
 ```json
 {
   "mcpServers": {
     "guarded-filesystem": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/path/to/aster-guard/dist/mcp/cli.js",
+        "-y", "-p", "@aster-cloud/aster-guard", "aster-guard-mcp",
         "--upstream", "npx -y @modelcontextprotocol/server-filesystem /tmp",
-        "--base-url", "http://localhost:8080",
+        "--base-url", "https://policy.aster-lang.dev",
         "--policy", "guard.customer/decide",
         "--principal-id", "agent-claude",
+        "--tenant-id", "team-1",
+        "--isolation", "network",
+        "--tools", "write_file,move_file",
         "--resource-from", "path",
         "--approval-timeout", "300"
       ],
@@ -178,17 +304,44 @@ cd aster-guard && pnpm install && pnpm build
 }
 ```
 
-API key 只从环境变量读取（`--api-key-env` 可改变量名），也不会传给上游子进程。
+API key 只从环境变量读取（`--api-key-env` 可改变量名），也不会传给上游进程。包裹上游时 `--tenant-id` 与
+`--isolation` 必填，`--tools` 列出允许暴露的工具（不配置则全部暴露，代理启动时告警）。
 
-对每一次工具调用，代理这样构造动作：工具名作 `action.name`；工具参数（剔除 `null` 值）作 `context`；
-`--resource-from <argName>` 取该**顶层**参数的值作 `resource: { type: "arg", id }`（超过 255 字符的值改为
-`sha256:<hex>`）。只有确认的 `ALLOW` 才转发；`DENY` 返回工具错误
-`Blocked by Aster Guard: <reason> (decision <id>)`；`PENDING` 最多等待 `--approval-timeout` 秒（缺省 300）。
-不指定 `--upstream` 时，代理改为提供五个治理工具：`guard_check`、`guard_status`、`guard_list_approvals`、
+对每一次工具调用，代理以工具名作 `action.name`，以规范化后的工具参数（键排序、保留 `null`）同时作 `context`
+和转发给上游的参数——同一个对象，裁决的就是将要执行的。`--resource-from <argName>` 取该顶层参数作资源 id。
+只有已 consume 的 `ALLOW` 才转发；`DENY`、等到 `--approval-timeout` 仍为 `PENDING`、以及任何验签或 consume
+失败，都返回工具错误（`Blocked by Aster Guard: …`），附结构化的 `asterGuard` 载荷，`status` 为 `denied`、
+`pending` 或 `blocked`。再次调用同一工具是一次新的决策。
+
+不指定上游时，代理改为提供五个治理工具：`guard_check`、`guard_status`、`guard_list_approvals`、
 `guard_approve`、`guard_reject`。
 
-仓库里的 `scripts/e2e-local.mjs` 用两把 key 对本地 aster-api 走完整个闭环：检查一个放行的动作、检查一次删除
-（`PENDING`）、用第二把 key 批准、读到最终的 `ALLOW`。
+#### HTTP 上游与监听模式
+
+- `--upstream-url <url>` 经 Streamable HTTP 连接上游，而不是启动子进程（`--upstream-auth-env <name>`
+  把该环境变量的值作为 bearer token 发给上游）。
+- `--listen <host>:<port>` 让代理自身以无状态 Streamable HTTP 提供服务（`POST /mcp`，请求体 ≤ 1 MiB）。
+  Agent 登记在 `--agents-file` 中（只保存每个 Agent token 的 SHA-256），每个 Agent 以自己的主体裁决。
+  `GET /healthz` 用于存活检查；`GET /readyz` 只有在最近 30 秒内上游 `tools/list` 成功过才是 `200`。
+- 监听模式下，HTTP 上游连不上或中途断开都不会让进程退出：代理在后台按封顶的指数退避重连（约 0.5 秒起、
+  30 秒封顶、带抖动）。就绪之前 `/readyz` 为 `503`，`tools/call` 在**任何裁决之前**即被拒绝，返回
+  `{ "asterGuard": { "status": "blocked", "reasonCode": "upstream_unavailable" } }`。
+
+#### 隔离：Agent 不能直接够到原始工具
+
+只有模型无法直接调用工具时，代理才有意义。`--isolation` 声明由什么保证这一点，并由绕过测试套件验证：
+
+- `network`——上游只接受来自代理的连接。stdio 子进程天然满足；HTTP 上游由你的网络策略保证（例如 Kubernetes
+  中 `aster-agents → aster-guard → aster-tools` 三个命名空间）。
+- `auth`——代理在转发的调用上附带 consume 票据（`params._meta["io.aster/guard-consume"]`），工具先用
+  `@aster-cloud/aster-guard/tool` 核对它再做事。
+- `network,auth`——两层同时声明，任一层失效时另一层仍然挡住直连。
+
+#### 服务端版本
+
+0.3.0 要求策略 API 已把策略地址签进收据（`policy.aster-lang.dev` 已上线）。对接更旧或回滚过的自托管 API 时，
+所有动作都会以 `policy_mismatch` 被拒绝（fail-closed）——这种环境请钉住 `@aster-cloud/aster-guard@0.2.0`。
+升级自托管部署时先部署 API，等待至少一个收据有效期（5 分钟），再升级执行方。
 
 ### 已知限制：宿主超时
 
