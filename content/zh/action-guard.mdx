@@ -311,7 +311,7 @@ API key 只从环境变量读取（`--api-key-env` 可改变量名），也不�
 
 对每一次工具调用，代理以工具名作 `action.name`，以规范化后的工具参数（键排序、保留 `null`）同时作 `context`
 和转发给上游的参数——同一个对象，裁决的就是将要执行的。例外是 `--config` 中按工具配置的 `digestArgs`：
-这些键以 `{ "$sha256": … }` 摘要形式进入策略，转发给上游的仍是原值。`--resource-from <argName>` 取该顶层参数作资源 id。
+这些键以 `{ "$sha256": … }` 摘要形式进入策略，转发给上游的仍是原值。`--resource-from <argName>` 取该顶层参数作资源 id（超过 255 字符或含控制字符的值改为 `sha256:<hex>`）。
 只有已 consume 的 `ALLOW` 才转发；`DENY`、等到 `--approval-timeout` 仍为 `PENDING`、以及任何验签或 consume
 失败，都返回工具错误（`Blocked by Aster Guard: …`），附结构化的 `asterGuard` 载荷，`status` 为 `denied`、
 `pending` 或 `blocked`。再次调用同一工具是一次新的决策。

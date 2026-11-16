@@ -378,7 +378,8 @@ tool arguments (keys sorted, `null` kept) as both `context` and the arguments it
 forwards — one object, so what was decided is what runs. The exception is a per-tool
 `digestArgs` mapping in `--config`: those keys reach the policy as
 `{ "$sha256": … }` digests, while the upstream still receives the original values. `--resource-from <argName>`
-takes that top-level argument as the resource id. Only a consumed `ALLOW` is
+takes that top-level argument as the resource id (a value over 255 characters or
+with control characters becomes `sha256:<hex>`). Only a consumed `ALLOW` is
 forwarded. `DENY`, a `PENDING` that outlasts `--approval-timeout`, and any failed
 verification or consume return a tool error (`Blocked by Aster Guard: …`) with a
 structured `asterGuard` payload whose `status` is `denied`, `pending` or `blocked`.
