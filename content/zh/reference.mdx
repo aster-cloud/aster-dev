@@ -101,6 +101,28 @@ Rule validate given amount as Int, produce result of Int and Text:
 ((result of Int), Text) -> Bool     ✅ 两个参数
 ```
 
+### 签名语法裁决（自 1.0.49 / `aster-lang-ts` 3.2.0 起提供）
+
+引擎 1.0.49 与 `aster-lang-ts` 3.2.0 消除了两个引擎在形参表与类型表达式上剩余的分歧。现在两个引擎的行为如下：
+
+| 写法 | 结果 | 改写为 |
+| --- | --- | --- |
+| `given x as Pair<Int, Text>` | 在 `<` 处报 `E056`——不支持尖括号类型参数 | `Pair of Int and Text` |
+| `given Customer as Text` | `E055`——形参名不能以大写 A–Z 字母开头 | `customer as Text` |
+| `given xs as list of Int and Text` | `E055`——`list of` 只接一个类型，`Text` 会被当作大写开头的形参名 | `list of Int` |
+| `given r as result of Int or Text` | 在 `or` 处报 `E062` | `result of Int and Text` |
+| `given n as maybe of Text` | 在 `of` 处报 `E061` | `maybe Text` |
+| `given @pii(L1, email) email as Text` | 接受：形参名之前可以写注解 | — |
+| `Type Amount as Int.` | 接受：`type` 关键词与其他声明关键词一样不区分大小写 | — |
+| `given n as maybe Text`、`maybe @pii(L1, name) Text` | 接受：`maybe T` 是 `T?` 的前缀写法 | — |
+
+写在形参名之前的注解与类型最外层的 `@pii(…)` 都记入 Core IR 中该形参的 `annotations`，两个引擎完全一致。
+
+```text
+Rule f given x as Pair of Int, @pii(L1, email) y as Text, produce Int:   ✅ 两个形参
+Rule f given r as result of Int or Text, produce Int:                   ❌ E062
+```
+
 ## 控制流
 
 条件逻辑用 `If … Return …`。分支自上而下求值；第一个条件为 `true` 的分支返回并
