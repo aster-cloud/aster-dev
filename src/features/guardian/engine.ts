@@ -39,8 +39,19 @@ export type CompileOutput = {
   success: boolean;
   core?: Core;
   parseErrors?: { message: string; span: { start: { line: number; col: number } } }[];
+  /** lowering 诊断（E600–E606）；有它时 loweringErrors 只是其英文消息的重复。 */
+  loweringDiagnostics?: SpannedDiagnostic[];
+  /** 过渡字段：前置阶段（规范化 / 词法）的非诊断异常只出现在这里。 */
   loweringErrors?: string[];
+  /** 名称解析诊断（E800–E807）；名称解析失败时这是唯一的原因来源。 */
+  resolutionDiagnostics?: SpannedDiagnostic[];
 };
+
+type SpannedDiagnostic = { message: string; severity?: string; span?: { start: { line: number; col: number } } };
+
+function spanned(d: SpannedDiagnostic): EngineDiagnostic {
+  return { message: d.message, line: d.span?.start.line ?? null, col: d.span?.start.col ?? null };
+}
 
 const MAX_STEPS = 10_000;
 const OUTCOMES: Outcome[] = ['ALLOW', 'DENY', 'REQUIRE_APPROVAL', 'ESCALATE'];
@@ -83,11 +94,14 @@ function loweringDiagnostic(message: string): EngineDiagnostic {
   return { message, line: l ? Number(l[1]) : null, col: null };
 }
 
-/** 汇总解析错误与降级错误；两者都没有时才退回笼统的「compile failed」。 */
+/** 汇总解析、降级与名称解析错误；都没有时才退回笼统的「compile failed」。 */
 export function compileDiagnostics(out: CompileOutput): EngineDiagnostic[] {
   const parse = (out.parseErrors ?? []).map((e) => ({ message: e.message, line: e.span.start.line, col: e.span.start.col }));
-  const lowering = (out.loweringErrors ?? []).map(loweringDiagnostic);
-  const all = [...parse, ...lowering];
+  const lowering = out.loweringDiagnostics?.length
+    ? out.loweringDiagnostics.map(spanned)
+    : (out.loweringErrors ?? []).map(loweringDiagnostic);
+  const resolution = (out.resolutionDiagnostics ?? []).filter((d) => d.severity !== 'warning').map(spanned);
+  const all = [...parse, ...lowering, ...resolution];
   return all.length > 0 ? all : [{ message: 'compile failed', line: null, col: null }];
 }
 

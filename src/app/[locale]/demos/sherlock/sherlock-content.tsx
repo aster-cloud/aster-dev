@@ -19,7 +19,7 @@ function compileRule() {
   if (!c.success || !c.core) {
     return { canonical, display, error: (c.parseErrors ?? []).map((e) => e.message).join('; ') || 'compile failed' } as const;
   }
-  return { canonical, display, core: c.core, rule: c.core.decls?.[0]?.name ?? '', module: c.core.name ?? '' } as const;
+  return { canonical, display, core: c.core, rule: c.core.decls.find((d) => d.kind === 'Func')?.name ?? '', module: c.core.name ?? '' } as const;
 }
 
 /** 初始线索状态 = 原案预设（全部为真）。 */

@@ -21,12 +21,14 @@ interface RawDiag {
 function collectErrors(source: string): RawDiag[] {
   const r = compileAndTypecheck(source, { lexicon: EN_US }) as {
     parseErrors?: RawDiag[];
-    loweringErrors?: RawDiag[];
+    loweringDiagnostics?: RawDiag[];
+    resolutionDiagnostics?: RawDiag[];
     typeErrors?: RawDiag[];
   };
   return [
     ...(r.parseErrors ?? []),
-    ...(r.loweringErrors ?? []),
+    ...(r.loweringDiagnostics ?? []),
+    ...(r.resolutionDiagnostics ?? []),
     ...(r.typeErrors ?? []),
   ];
 }
@@ -51,6 +53,23 @@ describe('客户端编译诊断（useClientCompile 依赖链路）', () => {
     expect(withSpan!.span!.start!.line).toBeGreaterThanOrEqual(0);
   });
 
+  it('span 行列是 1-based：错误在第 4 行，编辑器就标第 4 行', () => {
+    const bad = 'Module M.\n\nRule p given x as Int, produce Int:\n  Return x times .';
+    const r = compileAndTypecheck(bad, { lexicon: EN_US });
+    const diags = aggregateDiagnostics(r as Parameters<typeof aggregateDiagnostics>[0]);
+    expect(diags[0].startLine).toBe(4);
+  });
+
+  it('名称解析失败（E802）也会给出诊断，而不是编辑器里一片干净', () => {
+    const unresolved = 'Module m.\n\nRule f given a as Int, produce Int:\n  Return zzz.';
+    const r = compileAndTypecheck(unresolved, { lexicon: EN_US });
+    expect(r.success).toBe(false);
+    const diags = aggregateDiagnostics(r as Parameters<typeof aggregateDiagnostics>[0]);
+    expect(diags).toHaveLength(1);
+    expect(diags[0]).toMatchObject({ severity: 'error', startLine: 4, startCol: 10 });
+    expect(diags[0].message).toContain('zzz');
+  });
+
   it('空源码不算错误（合法空策略）', () => {
     // 空白源码本身编译器可能给 0 或非空——hook 层对空源码短路返回空诊断，
     // 这里只确认非空白的最小模块编译干净。
@@ -59,8 +78,8 @@ describe('客户端编译诊断（useClientCompile 依赖链路）', () => {
   });
 });
 
-describe('normalize — span 0-based → 1-based 归一', () => {
-  it('有 span → 行列各 +1', () => {
+describe('normalize — span 原样作为 1-based 行列', () => {
+  it('有 span → 行列原样使用', () => {
     const d = normalize(
       { message: 'oops', span: { start: { line: 4, col: 17 }, end: { line: 4, col: 18 } } },
       'error',
@@ -68,10 +87,10 @@ describe('normalize — span 0-based → 1-based 归一', () => {
     expect(d).toEqual({
       severity: 'error',
       message: 'oops',
-      startLine: 5,
-      startCol: 18,
-      endLine: 5,
-      endCol: 19,
+      startLine: 4,
+      startCol: 17,
+      endLine: 4,
+      endCol: 18,
     });
   });
 
@@ -97,17 +116,26 @@ describe('normalize — span 0-based → 1-based 归一', () => {
   });
 });
 
-describe('aggregateDiagnostics — 三来源聚合', () => {
-  it('parse + lowering + type 三来源按序拼接', () => {
+describe('aggregateDiagnostics — 多来源聚合', () => {
+  it('parse + lowering + resolution + type 按序拼接', () => {
     const diags = aggregateDiagnostics({
-      parseErrors: [{ message: 'p', span: { start: { line: 0, col: 0 }, end: { line: 0, col: 1 } } }],
-      loweringErrors: [{ message: 'l' }],
-      typeErrors: [{ message: 't', span: { start: { line: 1, col: 2 }, end: { line: 1, col: 3 } } }],
+      parseErrors: [{ message: 'p', span: { start: { line: 1, col: 1 }, end: { line: 1, col: 2 } } }],
+      loweringDiagnostics: [{ message: 'l', severity: 'error' }],
+      resolutionDiagnostics: [{ message: 'r', severity: 'error', span: { start: { line: 3, col: 5 } } }],
+      typeErrors: [{ message: 't', span: { start: { line: 2, col: 3 }, end: { line: 2, col: 4 } } }],
     });
-    expect(diags.map((d) => d.message)).toEqual(['p', 'l', 't']);
-    expect(diags[0].startLine).toBe(1); // 0-based 0 → 1-based 1
+    expect(diags.map((d) => d.message)).toEqual(['p', 'l', 'r', 't']);
+    expect(diags[0].startLine).toBe(1);
     expect(diags[1].startLine).toBeUndefined(); // lowering 无 span
-    expect(diags[2].startLine).toBe(2);
+    expect(diags[2]).toMatchObject({ startLine: 3, startCol: 5 });
+    expect(diags[3].startLine).toBe(2);
+  });
+
+  it('loweringDiagnostics 为空时才退回 loweringErrors（前置阶段异常只在那里）', () => {
+    expect(aggregateDiagnostics({ loweringErrors: ['boom'] }).map((d) => d.message)).toEqual(['boom']);
+    expect(
+      aggregateDiagnostics({ loweringDiagnostics: [{ message: 'E600 x' }], loweringErrors: ['E600 x'] }).map((d) => d.message),
+    ).toEqual(['E600 x']);
   });
 
   it('全空来源 → 空数组', () => {

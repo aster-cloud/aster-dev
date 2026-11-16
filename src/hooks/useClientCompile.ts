@@ -37,26 +37,37 @@ export interface RawDiag {
 /** compileAndTypecheck 结果形状（只取诊断相关字段）。 */
 export interface CompileResultLike {
   parseErrors?: RawDiag[];
-  loweringErrors?: RawDiag[];
+  /** lowering 诊断（E600–E606），带码与 span。 */
+  loweringDiagnostics?: RawDiag[];
+  /**
+   * 过渡字段：lowering 诊断的英文消息，外加规范化 / 词法阶段的非诊断异常（只出现在这里）。
+   * 有 loweringDiagnostics 时与之重复，只在其为空时取用。
+   */
+  loweringErrors?: string[];
+  /** 名称解析诊断（E800–E807 / W800–W801）。含 error 时编译失败且不做类型检查，只能从这里拿到原因。 */
+  resolutionDiagnostics?: RawDiag[];
   typeErrors?: RawDiag[];
 }
 
 /**
- * 聚合三类错误来源 → 归一化诊断（纯函数，供 hook + 单测复用）。
- * parseErrors/loweringErrors/typeErrors 全部当 error 级（fallback），各自 span
- * 若有则 +1 归一到 1-based。
+ * 聚合各错误来源 → 归一化诊断（纯函数，供 hook + 单测复用）。
+ * 顺序：解析 → lowering → 名称解析 → 类型；无 severity 的按 error 处理。
  */
 export function aggregateDiagnostics(
   result: CompileResultLike,
 ): ClientDiagnostic[] {
+  const lowering: RawDiag[] = result.loweringDiagnostics?.length
+    ? result.loweringDiagnostics
+    : (result.loweringErrors ?? []).map((message) => ({ message }));
   return [
     ...(result.parseErrors ?? []).map((d) => normalize(d, 'error')),
-    ...(result.loweringErrors ?? []).map((d) => normalize(d, 'error')),
+    ...lowering.map((d) => normalize(d, 'error')),
+    ...(result.resolutionDiagnostics ?? []).map((d) => normalize(d, 'error')),
     ...(result.typeErrors ?? []).map((d) => normalize(d, 'error')),
   ];
 }
 
-/** 把 lang-ts 各来源诊断（span 0-based）归一到 1-based ClientDiagnostic。 */
+/** 把 lang-ts 各来源诊断归一为 ClientDiagnostic；lang-ts 的 span 行列本身就是 1-based，原样使用。 */
 export function normalize(
   raw: RawDiag,
   fallbackSeverity: ClientDiagnostic['severity'],
@@ -70,19 +81,18 @@ export function normalize(
   return {
     severity: sev,
     message: raw.message ?? '语法错误',
-    // lang-ts span 是 0-based，+1 归一到编辑器 1-based。
-    startLine: s ? s.line + 1 : undefined,
-    startCol: s ? s.col + 1 : undefined,
-    endLine: e ? e.line + 1 : undefined,
-    endCol: e ? e.col + 1 : undefined,
+    startLine: s?.line,
+    startCol: s?.col,
+    endLine: e?.line,
+    endCol: e?.col,
   };
 }
 
 /**
  * 纯客户端编译+类型检查，产出归一化诊断（行列标错）。无后端、无网络。
  *
- * 用 aster-lang-ts/browser 的 compileAndTypecheck，聚合三类错误来源
- * （parseErrors / loweringErrors / typeErrors），与 aster-cloud 客户端编译
+ * 用 aster-lang-ts/browser 的 compileAndTypecheck，聚合各错误来源
+ * （parseErrors / lowering / resolutionDiagnostics / typeErrors），与 aster-cloud 客户端编译
  * 路径同源。防抖 300ms，避免每次按键都编译。空源码返回空诊断。
  */
 export function useClientCompile(

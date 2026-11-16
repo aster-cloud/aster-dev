@@ -64,6 +64,25 @@ describe('compileDiagnostics', () => {
     expect(compileDiagnostics({ success: false, loweringErrors: ['bad call on line 7'] })[0]).toMatchObject({ line: 7, col: null });
   });
 
+  it('名称解析失败（E802）按其 span 给出行列', () => {
+    const d = compileDiagnostics({
+      success: false,
+      resolutionDiagnostics: [{ message: "Cannot resolve name 'zzz'", severity: 'error', span: { start: { line: 4, col: 10 } } }],
+    });
+    expect(d).toEqual([{ message: "Cannot resolve name 'zzz'", line: 4, col: 10 }]);
+  });
+
+  it('有 loweringDiagnostics 时不再重复 loweringErrors', () => {
+    const d = compileDiagnostics({ success: false, loweringDiagnostics: [{ message: 'E600 bad' }], loweringErrors: ['E600 bad'] });
+    expect(d).toEqual([{ message: 'E600 bad', line: null, col: null }]);
+  });
+
+  it('真实引擎：未声明的名字给出 E802 诊断', () => {
+    const e = createEngine('Module guard.demo.\n\nRule decide given req as Int, produce Int:\n  Return zzz.');
+    expect(e.diagnostics[0]).toMatchObject({ line: 4 });
+    expect(e.diagnostics[0].message).toContain('zzz');
+  });
+
   it('解析错误带 span 行列；什么都没有时才退回 compile failed', () => {
     const parse = compileDiagnostics({ success: false, parseErrors: [{ message: 'Expected newline', span: { start: { line: 2, col: 3 } } }] });
     expect(parse).toEqual([{ message: 'Expected newline', line: 2, col: 3 }]);
