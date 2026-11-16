@@ -19,6 +19,16 @@ body        = statement+ ;
 statement   = ifStmt | "Return" expression "." ;
 ```
 
+**规则头写在一行。** 从 `Rule` 到结束规则头的 `:`（或 `.`）——参数、`produce` 以及 `It performs …` 子句——
+必须写在同一行。自引擎 1.0.48 / `aster-lang-ts` 3.1.0 起，规则头中间换行在两个引擎里都是解析错误
+（通常为 `E055 Expected identifier`）。规则体以及 `Define … has` 的字段列表仍可分多行书写。
+
+```text
+Rule decide given amount as Int, produce Int:      ✅ 一行
+Rule decide given amount as Int,
+  produce Int:                                     ❌ E055
+```
+
 ## 类型系统
 
 Aster 提供四种内置原始类型，外加用户自定义结构体。类型是**推断**的——你很少需要写出来。
@@ -48,6 +58,47 @@ Rule quote given age as Int, produce Policy:
   If age is less than 25
     Return Policy with premium set to 500, deductible set to 1000.
   Return Policy with premium set to 300, deductible set to 500.
+```
+
+### 复合类型
+
+复合类型用词语书写，可以自由嵌套：
+
+| 写法 | 含义 | 类型参数 |
+| --- | --- | --- |
+| `list of T` | `T` 的列表 | 恰好一个 |
+| `option of T` | 一个 `T` 或没有值——取值 `Some(x)`、`None` | 恰好一个 |
+| `result of T and E` | 成功值 `T` 或失败值 `E`——取值 `Ok(x)`、`Err(e)` | 至多两个 |
+| `map K to V` | 从 `K` 到 `V` 的映射 | 键与值 |
+| `(A, B) -> R` | 接收 `A`、`B` 并返回 `R` 的函数 | 参数表与返回类型 |
+
+```aster
+Module Composite.
+
+Rule double given x as Int, produce Int:
+  Return x times 2.
+
+Rule applyOrZero given value as option of Int, f as (Int) -> Int, produce Int:
+  Return Maybe.withDefault(Maybe.map(value, f), 0).
+
+Rule validate given amount as Int, produce result of Int and Text:
+  If amount less than 0
+    Return Err("negative amount").
+  Return Ok(amount).
+```
+
+函数类型可以作为形参类型，于是一条规则可以按名字接收另一条规则：`applyOrZero(Some(4), double)` 返回 `8`
+（当前版本，`aster-lang-ts` 3.1.0）。
+
+`X of …` 类型延伸到哪里：分隔符之后若是「名字 as」或不能开始类型的记号，就属于外层列表，所以
+`given r as result of Int and Text, y as Text` 是两个形参。`result of` 的两个参数用 `and` 分隔。在函数类型带括号的
+参数表里，逗号有歧义——既可能是下一个参数，也可能是失败类型——因此报 `E064`（`Unexpected ','`）；改写为 `and`，
+或给内层类型加括号：
+
+```text
+(result of Int, Text) -> Bool       ❌ E064
+(result of Int and Text) -> Bool    ✅ 一个参数
+((result of Int), Text) -> Bool     ✅ 两个参数
 ```
 
 ## 控制流
@@ -111,13 +162,65 @@ Rule classify given score as Int, produce Text:
 ## 求值
 
 规则是其输入的纯函数。求值是**确定性**的：相同输入总产生相同结果，且 JVM（Truffle）
-与 TypeScript 两套运行时降到**同一份中间表示**，保证结果逐字节一致。每次求值都可
+与 TypeScript 两套运行时降到**同一份中间表示**，保证结果逐字节一致。
+
+这份中间表示是 **Core IR v2**（`schemaVersion: 2`；引擎 1.0.46 及以后、`aster-lang-ts` 2.0 及以后），由两个引擎共用的
+同一份 JSON Schema 定义。所有字段恒输出（为空时为 `null`、`[]` 或 `false`），每个节点都带源码位置 `origin`。
+可选值与可失败值是一等节点：表达式 `Some`、`None`、`Ok`、`Err`，类型 `Option`、`Maybe` 与 `Result`
+（带 `ok` 与 `err` 两个类型）；对它们的模式匹配是构造器模式。规范序列化（键按码点升序、无空白）就是用来哈希、
+存储或提交给 API 的字节——`compile()` 以 `coreJson` 返回它，见[浏览器 API](/docs/browser-api)。v1 IR 已不再可读：
+存储的 IR 须按源码重新编译。每次求值都可
 产出**决策轨迹**用于回放——哪条规则、在什么输入上、得出什么结果触发。
 
 ## 副作用与纯度
 
 规则默认是纯的。副作用（I/O、外部调用）必须经由 effect capability 显式声明，
 从而让审计面保持诚实。
+
+## 诊断
+
+每条诊断都带稳定的**错误码**与具名参数。英文消息只是兜底：编辑器与[演练场](/playground)按错误码渲染本地化文案
+（English、中文、Deutsch、हिन्दी），不需要解析消息文本。
+
+| 范围 | 阶段 |
+| --- | --- |
+| `E001`–`E099` | 类型（其中 `E050`–`E069` 为词法与语法解析） |
+| `E100`–`E199` | 作用域与导入 |
+| `E200`–`E399` | 效果与能力 |
+| `E400`–`E499` | PII |
+| `E500`–`E599` | 异步 |
+| `E600`–`E606` | 降级到 Core IR |
+| `E700`–`E799`、`W7xx` | 治理与 Cedar 导出（见[策略即治理](/docs/governance)） |
+| `E800`–`E807`、`W800`–`W801` | 名称解析（见[词法表](/docs/lexicons#名称如何解析)） |
+| `E900` | 注解重复给出同一个具名参数 |
+| `Wxxx` | 警告 |
+
+完整列表见引擎的错误码表（[`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.1.0/docs/error-codes.md)）。
+
+解析错误码：
+
+| 错误码 | 含义 |
+| --- | --- |
+| `E050` | 无法识别的字符 |
+| `E051` | 字符串字面量未闭合 |
+| `E052` | 缩进不正确（每层缩进 2 个空格） |
+| `E053` | 数值字面量超出范围 |
+| `E054` | 嵌套过深——表达式与类型的嵌套上限为 64 |
+| `E055` | 此处缺少某个记号 |
+| `E056` | 前一个构造之后缺少某个记号 |
+| `E057` | 构造内部缺少某个记号 |
+| `E058` | 构造的某一部分之后缺少某个记号 |
+| `E059` | 缺少语句结束符 |
+| `E060` | 高亮记号之前缺少某个记号 |
+| `E061` | 意外的记号 |
+| `E062` | 意外的记号，并列出期望的记号 |
+| `E063` | 无法解析该记号附近的语法 |
+| `E064` | 意外的构造（包括类型表中有歧义的逗号） |
+| `E065` | 构造出现在错误的位置 |
+| `E066` | 代码块为空 |
+| `E067` | 值不合法（例如注解参数不是文本、32 位整数或布尔值） |
+| `E068` | 内置构造的参数个数不对 |
+| `E069` | 固定种类中的未知名字 |
 
 ## 多语言
 

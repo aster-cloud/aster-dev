@@ -21,6 +21,18 @@ body        = statement+ ;
 statement   = ifStmt | "Return" expression "." ;
 ```
 
+**A rule header is one line.** Everything from `Rule` to the `:` (or `.`) that ends
+the header — parameters, `produce`, and any `It performs …` clause — must be written
+on a single line. Since engines 1.0.48 / `aster-lang-ts` 3.1.0 a line break inside
+the header is a parse error in both engines (typically `E055 Expected identifier`).
+Rule bodies and the field list of `Define … has` may still span several lines.
+
+```text
+Rule decide given amount as Int, produce Int:      ✅ one line
+Rule decide given amount as Int,
+  produce Int:                                     ❌ E055
+```
+
 ## Type system
 
 Aster provides four built-in primitive types plus user-defined structs. Types are
@@ -51,6 +63,51 @@ Rule quote given age as Int, produce Policy:
   If age is less than 25
     Return Policy with premium set to 500, deductible set to 1000.
   Return Policy with premium set to 300, deductible set to 500.
+```
+
+### Composite types
+
+Composite types are written in words and nest freely:
+
+| Written | Meaning | Type arguments |
+| --- | --- | --- |
+| `list of T` | list of `T` | exactly one |
+| `option of T` | a `T` or nothing — values `Some(x)`, `None` | exactly one |
+| `result of T and E` | success `T` or failure `E` — values `Ok(x)`, `Err(e)` | at most two |
+| `map K to V` | map from `K` to `V` | key and value |
+| `(A, B) -> R` | function taking `A` and `B`, returning `R` | parameter list and result |
+
+```aster
+Module Composite.
+
+Rule double given x as Int, produce Int:
+  Return x times 2.
+
+Rule applyOrZero given value as option of Int, f as (Int) -> Int, produce Int:
+  Return Maybe.withDefault(Maybe.map(value, f), 0).
+
+Rule validate given amount as Int, produce result of Int and Text:
+  If amount less than 0
+    Return Err("negative amount").
+  Return Ok(amount).
+```
+
+A function type can be the type of a parameter, so a rule can take another rule by
+name: `applyOrZero(Some(4), double)` returns `8` (current release,
+`aster-lang-ts` 3.1.0).
+
+How far an `X of …` type reaches: after a separator, a `name as` pair or a token
+that cannot start a type belongs to the enclosing list, so
+`given r as result of Int and Text, y as Text` has two parameters. Separate the two
+arguments of `result of` with `and`. Inside the parenthesised parameter list of a
+function type a comma would be ambiguous — it could be the next parameter or the
+failure type — so it is reported as `E064` (`Unexpected ','`); write `and`, or
+parenthesise the inner type:
+
+```text
+(result of Int, Text) -> Bool       ❌ E064
+(result of Int and Text) -> Bool    ✅ one parameter
+((result of Int), Text) -> Bool     ✅ two parameters
 ```
 
 ## Control flow
@@ -118,13 +175,72 @@ compile identically. Use whichever reads clearer.
 A rule is a pure function of its inputs. Evaluation is **deterministic**: the same
 inputs always yield the same result, and both the JVM (Truffle) and TypeScript
 runtimes lower to the **same intermediate representation**, guaranteeing
-byte-identical results. Every evaluation can emit a **decision trace** for replay —
+byte-identical results.
+
+That representation is **Core IR v2** (`schemaVersion: 2`; engines 1.0.46 and
+later, `aster-lang-ts` 2.0 and later), defined by a single JSON Schema shared by
+both engines. Every field is always present (`null`, `[]` or `false` when empty),
+and every node carries its source `origin`. Optional and fallible values are
+first-class nodes: the expressions `Some`, `None`, `Ok` and `Err`, and the types
+`Option`, `Maybe` and `Result` (with an `ok` and an `err` type); patterns over them
+are constructor patterns. The canonical serialisation (keys in code-point order, no
+whitespace) is what you hash, store or send to the API — `compile()` returns it as
+`coreJson`, see the [Browser API](/docs/browser-api). IR v1 is not readable any
+more: recompile stored IR from its source. Every evaluation can emit a **decision trace** for replay —
 which rule fired, on which inputs, to which result.
 
 ## Effects & purity
 
 Rules are pure by default. Side effects (I/O, external calls) are declared
 explicitly via effect capabilities, keeping the audit surface honest.
+
+## Diagnostics
+
+Every diagnostic carries a stable **code** and named parameters. The English
+message is a fallback: editors and the [Playground](/playground) render the
+localised text (English, 中文, Deutsch, हिन्दी) from the code, so a message never
+has to be parsed.
+
+| Range | Stage |
+| --- | --- |
+| `E001`–`E099` | types (`E050`–`E069` within it: lexing and parsing) |
+| `E100`–`E199` | scopes and imports |
+| `E200`–`E399` | effects and capabilities |
+| `E400`–`E499` | PII |
+| `E500`–`E599` | async |
+| `E600`–`E606` | lowering to Core IR |
+| `E700`–`E799`, `W7xx` | governance and Cedar export (see [Governance](/docs/governance)) |
+| `E800`–`E807`, `W800`–`W801` | name resolution (see [Lexicons](/docs/lexicons#how-names-are-resolved)) |
+| `E900` | an annotation repeats a named argument |
+| `Wxxx` | warnings |
+
+The full list is in the engine's error-code table
+([`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.1.0/docs/error-codes.md)).
+
+The parse codes:
+
+| Code | Meaning |
+| --- | --- |
+| `E050` | unrecognised character |
+| `E051` | unterminated string literal |
+| `E052` | incorrect indentation (indent with 2 spaces) |
+| `E053` | numeric literal out of range |
+| `E054` | nesting too deep — expressions and types have a nesting limit of 64 |
+| `E055` | expected a token here |
+| `E056` | expected a token after the preceding construct |
+| `E057` | expected a token inside a construct |
+| `E058` | expected a token after a part of a construct |
+| `E059` | expected the statement terminator |
+| `E060` | expected a token before the highlighted one |
+| `E061` | unexpected token |
+| `E062` | unexpected token; lists what was expected |
+| `E063` | cannot parse the syntax near a token |
+| `E064` | unexpected construct (including an ambiguous comma in a type list) |
+| `E065` | a construct is in the wrong position |
+| `E066` | a block is empty |
+| `E067` | invalid value (for example an annotation argument that is not text, a 32-bit integer or a boolean) |
+| `E068` | wrong number of arguments to a built-in construct |
+| `E069` | unknown name of a fixed kind |
 
 ## Multi-language
 

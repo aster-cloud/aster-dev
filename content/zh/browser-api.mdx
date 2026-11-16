@@ -40,7 +40,11 @@ Rule discountedPrice given amount as Int, produce Int:
 // 1. 编译 → Core IR
 const result = compile(source, { lexicon: EN_US });
 if (!result.success) {
-  console.error(result.diagnostics);
+  console.error([
+    ...(result.parseErrors ?? []),
+    ...(result.resolutionDiagnostics ?? []),
+    ...(result.loweringDiagnostics ?? []),
+  ]);
 } else {
   // 2. 针对输入上下文对某条规则求值
   const out = evaluate(result.core, 'discountedPrice', { amount: 200 });
@@ -61,11 +65,12 @@ const result = compile(source, { lexicon: ZH_CN });
 
 ### `validateSyntaxWithSpan(source, lexicon?)`
 
-对源码做解析检查，返回带行/列位置的诊断——非常适合编辑器的波浪下划线。
+对源码做解析检查，返回带行/列位置的诊断——非常适合编辑器的波浪下划线。每条诊断带稳定的 `code`（`E050`–`E069`）
+与具名参数 `params`；`message` 是英文兜底，本地化请按 `code`，不要解析消息文本。
 
 ```js
 const diags = validateSyntaxWithSpan(source);
-// → [{ message, severity, start: {line, col}, end: {line, col} }]
+// → [{ message, code, params, span: { start: {line, col}, end: {line, col} } }]
 ```
 
 ### `compile(source, options?)`
@@ -74,7 +79,14 @@ const diags = validateSyntaxWithSpan(source);
 
 ```js
 const result = compile(source, { lexicon: EN_US });
-// result: { success: boolean, core?: Module, diagnostics?: Diagnostic[] }
+// result: {
+//   success: boolean,
+//   core?: Module,            // Core IR v2 对象
+//   coreJson?: string,        // 它的规范字节
+//   parseErrors?: ParseError[],                 // E050–E069
+//   loweringDiagnostics?: TypecheckDiagnostic[], // E600–E606
+//   resolutionDiagnostics?: TypecheckDiagnostic[], // E800–E807, W800–W801
+// }
 if (result.success) {
   console.log(result.core); // 编译出的 Core IR 模块
 }
@@ -82,11 +94,31 @@ if (result.success) {
 
 > 注意：编译出的模块在 `result.core`（即 Core IR）。`compile` **不**返回 `ir` 字段。
 
-`options`（`CompileOptions`）：`{ lexicon?, domain?, tenantId?, includeIntermediates? }`。
+`options`（`CompileOptions`）：`{ lexicon?, vocabulary?, domain?, tenantId?, controls?, includeIntermediates? }`
+——`vocabulary`（或 `domain` + `tenantId`）提供[领域词汇](/docs/lexicons#领域词汇)，`controls` 替换内置的控制注册表。
+出现名称解析错误（`E8xx`）时 `success` 为 false，且不产出 `core`。
+
+### Core IR v2：`coreJson`、`serializeCoreIr`、`readCoreIr`
+
+`result.core` 是 Core IR v2 对象；`result.coreJson` 是它的**规范字节**（`serializeCoreIr(core)`：键按码点升序、
+无空白、所有字段恒输出）。哈希、存储或 `POST` 到 `/evaluate-json` 时直接用 `coreJson` 字符串——不要自己
+`JSON.stringify(core)`。
+
+```js
+import { serializeCoreIr, validateCoreIrInvariants } from '@aster-cloud/aster-lang-ts/browser';
+import { readCoreIr } from '@aster-cloud/aster-lang-ts'; // 仅 Node 入口
+
+const json = serializeCoreIr(result.core);   // === result.coreJson
+const core = readCoreIr(json);               // 严格读入：schema 版本、schema、不变式
+```
+
+不是合法 v2 IR 的输入——包括 2.0 之前版本保存的 IR——会让 `readCoreIr` 抛出 `CoreIrFormatError`
+（`code` 为 `unsupported_schema_version` 或 `invalid_request`），这类 IR 须按源码重新编译。
 
 ### `compileAndTypecheck(source, options?)`
 
-`compile` 加上静态类型推断——在求值前就抓出类型错误（如把 `Text` 与 `Int` 比较）。返回同样的 `CompileResult` 形状，含类型诊断。
+`compile` 加上静态类型推断——在求值前就抓出类型错误（如把 `Text` 与 `Int` 比较）。返回同样的 `CompileResult` 形状，另有
+`typeErrors`；类型错误不会让 `success` 变为 false，请检查其 `severity`。
 
 ### `extractSchema(source, options?)`
 
@@ -130,11 +162,17 @@ import {
 
 // 1. 用户输入时实时校验
 const diags = validateSyntaxWithSpan(source);
-if (diags.some((d) => d.severity === 'error')) return showErrors(diags);
+if (diags.length > 0) return showErrors(diags);
 
 // 2. 编译 + 类型检查
 const result = compileAndTypecheck(source, { lexicon: EN_US });
-if (!result.success) return showErrors(result.diagnostics);
+const errors = [
+  ...(result.parseErrors ?? []),
+  ...(result.loweringDiagnostics ?? []),
+  ...(result.resolutionDiagnostics ?? []),
+  ...(result.typeErrors ?? []).filter((d) => d.severity === 'error'),
+];
+if (!result.success || errors.length > 0) return showErrors(errors);
 
 // 3. 提取 schema → 构建输入表单（参数名 + 推断类型）
 const schema = extractSchema(source, { lexicon: EN_US });
