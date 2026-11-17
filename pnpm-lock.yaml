@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@aster-cloud/aster-lang-ts':
-        specifier: 3.1.0
-        version: 3.1.0(ws@8.20.1)(zod@4.4.3)
+        specifier: 3.2.0
+        version: 3.2.0(ws@8.20.1)(zod@4.4.3)
       '@aster-cloud/tokens':
         specifier: ^0.2.1
         version: 0.2.1
@@ -182,8 +182,8 @@ packages:
     resolution: {integrity: sha512-hJA62OeBKUQT68DD2gDyhOqJxZxycqg8wLxbqjgqSzYttCMSDL9tiAQ9abgekBYNHudbJosm9sWOEbmCDfpX2A==}
     engines: {node: '>= 10'}
 
-  '@aster-cloud/aster-lang-ts@3.1.0':
-    resolution: {integrity: sha512-vlsTLfRoOeQ4JlLG+PIzqB4KDh+32wmIhPmPpfSJyIokQZwinYVlgC6qHVYEIULBXx3B++vFHFdvsXAQCGZbnA==}
+  '@aster-cloud/aster-lang-ts@3.2.0':
+    resolution: {integrity: sha512-xJFoIHds0dMPSEkMZUmd6EvNzE3e1j0wyEO1U2oKksypQMEm18zYONrE/bLCTns55aSFMW2h4xGCpvQJqO3i2w==}
     engines: {node: '>=24.0.0'}
     hasBin: true
     peerDependencies:
@@ -4616,7 +4616,7 @@ snapshots:
       '@ast-grep/napi-win32-ia32-msvc': 0.40.5
       '@ast-grep/napi-win32-x64-msvc': 0.40.5
 
-  '@aster-cloud/aster-lang-ts@3.1.0(ws@8.20.1)(zod@4.4.3)':
+  '@aster-cloud/aster-lang-ts@3.2.0(ws@8.20.1)(zod@4.4.3)':
     dependencies:
       '@types/semver': 7.7.1
       ajv: 8.20.0
