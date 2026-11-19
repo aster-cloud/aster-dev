@@ -94,11 +94,15 @@ Rule validate given amount as Int, produce result of Int and Text:
 
 A function type can be the type of a parameter, so a rule can take another rule by
 name: `applyOrZero(Some(4), double)` returns `8` (current release,
-`aster-lang-ts` 3.1.0).
+`aster-lang-ts` 3.3.0).
 
 How far an `X of …` type reaches: after a separator, a `name as` pair or a token
 that cannot start a type belongs to the enclosing list, so
-`given r as result of Int and Text, y as Text` has two parameters. Separate the two
+`given r as result of Int and Text, y as Text` has two parameters. A bare lowercase
+name after a separator, with no `as` (the `y` in `given x as Pair of Int, y, produce Int`),
+is `E055` in both engines (`aster-lang-ts` matches core from 3.3.0; earlier ts silently
+read it as another type argument); write `y as <Type>`, or parenthesise the type:
+`(Pair of Int), y`. Separate the two
 arguments of `result of` with `and`. Inside the parenthesised parameter list of a
 function type a comma would be ambiguous — it could be the next parameter or the
 failure type — so it is reported as `E064` (`Unexpected ','`); write `and`, or
@@ -240,13 +244,13 @@ has to be parsed.
 | `Wxxx` | warnings |
 
 The full list is in the engine's error-code table
-([`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.1.0/docs/error-codes.md)).
+([`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.3.0/docs/error-codes.md)).
 
 The parse codes:
 
 | Code | Meaning |
 | --- | --- |
-| `E050` | unrecognised character |
+| `E050` | unrecognised character (including non-ASCII whitespace such as U+00A0 at the end of a line, before punctuation or on a whitespace-only line; in zh-CN the ideographic space U+3000 still counts as a space) |
 | `E051` | unterminated string literal |
 | `E052` | incorrect indentation (indent with 2 spaces) |
 | `E053` | numeric literal out of range |
