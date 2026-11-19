@@ -1,0 +1,219 @@
+# 策略包
+
+**策略包**把某个策略的一个已批准版本带出 Aster Cloud，让你在自己的机器上运行（ADR 0059）。它是一个 zip，装有策略的源码与元数据，
+并由平台签名。Aster CLI 先验签，在本地编译源码，确认得到的正是平台批准的那个程序，然后才求值。整个过程不回调平台。
+
+本页是面向开发者的参考：包里有什么、两个 CLI 怎样处理它、承诺什么。如何导出策略包以及需要什么套餐，见
+[Aster Cloud 操作指南](https://aster-lang.cloud/zh/docs/guides/policy-packages)。
+
+> **状态。** 策略包导出正在以开关分阶段开放，**JRE 策略包**先开放。**Node 策略包即将推出**：下文的格式与 Node CLI 已定稿，
+> 但要等 Aster Cloud 的 Node 工具链核对上线后，界面里才会出现 Node 一项。目前导出的都是 **B 形态**（源码 + 元数据）；
+> 自带运行时的 A 形态尚在计划中。
+
+## 包布局
+
+zip 里只有一个文件夹，名为 `<模块名>-v<版本>-<target>-b`，例如 `credit.limit-v3-jre-b/`：
+
+```text
+manifest.json             包的内容清单（规范 JSON）
+manifest.sig.json         对 manifest.json 的 Ed25519 签名
+SHA256SUMS                载荷文件 + manifest.json，GNU sha256sum 格式
+README.md                 如何验证与运行，语言取导出者的界面语言
+policy/policy.aster       已批准的源码，逐字节不变
+policy/compile/alias-set.json   冻结的别名集（规范 JSON，或 null）
+policy/compile/vocabulary.json  冻结的词汇（仅当该版本有词汇时）
+schema/input.json         入口输入的 JSON Schema
+schema/output.json        入口结果的 JSON Schema
+tests/probes.json         探针输入及平台算出的结果
+```
+
+B 包不含编译好的代码。整个 zip 不超过 1 MiB。zip 可复现：版本、target、界面语言、CLI 版本与签名密钥都相同时，得到逐字节相同的
+zip——manifest 不含时间戳，zip 条目的顺序、时间与压缩方式都固定。
+
+## manifest
+
+`manifest.json` 遵循严格 schema `aster-policy-package` 1.0：未知字段一律拒绝；更高的次版本按「不受支持」拒绝，而不是宽松读取。
+集成时需要关注的字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `target`、`mode` | `jre` 或 `node`；`b` |
+| `policy.moduleName`、`policy.entries` | 模块与入口函数（恰有一个，`default: true`），JSON Schema 引用为 `#/$defs/entry.<函数>` |
+| `policy.ruleId`、`policy.profile`、`policy.controls` | 入口的 `@id`、模块的治理档案、入口的 `@control` 标签 |
+| `source.claimedRef` | Aster Cloud 自述的 `{policyId, version, status: "APPROVED", approvedAt}` |
+| `source.sha256`、`source.locale`、`source.envelopeSha256` | `policy/policy.aster` 的哈希与语言，以及完整编译输入（源码、别名集、locale、工具链、词汇）的哈希 |
+| `coreIr.version`、`coreIr.sha256`、`coreIr.positionFreeSha256` | Core IR v2 以及平台编译结果的哈希 |
+| `effects.declared`、`effects.io` | 声明的效果；`io` 恒为 `false` |
+| `governance.enforced`、`governance.verdict`、`governance.factSources` | `enforced` 恒为 `false`；入口是否返回 `Verdict`；档案声明的事实来源（包内不验证） |
+| `runtime.engine`、`runtime.cli`、`runtime.requires`、`runtime.ecosystem` | 引擎（`aster-lang-truffle` 或 `aster-lang-ts-interpreter`）、构建本包时对应的 CLI 名称与版本、`{"java": ">=25"}` 或 `{"node": ">=24"}`、平台的 Aster 发布版本 |
+| `tests.probes`、`tests.probesSha256`、`tests.nodeCheck` | 探针条数与哈希；Node 包另有平台 Node 核对的结果 |
+| `files[]` | 每个载荷文件的路径、SHA-256 与大小 |
+| `exportedBy` | `{issuer: "aster-cloud", tenantId}` |
+
+`claimedRef` 与 `exportedBy` 受签名保护，但 CLI 不据此放行：它们记录包的来源。
+
+## 安装 CLI
+
+两个 CLI 实现同样的命令、选项、输出与退出码。请安装 `runtime.cli.version` 记录的版本。
+
+**JVM**：`aster-cli-<版本>.jar`（Java 25 或更高）连同 `.sha256` 与启动脚本 `aster` / `aster.cmd`，附在每个
+[aster-lang-truffle Release](https://github.com/aster-cloud/aster-lang-truffle/releases) 上，可匿名下载。首个版本为 1.0.50：
+
+```bash
+VER=1.0.50
+BASE=https://github.com/aster-cloud/aster-lang-truffle/releases/download/v$VER
+curl -sSLO $BASE/aster-cli-$VER.jar
+curl -sSLO $BASE/aster-cli-$VER.jar.sha256
+curl -sSLO $BASE/aster && chmod +x aster
+sha256sum -c aster-cli-$VER.jar.sha256
+./aster version
+```
+
+启动脚本对同目录下的 jar 执行 `java --sun-misc-unsafe-memory-access=allow -jar`，这个选项只是关掉 JDK 25 针对 GraalVM Truffle 的一条警告。
+jar 用 Truffle 回退解释器，在与平台相同的沙箱中求值（无宿主访问、无 IO）。设置了 `ASTER_TRUFFLE_FUNC` 时它拒绝启动。
+
+**Node**（用于 Node 包，即将推出）：单文件 `aster.mjs`（Node.js 24 或更高，无依赖）连同 `aster.mjs.sha256` 附在每个
+[aster-lang-ts Release](https://github.com/aster-cloud/aster-lang-ts/releases) 上，也随 npm 包 `@aster-cloud/aster-lang-ts`
+以 `dist/runner/aster.mjs` 发布（导出路径 `@aster-cloud/aster-lang-ts/runner`）：
+
+```bash
+VER=3.3.0
+curl -sSLO https://github.com/aster-cloud/aster-lang-ts/releases/download/v$VER/aster.mjs
+curl -sSLO https://github.com/aster-cloud/aster-lang-ts/releases/download/v$VER/aster.mjs.sha256
+sha256sum -c aster.mjs.sha256
+node aster.mjs version
+```
+
+下文的 `aster` 指任一 CLI。
+
+## 命令
+
+```bash
+aster verify <pkg> [--recompile] [--probes] [--timeout 5s] [信任选项]
+aster run <pkg> --input <file|-> [--entry <fn>] [--timeout 5s] [信任选项]
+aster inspect <pkg> [信任选项]
+aster compile <pkg> [--out <file>] [信任选项]
+aster compile <file.aster> [--locale en-US] [--alias-set <file>] [--allow-structural] [--vocabulary <file>] [--out <file>]
+aster version
+```
+
+信任选项是 `--jwks <file|https-url>`、`--pubkey <file>` 与 `--allow-unsigned`。`<pkg>` 可以是 zip 文件或解压后的文件夹。
+选项可以写在包路径之前或之后；同一选项出现两次是错误，`--` 结束选项解析。
+
+- **`verify`** 依次执行 `schema`、`signature`、`integrity`，然后是 `recompile`（给出 `--recompile` 时：编译源码并与平台的 Core IR 比对）
+  与 `probes`（给出 `--probes` 时：编译后逐条求值探针并与期望结果比较，每条受 `--timeout` 限制）。在第一项失败处停止，输出
+  `{"checks":[{"name","ok"[,"code"]}…],"meta":…,"ok":…}`。
+- **`run`** 执行与 `verify` 相同的检查直到 `integrity`，编译源码，要求得到与平台相同的 Core IR，校验输入后对入口求值。
+  超时（缺省 `5s`，最多 `300s`，写成 `500ms` 或 `30s`）只计求值本身。
+- **`inspect`** 检查包，并打印 manifest 的 `policy`、`effects`、`governance`、`runtime`、`tests` 与两个 schema，不编译、不运行。
+- **`compile`** 打印 CLI 从包（或源码文件）编译出的规范 Core IR，用于排查漂移；它不比对哈希，也不求值。
+- **`version`** 打印 CLI 版本、引擎、支持的格式与 Core IR 版本、toolchain id 以及 `trustAnchorKids`。
+
+除非 `--jwks` 是 https URL，`run` 不发任何网络请求。
+
+### 输出与退出码
+
+每个命令都向标准输出写恰好一行规范 JSON；给人看的诊断写到标准错误。`run` 输出 `{"meta":M,"ok":true,"value":V}` 或
+`{"error":{"code":C,"message":S},"meta":M,"ok":false}`，其中 `M` 为 `{cliVersion, coreIrSha256, engine, entry, irRecompiled, signed}`。
+每个错误码的 `message` 是固定的，所以两个 CLI 输出相同的信封；细节写到标准错误。
+
+| 退出码 | 错误码 |
+| --- | --- |
+| 0 | 成功 |
+| 1 | `EVAL_ERROR`（策略求值失败）、`PROBE_MISMATCH`（仅 `verify --probes`） |
+| 2 | `INPUT_INVALID`、`ENTRY_NOT_FOUND`、`USAGE` |
+| 3 | `PKG_INTEGRITY`、`PKG_SIGNATURE`、`PKG_UNSIGNED`、`PKG_UNTRUSTED_KID` |
+| 4 | `PKG_INVALID_MANIFEST`、`PKG_UNSUPPORTED_FORMAT`、`PKG_UNSUPPORTED_IR`、`PKG_IR_DRIFT`、`COMPILE_ERROR` |
+| 5 | `TIMEOUT`、`RESOURCE_EXHAUSTED` |
+
+## 签名与信任锚
+
+`manifest.json` 以 RFC 8785（JCS）规范 JSON 写出，CLI 先确认文件字节等于其规范形。`manifest.sig.json` 为
+`{"alg":"Ed25519","issuer","kid","sig"}`：`sig` 是对 manifest 字节本身（而不是其摘要）的 Ed25519 签名，base64url 编码。
+manifest 列出每个载荷文件的哈希与大小；`run` 与 `verify` 还拒绝任何未列出的文件。`SHA256SUMS` 只用于定位损坏的文件，不证明来源。
+
+公钥从不放在包里。CLI 在信任锚中查找签名的 `kid`：
+
+- **内置（缺省）。** 每个 CLI 版本都带有平台导出公钥的快照，`aster version` 以 `trustAnchorKids` 列出。Aster Cloud 用
+  `export-2026-11a` 签名。新密钥先进入 JWKS 并随 CLI 版本发布，平台之后才开始用它签名，所以最新的 CLI 总是认识它。
+- **`--jwks <file|https-url>`** 用一个 JWKS 取代内置锚。平台在
+  `https://policy.aster-lang.dev/api/v1/exports/keys` 匿名发布导出公钥（形状与 Guard 公钥集相同，`Cache-Control: max-age=300`）。
+  https URL 直接获取（不走代理），总时限 10 s，至多 3 次重定向，响应体不超过 1 MiB；只接受小写的 `https://`。
+- **`--pubkey <file>`** 接受单个公钥：JWK（带 `kid` 时必须一致）或 32 字节公钥的 base64url 原文（不看 `kid`）。
+  自托管部署用它或 `--jwks` 提供自己的导出密钥。
+
+`kid` 不在锚中为 `PKG_UNTRUSTED_KID`（退出码 3）。没有 `manifest.sig.json` 的包为 `PKG_UNSIGNED`，除非给出 `--allow-unsigned`，
+此时 `meta.signed` 为 `false`。即使给了 `--allow-unsigned`，存在的签名也必须有效。Aster Cloud 总是签名；无签名的包只来自
+未配置导出密钥的自托管部署。
+
+## 同一程序，否则不运行：positionFreeSha256
+
+B 包在你的机器上编译，因此 CLI 必须证明它运行的就是平台批准的程序。它按 manifest 记录的 locale、别名集、`allowStructural`
+与词汇编译 `policy/policy.aster`，把结果与 `coreIr.positionFreeSha256` 比较：后者是去掉源码位置之后的规范 Core IR 的 SHA-256。
+去掉位置是因为两个编译器报告的列号略有不同，而产出的程序相同。
+
+哈希不同时，`run` 与 `verify --probes` 以 `PKG_IR_DRIFT`（退出码 4）停止。判据是程序而不是 CLI 版本：版本不同但编译出同一 IR
+的 CLI 可以运行该包；版本相同但本地词库被改过的则不行。没有跳过这项检查的开关。排查时用 `aster compile <pkg> --out local.json`
+取出本地 IR 自行比对；通常的解决办法是安装 `runtime.cli.version` 记录的版本。
+
+## 输入与输出的值
+
+`--input` 是一个 JSON 对象，入口的每个参数恰好对应一个键。输入按严格规则读取（UTF-8 且无 BOM、无重复键、嵌套至多 64 层、
+不超过 16 MiB），并按入口的 Core IR 类型校验：
+
+| 类型 | 输入形态 |
+| --- | --- |
+| `Int` | 32 位范围内的整数 token（`7`，不能是 `7.0`） |
+| `Long` | ±(2^53 − 1) 内的整数 token，或 64 位范围内的十进制字符串（`"9007199254740993"`） |
+| `Double` | 任意有限 JSON 数字 |
+| `Decimal` | 十进制字符串，至多 80 位数字（`"0.15"`）；JSON 数字一律拒绝 |
+| `Text`、`Bool` | 字符串、布尔 |
+| `List<T>`、`Map<Text, V>` | 数组、对象 |
+| `Maybe<T>` / `Option<T>` | 无值为 `null`，否则为该值 |
+| 无载荷的枚举 | 变体名字符串 |
+| `Data` 类型 | 对象，全部字段必填，不得有多余字段 |
+
+`schema/input.json` 以 JSON Schema 表达同一映射；它表达不了的规则（Long 与 Decimal 的范围、`7` 与 `7.0` 的区别）由 CLI 另行判定。
+
+结果以**值规范 JSON** 写出，与平台 `/evaluate-json` 的值逐字节相同：对象键排序、无空白；Data 值与 Verdict 为 `{"__type": …}`
+对象，`Maybe` 为 `{"__type":"Some","value":…}` 或 `{"__type":"None"}`，枚举为 `{"_enum": …}` 对象，Decimal 为去掉末尾 0 的字符串
+（`"43.3"`），Long 即使超过 2^53 也输出精确整数。值可能这么大时，请用能保留大整数的解析器（`BigInt`、`BigInteger`、`json.loads`）
+读取输出；`JSON.parse` 会静默舍入。
+
+## 两个 CLI 承诺什么、不承诺什么
+
+两个 CLI 求值的是同一份 Core IR 字节。承诺覆盖**正常完成的求值**：
+
+- **JRE。** 与平台同一引擎（Truffle）、同一 IR、同样的输入转换与结果序列化。正常完成的求值给出与平台相同的结果。
+- **Node。** 引擎不同（TypeScript 解释器）。一致性依靠三道保障：IR 逐字节相同；CI 中的跨引擎求值语料；对每个 Node 包，
+  Aster Cloud 在导出时核对每条探针一致（`E735`）且 Node 编译器产出平台的 IR（`E739`）。
+- **不承诺：** 超时与资源耗尽（含深递归）取决于机器，不在承诺之内；贴近时限才完成的求值同样不在承诺之内。
+
+探针从输入 schema 生成：每个枚举变体、模块中出现的每个同类字面量及其 ±1、可选字段存在与缺失，至多 256 条，从不取真实执行记录。
+探针只是抽样，不是证明。
+
+## 策略包不做什么
+
+- 它不是 Guard 执行点：没有收据、没有审批、没有审计链。`require_approval` 与 `escalate` 是返回值，由你的代码处理。见
+  [Action Guard](/docs/action-guard)。
+- 事实不经验证，输入按给定值采信。
+- 不做 IO：声明了 IO 能力、使用工作流或 async、或调用了目标引擎纯内置函数以外任何东西的模块，导出时即被拒绝（`E730`–`E732`）。
+- 已下载的策略包无法撤销。
+
+## 导出诊断
+
+| 码 | 拒绝原因 |
+| --- | --- |
+| `E730` | 某个函数声明了 IO 能力（Http、Network、Sql、Time、Files、Secrets、Process、AiModel、Payment、Inventory） |
+| `E731` | 工作流、`Async` 效果或 `Await` |
+| `E732` | 某个名字解析不到模块函数、局部绑定、类型构造器或目标引擎的纯内置函数 |
+| `E733` | 入口的参数或结果类型没有 JSON 形式（函数类型、`Result`、键不是 Text 的 Map、嵌套 Maybe、带载荷的枚举） |
+| `E734` | 策略包会超过 1 MiB |
+| `E735` | Node：某条探针在 Node 引擎与平台上的结果不同 |
+| `E737` | JVM：入口被名为 `main` 的函数遮蔽 |
+| `E738` | 入口用到 `DateTime` 或 PII 类型，其值形态尚未定义 |
+| `E739` | Node：Node 编译器的 IR 与平台不同（`positionFreeSha256`） |
+
+检查作用于整个模块，而不只是入口可达的函数。`E736` 保留不用。
+
+包格式与 CLI 行为由 aster-lang-test 的一致性夹具（`conformance/package-v1/`）钉住，两个 CLI 都必须逐字节通过。

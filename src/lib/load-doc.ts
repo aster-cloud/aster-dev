@@ -24,6 +24,7 @@ const SLUGS = [
   'action-guard',
   'evidence',
   'cedar-export',
+  'policy-packages',
   'ai-assist',
 ] as const;
 export type DocSlug = (typeof SLUGS)[number];

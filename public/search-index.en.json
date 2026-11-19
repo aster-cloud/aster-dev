@@ -165,6 +165,24 @@
       ]
     },
     {
+      "slug": "policy-packages",
+      "title": "Policy packages",
+      "description": "A policy package carries one approved version of a policy out of Aster Cloud so that you can run it on your own machines (ADR 0059). It is a zip with the policy's source and metadata, signed by the...",
+      "headings": [
+        "Package layout",
+        "The manifest",
+        "Installing the CLIs",
+        "Commands",
+        "Output and exit codes",
+        "Signatures and trust anchors",
+        "Same program or nothing: positionFreeSha256",
+        "Input and output values",
+        "What both CLIs promise — and what not",
+        "What a package does not do",
+        "Export diagnostics"
+      ]
+    },
+    {
       "slug": "reference",
       "title": "Language Reference",
       "description": "The authoritative reference for Aster's grammar, type system and evaluation semantics. The Language Guide is the tutorial-style introduction; this page is the specification.",
