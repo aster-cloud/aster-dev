@@ -14,7 +14,7 @@ import type { Lexicon } from '@aster-cloud/aster-lang-ts/lexicons/types';
 import { SemanticTokenKind as K } from '@aster-cloud/aster-lang-ts/token-kind';
 import { vocabularyRegistry } from '@aster-cloud/aster-lang-ts/lexicons/identifiers/registry';
 import { IdentifierKind } from '@aster-cloud/aster-lang-ts/lexicons/identifiers/types';
-import type { LayoutSpan } from '@/lib/layout-map';
+import type { LayoutSpan, PolicyLayout } from '@aster-cloud/aster-lang-ts/layout';
 
 export const JINGYESI_DOMAIN = 'jingyesi';
 
@@ -54,7 +54,7 @@ export function registerJingyesiVocab(): void {
 // 但原诗无空格——故把词间空格拆成隐藏结构 span（canonical=' '、display=''），让 display 是
 // 真正工整的原诗「床前明月光」，canonical 仍是可编译的「床前 明月光」（Codex 审 Medium）。
 const SP: LayoutSpan = { canonical: ' ', display: '' };
-export const JINGYESI_LAYOUT: readonly LayoutSpan[] = [
+export const JINGYESI_LAYOUT: PolicyLayout = { v: 1, spans: [
   { text: '床前' }, SP, { text: '明月光' },
   { canonical: '。\n', display: '，\n' },
   { text: '疑是' }, SP, { text: '地上霜' },
@@ -63,4 +63,4 @@ export const JINGYESI_LAYOUT: readonly LayoutSpan[] = [
   { canonical: '：\n  ', display: '，\n' },
   { text: '低头' }, SP, { text: '思故乡' },
   { canonical: '。', display: '。' },
-];
+] };

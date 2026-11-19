@@ -88,10 +88,12 @@ Rule validate given amount as Int, produce result of Int and Text:
 ```
 
 函数类型可以作为形参类型，于是一条规则可以按名字接收另一条规则：`applyOrZero(Some(4), double)` 返回 `8`
-（当前版本，`aster-lang-ts` 3.1.0）。
+（当前版本，`aster-lang-ts` 3.3.0）。
 
 `X of …` 类型延伸到哪里：分隔符之后若是「名字 as」或不能开始类型的记号，就属于外层列表，所以
-`given r as result of Int and Text, y as Text` 是两个形参。`result of` 的两个参数用 `and` 分隔。在函数类型带括号的
+`given r as result of Int and Text, y as Text` 是两个形参。分隔符之后若是没有 `as` 的小写名字（如
+`given x as Pair of Int, y, produce Int` 的 `y`），两个引擎都报 `E055`（`aster-lang-ts` 3.3.0 起与 core 一致，
+此前 ts 会把它静默读成类型参数）；写成 `y as <类型>`，或给类型加括号 `(Pair of Int), y`。`result of` 的两个参数用 `and` 分隔。在函数类型带括号的
 参数表里，逗号有歧义——既可能是下一个参数，也可能是失败类型——因此报 `E064`（`Unexpected ','`）；改写为 `and`，
 或给内层类型加括号：
 
@@ -217,13 +219,13 @@ Rule classify given score as Int, produce Text:
 | `E900` | 注解重复给出同一个具名参数 |
 | `Wxxx` | 警告 |
 
-完整列表见引擎的错误码表（[`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.1.0/docs/error-codes.md)）。
+完整列表见引擎的错误码表（[`docs/error-codes.md`](https://github.com/aster-cloud/aster-lang-ts/blob/v3.3.0/docs/error-codes.md)）。
 
 解析错误码：
 
 | 错误码 | 含义 |
 | --- | --- |
-| `E050` | 无法识别的字符 |
+| `E050` | 无法识别的字符（包括出现在行尾、标点前或只含空白的行里的非 ASCII 空白，如 U+00A0；zh-CN 的全角空格 U+3000 仍按空格处理） |
 | `E051` | 字符串字面量未闭合 |
 | `E052` | 缩进不正确（每层缩进 2 个空格） |
 | `E053` | 数值字面量超出范围 |

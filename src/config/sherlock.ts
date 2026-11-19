@@ -10,7 +10,7 @@
 import { ZH_CN } from '@aster-cloud/aster-lang-ts/lexicons/zh-CN';
 import type { Lexicon } from '@aster-cloud/aster-lang-ts/lexicons/types';
 import { SemanticTokenKind as K } from '@aster-cloud/aster-lang-ts/token-kind';
-import type { LayoutSpan } from '@/lib/layout-map';
+import type { PolicyLayout } from '@aster-cloud/aster-lang-ts/layout';
 
 export const SHERLOCK_DOMAIN = 'sherlock';
 
@@ -40,7 +40,7 @@ export const SHERLOCK_LEXICON: Lexicon = {
  * display 把两者都渲染成叙事连接词。toCanonical(SHERLOCK_LAYOUT) 即编译真源，现在推理链
  * 是纯中文（那么/否则），不再夹生英文 then。
  */
-export const SHERLOCK_LAYOUT: readonly LayoutSpan[] = [
+export const SHERLOCK_LAYOUT: PolicyLayout = { v: 1, spans: [
   { canonical: '探案笔记 ', display: '《' },
   { text: '斑点带子案' },
   { canonical: '。\n\n', display: '》\n\n' },
@@ -67,7 +67,7 @@ export const SHERLOCK_LAYOUT: readonly LayoutSpan[] = [
   { canonical: '\n  否则 凶手即 ', display: '。\n  否则，只得承认' },
   { text: '"疑点未清，尚难定论"' },
   { canonical: '。', display: '。' },
-];
+] };
 
 /**
  * 探案台的四条线索。`id` 是稳定标识（给 i18n label + React key），`field` 是喂给引擎

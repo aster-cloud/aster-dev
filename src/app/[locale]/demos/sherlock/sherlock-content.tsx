@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { compile, evaluate } from '@aster-cloud/aster-lang-ts/browser';
 import { Card, CardBody } from '@/components/ui';
 import { DemoPlaygroundLink } from '@/components/demo-playground-link';
-import { toCanonical, toDisplay } from '@/lib/layout-map';
+import { toCanonical, toDisplay } from '@aster-cloud/aster-lang-ts/layout';
 import { SHERLOCK_LAYOUT, SHERLOCK_LEXICON, SHERLOCK_DOMAIN, SHERLOCK_CLUES, SHERLOCK_PRESETS } from '@/config/sherlock';
 
 /**

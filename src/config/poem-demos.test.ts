@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { compile, evaluate } from '@aster-cloud/aster-lang-ts/browser';
-import { toCanonical, toDisplay } from '../lib/layout-map';
+import { toCanonical, toDisplay } from '@aster-cloud/aster-lang-ts/layout';
 import { JINGYESI_LAYOUT, JINGYESI_LEXICON, JINGYESI_DOMAIN, registerJingyesiVocab } from './jingyesi';
 import { SHERLOCK_LAYOUT, SHERLOCK_LEXICON, SHERLOCK_DOMAIN, SHERLOCK_CLUES, SHERLOCK_PRESETS } from './sherlock';
 
@@ -30,6 +30,11 @@ describe('静夜思 demo（LayoutMap）', () => {
     const ev = evaluate(c.core!, firstRule(c.core!), {});
     expect(ev.success).toBe(true);
     expect(ev.value).toBe('静夜思');
+  });
+
+  it('JINGYESI_LAYOUT is a PolicyLayout (v === 1)', () => {
+    expect(JINGYESI_LAYOUT.v).toBe(1);
+    expect(Array.isArray(JINGYESI_LAYOUT.spans)).toBe(true);
   });
 
   it('display 是无空格的李白原诗工整四句', () => {
