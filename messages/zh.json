@@ -77,6 +77,7 @@
     "actionGuard": "Action Guard（行动守卫）",
     "evidence": "证据与重放",
     "cedarExport": "导出到 Cedar",
+    "policyPackages": "策略包",
     "aiAssist": "AI 辅助与自带 Key",
     "examples": "示例",
     "onThisPage": "本页目录",

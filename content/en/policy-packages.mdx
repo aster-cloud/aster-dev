@@ -1,0 +1,282 @@
+# Policy packages
+
+A **policy package** carries one approved version of a policy out of Aster Cloud so
+that you can run it on your own machines (ADR 0059). It is a zip with the policy's
+source and metadata, signed by the platform. The Aster CLI verifies the signature,
+compiles the source locally, checks that it got exactly the program the platform
+approved, and then evaluates it. Nothing calls back to the platform.
+
+This page is the developer reference: what is in a package, what the two CLIs do
+with it, and what they promise. How to export a package and the plan it needs are
+described in the [Aster Cloud guide](https://aster-lang.cloud/docs/guides/policy-packages).
+
+> **Status.** Package export is rolling out behind a switch. **JRE packages** come first.
+> **Node packages are coming**: the format and the Node CLI below are final, but Aster
+> Cloud offers the Node item only once its Node toolchain check is live. All packages
+> exported today are of the **B form** (source and metadata); packages that bring their
+> own runtime (the A form) are planned.
+
+## Package layout
+
+The zip holds a single folder named `<module>-v<version>-<target>-b`, for example
+`credit.limit-v3-jre-b/`:
+
+```text
+manifest.json             what the package contains (canonical JSON)
+manifest.sig.json         Ed25519 signature over manifest.json
+SHA256SUMS                payload files + manifest.json, GNU sha256sum format
+README.md                 how to verify and run, in the exporter's interface language
+policy/policy.aster       the approved source, byte for byte
+policy/compile/alias-set.json   frozen alias set (canonical JSON, or null)
+policy/compile/vocabulary.json  frozen vocabulary (only if the version has one)
+schema/input.json         JSON Schema of the entry's input
+schema/output.json        JSON Schema of the entry's result
+tests/probes.json         probe inputs with the platform's results
+```
+
+A B package contains no compiled code. The whole zip is at most 1 MiB. The zip is
+reproducible: the same version, target, interface language, CLI version and signing
+key give a byte-identical zip, because the manifest holds no timestamps and the zip
+entries have fixed order, time and compression.
+
+## The manifest
+
+`manifest.json` follows the strict schema `aster-policy-package` 1.0. Unknown fields
+are rejected; a newer minor version is refused as unsupported rather than read
+loosely. The fields that matter when you integrate a package:
+
+| Field | Meaning |
+| --- | --- |
+| `target`, `mode` | `jre` or `node`; `b` |
+| `policy.moduleName`, `policy.entries` | The module and its entry function (exactly one, `default: true`), with JSON Schema references `#/$defs/entry.<function>` |
+| `policy.ruleId`, `policy.profile`, `policy.controls` | The entry's `@id`, the module's profile and the entry's `@control` tags |
+| `source.claimedRef` | `{policyId, version, status: "APPROVED", approvedAt}` as stated by Aster Cloud |
+| `source.sha256`, `source.locale`, `source.envelopeSha256` | Hash and language of `policy/policy.aster`, and the hash of the full compile input (source, alias set, locale, toolchain, vocabulary) |
+| `coreIr.version`, `coreIr.sha256`, `coreIr.positionFreeSha256` | Core IR v2 and the hashes of the platform's compiled program |
+| `effects.declared`, `effects.io` | The declared effects; `io` is always `false` |
+| `governance.enforced`, `governance.verdict`, `governance.factSources` | `enforced` is always `false`; whether the entry returns a `Verdict`; the fact sources the profile declares (not verified in a package) |
+| `runtime.engine`, `runtime.cli`, `runtime.requires`, `runtime.ecosystem` | The engine (`aster-lang-truffle` or `aster-lang-ts-interpreter`), the CLI name and version the package was built for, `{"java": ">=25"}` or `{"node": ">=24"}`, and the platform's Aster release |
+| `tests.probes`, `tests.probesSha256`, `tests.nodeCheck` | Probe count and hash; for Node packages, the result of the platform's Node check |
+| `files[]` | Path, SHA-256 and size of every payload file |
+| `exportedBy` | `{issuer: "aster-cloud", tenantId}` |
+
+`claimedRef` and `exportedBy` are covered by the signature but not checked by the
+CLI: they record where the package came from.
+
+## Installing the CLIs
+
+The two CLIs implement the same commands, options, output and exit codes. Install the
+version recorded in `runtime.cli.version`.
+
+**JVM** — `aster-cli-<version>.jar` (Java 25 or later) is attached, with its
+`.sha256` and the launchers `aster` / `aster.cmd`, to each
+[aster-lang-truffle release](https://github.com/aster-cloud/aster-lang-truffle/releases),
+anonymously downloadable. The first release is 1.0.50:
+
+```bash
+VER=1.0.50
+BASE=https://github.com/aster-cloud/aster-lang-truffle/releases/download/v$VER
+curl -sSLO $BASE/aster-cli-$VER.jar
+curl -sSLO $BASE/aster-cli-$VER.jar.sha256
+curl -sSLO $BASE/aster && chmod +x aster
+sha256sum -c aster-cli-$VER.jar.sha256
+./aster version
+```
+
+The launcher runs `java --sun-misc-unsafe-memory-access=allow -jar` on the jar next to
+it; the flag only silences a JDK 25 warning from GraalVM Truffle. The jar runs the
+Truffle fallback interpreter in the same sandbox as the platform (no host access, no
+IO). It refuses to start while `ASTER_TRUFFLE_FUNC` is set.
+
+**Node** (for Node packages, coming) — the single file `aster.mjs` (Node.js 24 or later,
+no dependencies) is attached with `aster.mjs.sha256` to each
+[aster-lang-ts release](https://github.com/aster-cloud/aster-lang-ts/releases), and is
+also shipped in the npm package `@aster-cloud/aster-lang-ts` as `dist/runner/aster.mjs`
+(export `@aster-cloud/aster-lang-ts/runner`):
+
+```bash
+VER=3.3.0
+curl -sSLO https://github.com/aster-cloud/aster-lang-ts/releases/download/v$VER/aster.mjs
+curl -sSLO https://github.com/aster-cloud/aster-lang-ts/releases/download/v$VER/aster.mjs.sha256
+sha256sum -c aster.mjs.sha256
+node aster.mjs version
+```
+
+Below, `aster` stands for either CLI.
+
+## Commands
+
+```bash
+aster verify <pkg> [--recompile] [--probes] [--timeout 5s] [trust options]
+aster run <pkg> --input <file|-> [--entry <fn>] [--timeout 5s] [trust options]
+aster inspect <pkg> [trust options]
+aster compile <pkg> [--out <file>] [trust options]
+aster compile <file.aster> [--locale en-US] [--alias-set <file>] [--allow-structural] [--vocabulary <file>] [--out <file>]
+aster version
+```
+
+Trust options are `--jwks <file|https-url>`, `--pubkey <file>` and `--allow-unsigned`.
+`<pkg>` is a zip file or an unpacked folder. Options may come before or after the
+package; an option given twice is an error, and `--` ends option parsing.
+
+- **`verify`** runs the checks `schema`, `signature`, `integrity`, then `recompile`
+  (with `--recompile`: compile the source and compare with the platform's Core IR) and
+  `probes` (with `--probes`: compile, then evaluate every probe and compare with its
+  expected result, each under `--timeout`). It stops at the first failed check and
+  prints `{"checks":[{"name","ok"[,"code"]}…],"meta":…,"ok":…}`.
+- **`run`** performs the same checks as `verify` up to `integrity`, compiles the source,
+  requires the same Core IR as the platform, validates the input and evaluates the
+  entry. The timeout (default `5s`, at most `300s`, written as `500ms` or `30s`) counts
+  only the evaluation itself.
+- **`inspect`** checks the package and prints the manifest's `policy`, `effects`,
+  `governance`, `runtime` and `tests` with both schemas, without compiling or running.
+- **`compile`** prints the canonical Core IR the CLI compiles from the package (or from
+  a source file), for diagnosing drift. It does not compare hashes and does not evaluate.
+- **`version`** prints the CLI version, engine, supported format and Core IR versions,
+  the toolchain id and `trustAnchorKids`.
+
+`run` makes no network request unless `--jwks` is an https URL.
+
+### Output and exit codes
+
+Every command writes exactly one line of canonical JSON to stdout; diagnostics for
+people go to stderr. `run` prints `{"meta":M,"ok":true,"value":V}` or
+`{"error":{"code":C,"message":S},"meta":M,"ok":false}`, where `M` is
+`{cliVersion, coreIrSha256, engine, entry, irRecompiled, signed}`. The `message` of each
+code is fixed, so both CLIs print the same envelope; details go to stderr.
+
+| Exit | Codes |
+| --- | --- |
+| 0 | success |
+| 1 | `EVAL_ERROR` (the policy failed), `PROBE_MISMATCH` (`verify --probes` only) |
+| 2 | `INPUT_INVALID`, `ENTRY_NOT_FOUND`, `USAGE` |
+| 3 | `PKG_INTEGRITY`, `PKG_SIGNATURE`, `PKG_UNSIGNED`, `PKG_UNTRUSTED_KID` |
+| 4 | `PKG_INVALID_MANIFEST`, `PKG_UNSUPPORTED_FORMAT`, `PKG_UNSUPPORTED_IR`, `PKG_IR_DRIFT`, `COMPILE_ERROR` |
+| 5 | `TIMEOUT`, `RESOURCE_EXHAUSTED` |
+
+## Signatures and trust anchors
+
+`manifest.json` is written as RFC 8785 (JCS) canonical JSON, and the CLI first checks
+that the file's bytes equal its canonical form. `manifest.sig.json` is
+`{"alg":"Ed25519","issuer","kid","sig"}`: `sig` is the base64url Ed25519 signature over
+the manifest's bytes themselves (not over a digest). The manifest lists the hash and
+size of every payload file; `run` and `verify` also refuse any file not listed.
+`SHA256SUMS` only helps locate a damaged file — it proves nothing about origin.
+
+The public key is never inside the package. The CLI looks up the signature's `kid` in
+its trust anchor:
+
+- **Built in (default).** Each CLI release carries a snapshot of the platform's export
+  keys; `aster version` lists them as `trustAnchorKids`. Aster Cloud signs with
+  `export-2026-11a`. A new key is published in the JWKS and shipped in a CLI release
+  before the platform starts signing with it, so an up-to-date CLI always knows it.
+- **`--jwks <file|https-url>`** replaces the built-in anchor with a JWKS. The platform
+  publishes its export keys anonymously at
+  `https://policy.aster-lang.dev/api/v1/exports/keys`
+  (same shape as the Guard key set, `Cache-Control: max-age=300`). An https URL is
+  fetched directly (no proxy), with a 10 s limit, at most 3 redirects and a 1 MiB body
+  limit; only lowercase `https://` is accepted.
+- **`--pubkey <file>`** takes a single key: a JWK (whose `kid`, if present, must match)
+  or a raw 32-byte public key in base64url (any `kid`). Self-hosted installations use
+  this or `--jwks` with their own export key.
+
+An unknown `kid` is `PKG_UNTRUSTED_KID` (exit 3). A package without
+`manifest.sig.json` is `PKG_UNSIGNED` unless `--allow-unsigned` is given; then
+`meta.signed` is `false`. A signature that is present must be valid even with
+`--allow-unsigned`. Aster Cloud always signs; unsigned packages only come from
+self-hosted installations without an export key.
+
+## Same program or nothing: positionFreeSha256
+
+A B package is compiled on your machine, so the CLI must prove it is running the
+program the platform approved. It compiles `policy/policy.aster` with the locale,
+alias set, `allowStructural` flag and vocabulary recorded in the manifest, and compares
+the result with `coreIr.positionFreeSha256`: the SHA-256 of the canonical Core IR with
+source positions removed. Positions are excluded because the two compilers report
+column numbers slightly differently while producing the same program.
+
+If the hashes differ, `run` and `verify --probes` stop with `PKG_IR_DRIFT` (exit 4).
+The decision is made on the program, not on the CLI version: a different version that
+compiles to the same IR runs the package; the same version with modified local
+lexicons does not. There is no switch to bypass the check. To investigate, run
+`aster compile <pkg> --out local.json` and compare with what you expect; the usual fix
+is to install the version in `runtime.cli.version`.
+
+## Input and output values
+
+`--input` is a JSON object with exactly one key per parameter of the entry. Input is
+read strictly — UTF-8 without BOM, no duplicate keys, nesting at most 64 levels, at most
+16 MiB — and checked against the entry's Core IR types:
+
+| Type | Input form |
+| --- | --- |
+| `Int` | integer token within 32 bits (`7`, not `7.0`) |
+| `Long` | integer token within ±(2^53 − 1), or a decimal string within 64 bits (`"9007199254740993"`) |
+| `Double` | any finite JSON number |
+| `Decimal` | decimal string, at most 80 digits (`"0.15"`); JSON numbers are rejected |
+| `Text`, `Bool` | string, boolean |
+| `List<T>`, `Map<Text, V>` | array, object |
+| `Maybe<T>` / `Option<T>` | `null` for none, otherwise the value |
+| enum without payload | variant name as a string |
+| `Data` type | object with every field present and no extra fields |
+
+`schema/input.json` expresses the same mapping as JSON Schema; rules it cannot express
+(the Long and Decimal ranges, `7` versus `7.0`) are enforced by the CLI.
+
+Results are written as **canonical value JSON**, byte-identical to the platform's
+`/evaluate-json` values: object keys sorted, no whitespace, Data values and verdicts as
+`{"__type": …}` objects, `Maybe` as `{"__type":"Some","value":…}` or `{"__type":"None"}`,
+enums as `{"_enum": …}` objects, Decimals as strings without trailing zeros (`"43.3"`),
+and Longs as exact integers even above 2^53. Read the output with a parser
+that keeps big integers (`BigInt`, `BigInteger`, `json.loads`) if your values can be
+that large; `JSON.parse` silently rounds them.
+
+## What both CLIs promise — and what not
+
+Both CLIs evaluate the same Core IR bytes. The promise covers **evaluations that
+complete normally**:
+
+- **JRE.** Same engine as the platform (Truffle), same IR, same input conversion and
+  result serialization (shared code). A normally completing evaluation gives the
+  platform's result.
+- **Node.** A different engine (the TypeScript interpreter). Equality rests on three
+  checks: identical IR; the cross-engine evaluation corpus in CI; and for every
+  Node package, Aster Cloud's export-time check that every probe agrees (`E735`) and
+  that the Node compiler produces the platform's IR (`E739`).
+- **Not promised:** timeouts and resource exhaustion (including deep recursion) depend
+  on the machine and are outside the promise; so is an evaluation that finishes close
+  to its time limit.
+
+Probes are generated from the input schema — every enum variant, every literal of the
+right type in the module and its neighbours ±1, optional fields present and absent — up
+to 256, never from real execution records. They are a sample, not a proof.
+
+## What a package does not do
+
+- It is not a Guard execution point: no receipts, no approvals, no audit trail.
+  `require_approval` and `escalate` are return values for your code to handle. See
+  [Action Guard](/docs/action-guard).
+- Facts are not verified; inputs are trusted as given.
+- No IO: modules that declare IO capabilities, use workflows or async, or call anything
+  outside the target engine's pure built-ins are refused at export (`E730`–`E732`).
+- A downloaded package cannot be revoked.
+
+## Export diagnostics
+
+| Code | Refused because |
+| --- | --- |
+| `E730` | a function declares an IO capability (Http, Network, Sql, Time, Files, Secrets, Process, AiModel, Payment, Inventory) |
+| `E731` | a workflow, `Async` effect or `Await` |
+| `E732` | a name that resolves to no module function, local binding, type constructor or pure built-in of the target engine |
+| `E733` | an entry parameter or result type with no JSON form (function types, `Result`, Maps with non-Text keys, nested Maybe, enums with payload) |
+| `E734` | the package would exceed 1 MiB |
+| `E735` | Node: a probe disagrees between the Node engine and the platform |
+| `E737` | JVM: the entry is shadowed by a function named `main` |
+| `E738` | the entry uses `DateTime` or PII types, whose value form is not defined yet |
+| `E739` | Node: the Node compiler's IR differs from the platform's (`positionFreeSha256`) |
+
+The checks run on the whole module, not just the functions reachable from the entry.
+`E736` is reserved.
+
+The package format and the CLI behaviour are pinned by conformance fixtures in
+aster-lang-test (`conformance/package-v1/`), which both CLIs must pass byte for byte.
